@@ -2,6 +2,7 @@ package common
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -33,15 +34,45 @@ func (c *ContextResolver) getProjectFromWorkdir() (*ProjectMeta, error) {
 		return nil, err
 	}
 
-	projects := c.cfg.GetAllProjectMeta()
+	return findProjectForDir(dir, c.cfg.GetAllProjectMeta()), nil
+}
 
-	for _, p := range projects {
-		if strings.HasPrefix(dir, p.Path) {
-			return &p, nil
+// findProjectForDir returns the project whose directory contains dir, or nil if
+// there isn't one. Projects can be nested inside each other, so the most specific
+// (deepest) match wins, regardless of the order the projects are in.
+func findProjectForDir(dir string, projects []ProjectMeta) *ProjectMeta {
+	dir = filepath.Clean(dir)
+
+	var found *ProjectMeta
+	foundDepth := -1
+
+	for i := range projects {
+		path := filepath.Clean(projects[i].Path)
+
+		if !isWithinDir(dir, path) {
+			continue
+		}
+
+		if depth := strings.Count(path, string(filepath.Separator)); depth > foundDepth {
+			found = &projects[i]
+			foundDepth = depth
 		}
 	}
 
-	return nil, nil
+	return found
+}
+
+// isWithinDir reports whether dir is parent, or anywhere below it. Both must be
+// cleaned paths.
+func isWithinDir(dir string, parent string) bool {
+	if dir == parent {
+		return true
+	}
+
+	// Compare with a trailing separator, so /code/api doesn't match /code/api-v2
+	prefix := strings.TrimSuffix(parent, string(filepath.Separator)) + string(filepath.Separator)
+
+	return strings.HasPrefix(dir, prefix)
 }
 
 func (c *ContextResolver) buildExecutionContext(wsName string, projectName string) (ExecutionContext, error) {
