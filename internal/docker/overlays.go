@@ -20,6 +20,14 @@ const tlsInjectCertsLabel = "orca.pantoptescloud.tls/inject-certs"
 
 const defaultAliasTemplate = "{{ .Service }}.{{ .Project }}.{{ .Workspace }}.local"
 
+// networkNamePrefix is prepended to the workspace name to name the shared network,
+// so each workspace gets its own network and they can run at the same time.
+const networkNamePrefix = "orca-ws-"
+
+func networkName(ws *common.Workspace) string {
+	return networkNamePrefix + ws.Name
+}
+
 type aliasTemplateVariables struct {
 	Service   string
 	Project   string
@@ -79,12 +87,12 @@ func (ogc *overlayGenerationContext) AddRootNetworkConfig() {
 
 	if ogc.ws.OverlayConfig.Network.CreateIn == ogc.p.Name {
 		ogc.new.Networks["orca"] = types.NetworkConfig{
-			Name:   "orca-ws",
+			Name:   networkName(ogc.ws),
 			Labels: labels,
 		}
 	} else {
 		ogc.new.Networks["orca"] = types.NetworkConfig{
-			Name:     "orca-ws",
+			Name:     networkName(ogc.ws),
 			External: true,
 			Labels:   labels,
 		}
