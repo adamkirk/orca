@@ -230,20 +230,19 @@ func (g *Git) handleCheckout(ctx common.ExecutionContext, dto CheckoutDTO) error
 }
 
 func (g *Git) Checkout(dto CheckoutDTO) error {
-	ctx, err := g.contextResolver.Resolve(dto.Workspace, dto.Project)
+	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
 
 	if err != nil {
 		return err
 	}
 
 	if err := g.handleCheckout(ctx, dto); err != nil {
-		return err
+		return g.tui.RecordIfError("Failed to checkout", err)
 	}
 
 	if !dto.Pull {
 		return nil
 	}
 
-	return g.pullInContext(ctx, dto.AllProjects, dto.Rebase)
-
+	return g.tui.RecordIfError("Failed to pull", g.pullInContext(ctx, dto.AllProjects, dto.Rebase))
 }

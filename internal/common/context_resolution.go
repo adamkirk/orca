@@ -134,7 +134,15 @@ func (c *ContextResolver) Resolve(ws string, project string) (ExecutionContext, 
 
 	// We weren't in a project directory, so our final resort is to use the
 	// current workspace, and assume all projects should be started.
-	return c.buildExecutionContext(c.cfg.GetCurrentWorkspace(), "")
+	current := c.cfg.GetCurrentWorkspace()
+
+	if current == "" {
+		return ExecutionContext{}, ErrCouldNotDetermineWorkspace{
+			Message: "no global workspace chosen, and not in an orca project directory",
+		}
+	}
+
+	return c.buildExecutionContext(current, "")
 }
 
 func NewContextResolver(cfg configManager, workspaceRepo workspaceRepository) *ContextResolver {

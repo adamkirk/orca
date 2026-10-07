@@ -6,7 +6,7 @@ TESTS?=./...
 
 
 gen-mocks:
-	@mockery
+	@go tool mockery
 
 gen-proto:
 	@./scripts/gen-proto.sh

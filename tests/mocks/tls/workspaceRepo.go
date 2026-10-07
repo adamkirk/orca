@@ -15,10 +15,19 @@ func NewMockWorkspaceRepo(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockWorkspaceRepo {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockWorkspaceRepo{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -71,7 +80,7 @@ type MockWorkspaceRepo_Load_Call struct {
 
 // Load is a helper method to define mock.On call
 //   - name string
-func (_e *MockWorkspaceRepo_Expecter) Load(name interface{}) *MockWorkspaceRepo_Load_Call {
+func (_e *MockWorkspaceRepo_Expecter) Load(name any) *MockWorkspaceRepo_Load_Call {
 	return &MockWorkspaceRepo_Load_Call{Call: _e.mock.On("Load", name)}
 }
 

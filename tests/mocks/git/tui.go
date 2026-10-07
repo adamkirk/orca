@@ -2,7 +2,7 @@
 // github.com/vektra/mockery
 // template: testify
 
-package tls_mocks
+package git_mocks
 
 import (
 	mock "github.com/stretchr/testify/mock"
@@ -173,6 +173,72 @@ func (_c *MockTui_NewLine_Call) RunAndReturn(run func()) *MockTui_NewLine_Call {
 	return _c
 }
 
+// PresentChoices provides a mock function for the type MockTui
+func (_mock *MockTui) PresentChoices(opts []string, title string) (string, error) {
+	ret := _mock.Called(opts, title)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PresentChoices")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func([]string, string) (string, error)); ok {
+		return returnFunc(opts, title)
+	}
+	if returnFunc, ok := ret.Get(0).(func([]string, string) string); ok {
+		r0 = returnFunc(opts, title)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func([]string, string) error); ok {
+		r1 = returnFunc(opts, title)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTui_PresentChoices_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PresentChoices'
+type MockTui_PresentChoices_Call struct {
+	*mock.Call
+}
+
+// PresentChoices is a helper method to define mock.On call
+//   - opts []string
+//   - title string
+func (_e *MockTui_Expecter) PresentChoices(opts any, title any) *MockTui_PresentChoices_Call {
+	return &MockTui_PresentChoices_Call{Call: _e.mock.On("PresentChoices", opts, title)}
+}
+
+func (_c *MockTui_PresentChoices_Call) Run(run func(opts []string, title string)) *MockTui_PresentChoices_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTui_PresentChoices_Call) Return(s string, err error) *MockTui_PresentChoices_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockTui_PresentChoices_Call) RunAndReturn(run func(opts []string, title string) (string, error)) *MockTui_PresentChoices_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecordIfError provides a mock function for the type MockTui
 func (_mock *MockTui) RecordIfError(msg string, err error) error {
 	ret := _mock.Called(msg, err)
@@ -274,6 +340,52 @@ func (_c *MockTui_Success_Call) Return() *MockTui_Success_Call {
 }
 
 func (_c *MockTui_Success_Call) RunAndReturn(run func(msg ...string)) *MockTui_Success_Call {
+	_c.Run(run)
+	return _c
+}
+
+// Table provides a mock function for the type MockTui
+func (_mock *MockTui) Table(header []string, rows [][]string) {
+	_mock.Called(header, rows)
+	return
+}
+
+// MockTui_Table_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Table'
+type MockTui_Table_Call struct {
+	*mock.Call
+}
+
+// Table is a helper method to define mock.On call
+//   - header []string
+//   - rows [][]string
+func (_e *MockTui_Expecter) Table(header any, rows any) *MockTui_Table_Call {
+	return &MockTui_Table_Call{Call: _e.mock.On("Table", header, rows)}
+}
+
+func (_c *MockTui_Table_Call) Run(run func(header []string, rows [][]string)) *MockTui_Table_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 []string
+		if args[0] != nil {
+			arg0 = args[0].([]string)
+		}
+		var arg1 [][]string
+		if args[1] != nil {
+			arg1 = args[1].([][]string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTui_Table_Call) Return() *MockTui_Table_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockTui_Table_Call) RunAndReturn(run func(header []string, rows [][]string)) *MockTui_Table_Call {
 	_c.Run(run)
 	return _c
 }

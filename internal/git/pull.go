@@ -30,7 +30,7 @@ func (g *Git) pullInContext(ctx common.ExecutionContext, allProjects bool, rebas
 }
 
 func (g *Git) Pull(dto PullDTO) error {
-	ctx, err := g.contextResolver.Resolve(dto.Workspace, dto.Project)
+	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
 
 	if err != nil {
 		return err

@@ -63,7 +63,7 @@ func (g *Git) pushInContext(ctx common.ExecutionContext, allProjects bool, force
 }
 
 func (g *Git) Push(dto PushDTO) error {
-	ctx, err := g.contextResolver.Resolve(dto.Workspace, dto.Project)
+	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
 
 	if err != nil {
 		return err
