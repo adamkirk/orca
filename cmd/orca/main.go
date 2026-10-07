@@ -1,25 +1,27 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/hostsys"
 	"github.com/adamkirk/orca/internal/logging"
-	"github.com/adamkirk/orca/internal/workspaces"
+	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 const configFileName = "orca.yaml"
 const configFileOverrideEnv = "ORCA_CONFIG_PATH"
 const configToolsPathOverrideEnv = "ORCA_TOOLS_PATH"
+const configPluginsPathOverrideEnv = "ORCA_PLUGINS_PATH"
 
 type runEHandlerFunc func(cmd *cobra.Command, args []string) error
-type runHandlerFunc func(cmd *cobra.Command, args []string)
 
 var (
 	version string = "dev"
@@ -38,303 +40,13 @@ utilities to interact with services form anywhere on the host.`,
 	RunE: handleGroup,
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Show the current version you're using.",
-	Run:   errorHandlerWrapper(handleVersion, 1),
-}
-
-var gCmd = &cobra.Command{
-	Use:   "g",
-	Short: "Commands related to git.",
-	RunE:  handleGroup,
-}
-
-var gCoCmd = &cobra.Command{
-	Use:   "co",
-	Short: "Checkout a branch for a git repository.",
-	Long: `Searches for a branch with the name provided as an argument. If a single branch is
-found, it will be checked out. If multiple are found will provide a list to select from.`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		rebase, _ := cmd.Flags().GetBool("rebase")
-		pull, _ := cmd.Flags().GetBool("pull")
-
-		if rebase && !pull {
-			return fmt.Errorf("--rebase can only be used with --pull")
-		}
-
-		return nil
-	},
-	Run: errorHandlerWrapper(handleGCo, 1),
-}
-
-var gBranchesCmd = &cobra.Command{
-	Use:   "branches",
-	Short: "Searches branches for the git repository.",
-	Long: `Will search for any branches containing the given search term (case-insensitive).
-If no search term is given, will list all branches.`,
-	Run: errorHandlerWrapper(handleGBranches, 1),
-}
-
-var gPullCmd = &cobra.Command{
-	Use:   "pull",
-	Short: "Pulls a branch from origin.",
-	Long:  `Will pull the currently checked out branch. Use --all to pull the current branch in every project in the workspace.`,
-	Run:   errorHandlerWrapper(handleGPull, 1),
-}
-
-var gRbiCmd = &cobra.Command{
-	Use:   "rbi",
-	Short: "Run an interactive rebase.",
-	Long:  `Starts an interactive rebase, for the number of commits required.`,
-	Run:   errorHandlerWrapper(handleGRebaseInteractively, 1),
-}
-
-var gPushCmd = &cobra.Command{
-	Use:   "push",
-	Short: "Pushes the branch to origin.",
-	Long:  `Pushes the current branch to origin, using the current branches name as the target on the origin. Use --all to push the current branch in every project in the workspace.`,
-	Run:   errorHandlerWrapper(handleGPush, 1),
-}
-
-var gUndoCmd = &cobra.Command{
-	Use:   "undo",
-	Short: "Removes commits from the branch.",
-	Long:  `This will (destructively) remove commits from the current branch. The number of commits to remove is defined by the 'number' option.`,
-	Run:   errorHandlerWrapper(handleGUndo, 1),
-}
-
-var gStatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Shows the checked out branch for projects.",
-	Long:  `Shows a table of the currently checked out branch. Use --all to show every project in the workspace.`,
-	Run:   errorHandlerWrapper(handleGStatus, 1),
-}
-
-var gLoglCmd = &cobra.Command{
-	Use:   "logl",
-	Short: "Shows the last X commits.",
-	Long:  `Only shows the short commit sha and subject of each commit for the last X commits on the current branch.`,
-	Run:   errorHandlerWrapper(handleGLogl, 1),
-}
-
-var utilCmd = &cobra.Command{
-	Use:   "util",
-	Short: "Utility commands, mainly helper type commands for internal use.",
-	RunE:  handleGroup,
-}
-
-var utilGenDocsCmd = &cobra.Command{
-	Use:   "gen-docs",
-	Short: "Generates markdown documentation for the CLI.",
-	Run:   errorHandlerWrapper(handleUtilGenDocs, 1),
-}
-
-var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Commands for managing configuration",
-	RunE:  handleGroup,
-}
-
-var configShowCmd = &cobra.Command{
-	Use:   "show",
-	Short: "Show the config",
-	Run:   errorHandlerWrapper(handleConfigShow, 1),
-}
-
-var configPathCmd = &cobra.Command{
-	Use:   "path",
-	Short: "Show the path to config being used.",
-	Run:   errorHandlerWrapper(handleConfigPath, 1),
-}
-
-var wsCmd = &cobra.Command{
-	Use:   "ws",
-	Short: "Commands related to managing workspaces.",
-	RunE:  handleGroup,
-}
-
-var wsSwitchCmd = &cobra.Command{
-	Use:   "switch",
-	Short: "Switch to another workspace",
-	Run:   errorHandlerWrapper(handleWsSwitch, 1),
-}
-
-var wsInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialises a workspace.",
-	Long: `Initialises a new workspace with orca. Either a local directory or a git repository can be supplied.
-When using a local directory, will locate an orca workspace config and clone the relevant projects.
-When using a git url, will clone the given repository, and then clone any other required repositories based on an orca workspace file within the repo.`,
-	Run: errorHandlerWrapper(handleWsInit, 1),
-}
-
-var wsLsCmd = &cobra.Command{
-	Use:   "ls",
-	Short: "Lists all available workspaces.",
-	Run:   errorHandlerWrapper(handleWsLs, 1),
-}
-
-var wsCurrentCmd = &cobra.Command{
-	Use:   "current",
-	Short: "Shows the current workspace",
-	Run:   errorHandlerWrapper(handleWsCurrent, 1),
-}
-
-var wsClearCurrentCmd = &cobra.Command{
-	Use:   "clear-current",
-	Short: "Deselects the current workspace at a global level",
-	Run:   errorHandlerWrapper(handleWsClearCurrent, 1),
-}
-
-var wsCloneCmd = &cobra.Command{
-	Use:   "clone",
-	Short: "Clones all the projects required for this workspace.",
-	Long: `Based on the workspace config will clone each repository required by the workspace.
-This can be run at any time to clone any projects that have not already been cloned.
-The project option allows you to clone only a specific project.`,
-	Run: errorHandlerWrapper(handleWsClone, 1),
-}
-
-var sysCmd = &cobra.Command{
-	Use:   "sys",
-	Short: "Commands for handling the installation of this tool.",
-	RunE:  handleGroup,
-}
-
-var sysCheckCmd = &cobra.Command{
-	Use:          "check",
-	Short:        "Checks for dependencies.",
-	Long:         `Checks that the required system dependencies are installed and usable.`,
-	Run:          errorHandlerWrapper(handleCheck, 1),
-	SilenceUsage: true,
-}
-
-var sysInstallCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Installs a tool system tool that is needed.",
-	Long: fmt.Sprintf(`Tools are installed 'locally' rather than globally, they will be stored within %s.
-
-The first argument must be one of: %s`, getToolsDir(), hostsys.AllAvailableToolsCsv()),
-	Run:          errorHandlerWrapper(handleSysInstall, 1),
-	SilenceUsage: true,
-}
-
-var sysSelfUpdateCmd = &cobra.Command{
-	Use:   "self-update",
-	Short: "Updates this tool.",
-	Long:  `By default will update to the latest available version. A specific version can be specified if a specific version is required.`,
-	Run:   errorHandlerWrapper(handleSysSelfUpdate, 1),
-}
-
-var upCmd = &cobra.Command{
-	Use:   "up",
-	Short: "Starts the workspace or project.",
-	Long:  `...TBD...`,
-	Run:   errorHandlerWrapper(handleUp, 1),
-}
-
-var downCmd = &cobra.Command{
-	Use:   "down",
-	Short: "Stops the workspace or project.",
-	Long:  `...TBD...`,
-	Run:   errorHandlerWrapper(handleDown, 1),
-}
-
-var restartCmd = &cobra.Command{
-	Use:   "restart",
-	Short: "Alias for running down && up.",
-	Long:  `...TBD...`,
-	Run:   errorHandlerWrapper(handleRestart, 1),
-}
-
-var execCmd = &cobra.Command{
-	Use:   "exec",
-	Short: "Runs a command inside one of the containers in the environment",
-	Long:  `...TBD...`,
-	Run:   errorHandlerWrapper(handleExec, 1),
-}
-
-var tlsCmd = &cobra.Command{
-	Use:   "tls",
-	Short: "Commands to do with TLS certificates.",
-	RunE:  handleGroup,
-}
-
-var tlsGenCmd = &cobra.Command{
-	Use: "gen",
-	Short: `Generates TLS certificates for the current workspace.
-If no root certificate has been generated, one will be generated.`,
-	Run: errorHandlerWrapper(handleTLSGen, 1),
-}
-
-var debugCmd = &cobra.Command{
-	Use:   "debug",
-	Short: "Commands to aid in debugging or understanding whats happening.",
-	RunE:  handleGroup,
-}
-
-var debugShowComposeConfigCmd = &cobra.Command{
-	Use:   "show-compose-config",
-	Short: `Shows the full generated compose config that will be used for this project.`,
-	Long: `Similar to the 'docker compose config' command (it uses this under the 
-hood), it will show you the resulting config after all files are merged together, 
-including any relevant values from environment variables, or profile changes etc.`,
-	Run: errorHandlerWrapper(handleDebugShowComposeConfig, 1),
-}
-
-var debugShowComposeCommandCmd = &cobra.Command{
-	Use:   "show-compose-command",
-	Short: `Shows the compose command being used for this project.`,
-	Long:  `Can be used to run generic commands via: ` + "`$(orca debug show-compose-command) ps`",
-	Run:   errorHandlerWrapper(handleDebugShowComposeCommand, 1),
-}
-
-var logsCmd = &cobra.Command{
-	Use:   "logs",
-	Short: `Tails logs from docker compose project.`,
-	Long:  `Basically a 'docker compose logs -f', you may supply a service to tail specifically.`,
-	Run:   errorHandlerWrapper(handleLogs, 1),
-}
-
-var hostsCmd = &cobra.Command{
-	Use:   "hosts",
-	Short: `Shows all the required hosts entries for the workspace.`,
-	Run:   errorHandlerWrapper(handleHosts, 1),
-}
-
-var extCmd = &cobra.Command{
-	Use:   "ext",
-	Short: "Execute a custom extension, defined in the project configuration",
-	Run:   errorHandlerWrapper(handleExt, 1),
-}
-
-var provisionCmd = &cobra.Command{
-	Use:   "provision",
-	Short: "Run any provisioning scripts for the given project",
-	Run:   errorHandlerWrapper(handleProvision, 1),
-}
-
-func errorHandlerWrapper(f runEHandlerFunc, errorExitCode int) runHandlerFunc {
-	return func(cmd *cobra.Command, args []string) {
-		err := f(cmd, args)
-
-		if err != nil {
-			// Set as a debug level here as it should already be logged earlier
-			// in the stack
-			slog.Debug("unhandled error", "err", err)
-			os.Exit(errorExitCode)
-		}
-	}
-}
-
 func handleGroup(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
 }
 
 func getToolsDir() string {
 	homeDir, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	configFile := fmt.Sprintf("%s/.orca/bin", homeDir)
 
@@ -345,16 +57,29 @@ func getToolsDir() string {
 	return configFile
 }
 
+func getPluginsDir() string {
+	homeDir, err := os.UserHomeDir()
+	checkErr(err)
+
+	dir := fmt.Sprintf("%s/.orca/plugins", homeDir)
+
+	if override, found := os.LookupEnv(configPluginsPathOverrideEnv); found {
+		dir = override
+	}
+
+	return dir
+}
+
 func getOverlayDir() string {
 	homeDir, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	return fmt.Sprintf("%s/.orca/overlays", homeDir)
 }
 
 func getTLSDir() string {
 	homeDir, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	dir := fmt.Sprintf("%s/.orca/tls", homeDir)
 
@@ -363,7 +88,7 @@ func getTLSDir() string {
 
 func getConfigFilePath() string {
 	homeDir, err := os.UserHomeDir()
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	configFile := fmt.Sprintf("%s/.orca/%s", homeDir, configFileName)
 
@@ -377,7 +102,7 @@ func getConfigFilePath() string {
 func getWorkingDir() string {
 	wd, err := os.Getwd()
 
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	return wd
 }
@@ -389,7 +114,7 @@ func getWorkingDirParent() string {
 
 	_, err := os.Stat(dir)
 
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	return dir
 }
@@ -398,7 +123,7 @@ func init() {
 	cfg := svcContainer.GetConfig()
 
 	err := cfg.LoadOrCreate()
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	cobra.OnInitialize(bootstrap)
 
@@ -406,153 +131,8 @@ func init() {
 	rootCmd.PersistentFlags().String("log-level", cfg.GetLoggingLevel(), "Log level to use, one of: debug, info, warn, error, none. Defaults to none, as most errors are already surfaced anyway.")
 	rootCmd.PersistentFlags().String("log-format", cfg.GetLoggingFormat(), "log format to use")
 
-	cobra.CheckErr(viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("log-level")))
-	cobra.CheckErr(viper.BindPFlag("logging.format", rootCmd.PersistentFlags().Lookup("log-format")))
-
-	// Version
-	versionCmd.Flags().Bool("short", false, "Show only the version, excluding commit and date information.")
-	rootCmd.AddCommand(versionCmd)
-
-	// Sys
-	sysSelfUpdateCmd.Flags().String("to", "", "The version you wish to switch to. If left blank will download latest avaialable")
-	sysCmd.AddCommand(sysSelfUpdateCmd)
-
-	sysCmd.AddCommand(sysCheckCmd)
-	sysCmd.AddCommand(sysInstallCmd)
-	rootCmd.AddCommand(sysCmd)
-
-	// Git
-	gCoCmd.Flags().Bool("pull", false, "Pulls the branch from origin after checking it out.")
-	gCoCmd.Flags().BoolP("all", "a", false, "Checks out the chosen branch in each project in the workspace.")
-	gCoCmd.Flags().BoolP("create", "b", false, "Creates the branch if it doesn't exist.")
-	gCoCmd.Flags().BoolP("rebase", "r", false, "Passes --rebase to git pull, only valid with --pull.")
-	addWorkspaceOption(gCoCmd, false)
-	addProjectOption(gCoCmd)
-	gCoCmd.MarkFlagsMutuallyExclusive("all", "project")
-	gCoCmd.MarkFlagsMutuallyExclusive("create", "pull")
-	gCmd.AddCommand(gCoCmd)
-
-	gCmd.AddCommand(gBranchesCmd)
-
-	gRbiCmd.Flags().IntP("number", "n", 2, "The number of commits to include in the interactive rebase.")
-	gCmd.AddCommand(gRbiCmd)
-
-	gPushCmd.Flags().BoolP("force", "f", false, "Whether force push the branch.")
-	gPushCmd.Flags().BoolP("all", "a", false, "Pushes the current branch in each project in the workspace.")
-	addWorkspaceOption(gPushCmd, false)
-	addProjectOption(gPushCmd)
-	gPushCmd.MarkFlagsMutuallyExclusive("all", "project")
-	gCmd.AddCommand(gPushCmd)
-
-	gUndoCmd.Flags().BoolP("yes", "y", false, "Skip the confirmation prompt, and just delete them. #YOLO")
-	gUndoCmd.Flags().IntP("number", "n", 1, "The number of commits to remove from the branch.")
-	gCmd.AddCommand(gUndoCmd)
-
-	gLoglCmd.Flags().IntP("number", "n", 10, "The number of commits to remove from the branch.")
-	gCmd.AddCommand(gLoglCmd)
-
-	gStatusCmd.Flags().BoolP("all", "a", false, "Shows the current branch for each project in the workspace.")
-	addWorkspaceOption(gStatusCmd, false)
-	addProjectOption(gStatusCmd)
-	gStatusCmd.MarkFlagsMutuallyExclusive("all", "project")
-	gCmd.AddCommand(gStatusCmd)
-
-	gPullCmd.Flags().BoolP("all", "a", false, "Pulls the current branch in each project in the workspace.")
-	gPullCmd.Flags().BoolP("rebase", "r", false, "Passes --rebase to git pull.")
-	addWorkspaceOption(gPullCmd, false)
-	addProjectOption(gPullCmd)
-	gPullCmd.MarkFlagsMutuallyExclusive("all", "project")
-	gCmd.AddCommand(gPullCmd)
-
-	rootCmd.AddCommand(gCmd)
-
-	// Utils
-	utilCmd.AddCommand(utilGenDocsCmd)
-
-	rootCmd.AddCommand(utilCmd)
-
-	// config
-	configCmd.AddCommand(configPathCmd)
-	configCmd.AddCommand(configShowCmd)
-	rootCmd.AddCommand(configCmd)
-
-	// workspaces
-	wsCmd.AddCommand(wsSwitchCmd)
-
-	wsInitCmd.Flags().StringP("source", "s", getWorkingDir(), "The directory of the workspace configuration.")
-	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects.")
-	wsInitCmd.Flags().StringP("config", "c", workspaces.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
-	wsCmd.AddCommand(wsInitCmd)
-
-	wsCmd.AddCommand(wsLsCmd)
-	wsCmd.AddCommand(wsCurrentCmd)
-	wsCmd.AddCommand(wsClearCurrentCmd)
-
-	wsCloneCmd.Flags().StringP("target", "t", "", `The directory in which to clone the project(s). 
-If multiple projects are being cloned, then it will place them in {target}/{repo name}.
-If a single project is being clone then it will be cloned into {target}.`)
-	addWorkspaceOption(wsCloneCmd, false)
-	addProjectOption(wsCloneCmd)
-	wsCmd.AddCommand(wsCloneCmd)
-
-	rootCmd.AddCommand(wsCmd)
-
-	// up
-	addWorkspaceOption(upCmd, false)
-	addProjectOption(upCmd)
-
-	rootCmd.AddCommand(upCmd)
-
-	// down
-	addWorkspaceOption(downCmd, false)
-	addProjectOption(downCmd)
-
-	rootCmd.AddCommand(downCmd)
-
-	// restart
-	addWorkspaceOption(restartCmd, false)
-	addProjectOption(restartCmd)
-
-	rootCmd.AddCommand(restartCmd)
-
-	// tls
-	addWorkspaceOption(tlsGenCmd, false)
-	tlsCmd.AddCommand(tlsGenCmd)
-	rootCmd.AddCommand(tlsCmd)
-
-	// debug
-	addWorkspaceOption(debugShowComposeConfigCmd, false)
-	addProjectOption(debugShowComposeConfigCmd)
-	debugCmd.AddCommand(debugShowComposeConfigCmd)
-
-	addWorkspaceOption(debugShowComposeCommandCmd, false)
-	addProjectOption(debugShowComposeCommandCmd)
-	debugCmd.AddCommand(debugShowComposeCommandCmd)
-	rootCmd.AddCommand(debugCmd)
-
-	// exec
-	addWorkspaceOption(execCmd, false)
-	addProjectOption(execCmd)
-	addServiceOption(execCmd, true)
-	rootCmd.AddCommand(execCmd)
-
-	// logs
-	addWorkspaceOption(logsCmd, false)
-	addProjectOption(logsCmd)
-	addServiceOption(logsCmd, false)
-	rootCmd.AddCommand(logsCmd)
-
-	// hosts
-	addWorkspaceOption(hostsCmd, false)
-	rootCmd.AddCommand(hostsCmd)
-
-	// ext
-	addWorkspaceOption(extCmd, false)
-	addProjectOption(extCmd)
-	rootCmd.AddCommand(extCmd)
-
-	// provision
-	rootCmd.AddCommand(provisionCmd)
+	checkErr(viper.BindPFlag("logging.level", rootCmd.PersistentFlags().Lookup("log-level")))
+	checkErr(viper.BindPFlag("logging.format", rootCmd.PersistentFlags().Lookup("log-format")))
 }
 
 func addServiceOption(cmd *cobra.Command, required bool) {
@@ -586,18 +166,72 @@ func bootstrap() {
 	viper.AutomaticEnv()
 
 	err := viper.Unmarshal(cfg.GetRuntimeConfig())
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	h, err := logging.NewSlogHandler(cfg)
 
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	slog.SetDefault(slog.New(h))
 }
 
+// parsePersistentFlagsEarly parses the root command's persistent flags (e.g.
+// --log-level) before cobra does, ignoring any other flags. Plugins are loaded
+// before cobra runs, and they need to respect these.
+func parsePersistentFlagsEarly() {
+	fs := pflag.NewFlagSet("early", pflag.ContinueOnError)
+	fs.ParseErrorsAllowlist.UnknownFlags = true
+	fs.SetOutput(io.Discard)
+	fs.Usage = func() {}
+
+	// Shares the underlying flags, so parsed values land on the root command
+	fs.AddFlagSet(rootCmd.PersistentFlags())
+
+	// Any real errors will be reported when cobra parses the flags
+	_ = fs.Parse(os.Args[1:])
+}
+
 func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	os.Exit(run())
+}
+
+// run is the entrypoint, it returns the exit code rather than exiting so that
+// deferred cleanup always runs. See exit.go for how plugin processes are kept
+// from outliving orca.
+func run() int {
+	// Configure logging from flags/env before plugins are started, cobra will run
+	// bootstrap again once it has parsed the flags itself.
+	parsePersistentFlagsEarly()
+	bootstrap()
+
+	stopHandlingSignals := handleSignals()
+	defer stopHandlingSignals()
+	// Deferred after the above, so signals are still handled while plugins stop
+	defer svcContainer.KillPlugins()
+
+	// Done here rather than in init, so all builtin commands are registered first
+	registerPluginCommands(svcContainer.GetConfig())
+
+	err := rootCmd.Execute()
+
+	// Any error is likely from plugins being stopped by the signal handler, which
+	// is about to exit with this code anyway.
+	if code := signalExitCode.Load(); code != 0 {
+		return int(code)
 	}
+
+	if err == nil {
+		return 0
+	}
+
+	var exitErr plugins.ExitError
+	if errors.As(err, &exitErr) {
+		fmt.Fprintln(os.Stderr, err)
+
+		if exitErr.Code != 0 {
+			return exitErr.Code
+		}
+	}
+
+	return 1
 }

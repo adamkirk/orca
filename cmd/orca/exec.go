@@ -5,15 +5,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var execCmd = &cobra.Command{
+	Use:   "exec",
+	Short: "Runs a command inside one of the containers in the environment",
+	Long:  `...TBD...`,
+	RunE:  handleErrors(handleExec),
+}
+
+func init() {
+	addWorkspaceOption(execCmd, false)
+	addProjectOption(execCmd)
+	addServiceOption(execCmd, true)
+	rootCmd.AddCommand(execCmd)
+}
+
 func handleExec(cmd *cobra.Command, args []string) error {
 	ctrl := svcContainer.GetController()
 
-	ws, err := cmd.Flags().GetString("workspace")
-	cobra.CheckErr(err)
-	project, err := cmd.Flags().GetString("project")
-	cobra.CheckErr(err)
-	service, err := cmd.Flags().GetString("service")
-	cobra.CheckErr(err)
+	ws := mustGetString(cmd, "workspace")
+	project := mustGetString(cmd, "project")
+	service := mustGetString(cmd, "service")
 
 	return ctrl.ExecOrRun(controller.ExecDTO{
 		Workspace: ws,

@@ -5,15 +5,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var restartCmd = &cobra.Command{
+	Use:   "restart",
+	Short: "Alias for running down && up.",
+	Long:  `...TBD...`,
+	RunE:  handleErrors(handleRestart),
+}
+
+func init() {
+	addWorkspaceOption(restartCmd, false)
+	addProjectOption(restartCmd)
+
+	rootCmd.AddCommand(restartCmd)
+}
+
 func handleRestart(cmd *cobra.Command, args []string) error {
 	ctrl := svcContainer.GetController()
 
-	ws, err := cmd.Flags().GetString("workspace")
-	cobra.CheckErr(err)
-	project, err := cmd.Flags().GetString("project")
-	cobra.CheckErr(err)
+	ws := mustGetString(cmd, "workspace")
+	project := mustGetString(cmd, "project")
 
-	err = ctrl.Down(controller.DownDTO{
+	err := ctrl.Down(controller.DownDTO{
 		Workspace: ws,
 		Project:   project,
 	})

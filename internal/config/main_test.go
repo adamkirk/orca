@@ -242,6 +242,25 @@ func Test_LoggingGetters(t *testing.T) {
 	assert.Equal(t, "json", cfg.GetLoggingFormat())
 }
 
+func Test_GetPluginDirs(t *testing.T) {
+	_, cfg := useExistingConfig(t)
+
+	assert.Empty(t, cfg.GetPluginDirs())
+
+	fs := afero.NewMemMapFs()
+	err := afero.WriteFile(fs, configFilePath, []byte(existingConfigFileContents+`plugins:
+    dirs:
+        - /plugins/a
+        - /plugins/b
+`), 0755)
+	require.Nil(t, err)
+
+	cfg = NewDefaultConfig(fs, configFilePath)
+	require.Nil(t, cfg.LoadOrCreate())
+
+	assert.Equal(t, []string{"/plugins/a", "/plugins/b"}, cfg.GetPluginDirs())
+}
+
 // Used to ensure that during loading or any mutations we do not end up referencing
 // the same struct. Should be called after any mutation functions throughout the
 // tests.

@@ -202,6 +202,10 @@ func (self *Config) GetLoggingFormat() string {
 	return self.runtimeConfig.Logging.Format
 }
 
+func (self *Config) GetPluginDirs() []string {
+	return self.runtimeConfig.Plugins.Dirs
+}
+
 func (self *Config) GetRuntimeConfig() *config {
 	return self.runtimeConfig
 }

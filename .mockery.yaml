@@ -10,3 +10,12 @@ packages:
             # select the interfaces you want mocked
             tui:
             workspaceRepo:
+    github.com/adamkirk/orca/internal/git:
+        config:
+            dir: 'tests/mocks/git'
+            pkgname: "{{ .SrcPackageName }}_mocks"
+            filename: "{{ .InterfaceName }}.go"
+            structname: "Mock{{ .InterfaceName | firstUpper }}"
+        interfaces:
+            tui:
+            contextResolver:

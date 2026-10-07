@@ -2,14 +2,20 @@ DC_PROJECT=pc_orca
 DC=docker compose -f ./docker-compose.yml -p $(DC_PROJECT)
 NOW=$(shell date '+%Y-%m-%d %H:%M:%S')
 TESTS?=./...
-.PHONY: build fmt vet lint-last-commit dc-up dc-down test gen-mocks trivy-scan dc-build
+.PHONY: build fmt vet lint-last-commit dc-up dc-down test gen-mocks gen-proto build-example-plugins trivy-scan dc-build
 
 
 gen-mocks:
-	@mockery
+	@go tool mockery
+
+gen-proto:
+	@./scripts/gen-proto.sh
 
 build: fmt
 	@VERSION="dev" COMMIT="wip-commit" DATE="$(NOW)" ./scripts/build.sh
+
+build-example-plugins:
+	@go build -o $${ORCA_PLUGINS_PATH:-$$HOME/.orca/plugins}/orca-plugin-hello ./examples/plugins/hello
 
 build-global: fmt
 	@OUTDIR=/usr/local/bin/orca VERSION="dev" COMMIT="wip-commit" DATE="$(NOW)" ./scripts/build.sh

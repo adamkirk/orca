@@ -116,7 +116,7 @@ func (g *Git) statusRow(name string, dir string) []string {
 }
 
 func (g *Git) Status(dto StatusDTO) error {
-	ctx, err := g.contextResolver.Resolve(dto.Workspace, dto.Project)
+	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
 
 	if err != nil {
 		return err

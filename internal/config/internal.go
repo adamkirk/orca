@@ -29,10 +29,17 @@ func (self configWorkspace) GetName() string {
 	return self.Name
 }
 
+type configPlugins struct {
+	// Dirs are searched for plugin executables, in addition to the default
+	// plugins directory.
+	Dirs []string `yaml:"dirs,omitempty"`
+}
+
 type config struct {
 	Logging          configLogging
 	Workspaces       []configWorkspace
-	CurrentWorkspace string `yaml:"currentWorkspace" mapstructure:"current_workspace"`
+	CurrentWorkspace string        `yaml:"currentWorkspace" mapstructure:"current_workspace"`
+	Plugins          configPlugins `yaml:"plugins,omitempty"`
 }
 
 func (self *config) workspaceExists(name string) bool {

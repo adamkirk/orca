@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/adamkirk/orca/internal/common"
@@ -10,13 +11,13 @@ import (
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
 	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/adamkirk/orca/internal/provisioner"
 	"github.com/adamkirk/orca/internal/repository"
 	"github.com/adamkirk/orca/internal/tls"
 	"github.com/adamkirk/orca/internal/tui"
 	"github.com/adamkirk/orca/internal/workspaces"
 	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 type services struct {
@@ -50,6 +51,8 @@ type services struct {
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
 
 	provisionerRunner *provisioner.Runner
+
+	pluginManager *plugins.Manager
 }
 
 func (s *services) GetFs() afero.Fs {
@@ -120,7 +123,7 @@ func (s *services) GetEtcHostsManager() *hostsys.EtcHostsManager {
 
 	mgr, err := hostsys.NewEtcHostsManager()
 
-	cobra.CheckErr(err)
+	checkErr(err)
 
 	s.etcHostsManager = mgr
 
@@ -279,4 +282,22 @@ func (s *services) GetProvisionerRunner() *provisioner.Runner {
 	)
 
 	return s.provisionerRunner
+}
+
+func (s *services) GetPluginManager() *plugins.Manager {
+	if s.pluginManager != nil {
+		return s.pluginManager
+	}
+
+	s.pluginManager = plugins.NewManager(slog.Default())
+
+	return s.pluginManager
+}
+
+// KillPlugins stops any running plugin processes. Unlike GetPluginManager it
+// won't create the manager, so it's safe to call at any point.
+func (s *services) KillPlugins() {
+	if s.pluginManager != nil {
+		s.pluginManager.Kill()
+	}
 }

@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package orca.plugin.v1;
+
+option go_package = "github.com/adamkirk/orca/pkg/plugin/proto/v1;pluginv1";
+
+// CommandProvider is implemented by plugins that contribute CLI commands to orca.
+service CommandProvider {
+  // GetCommands returns the command tree the plugin wants registered.
+  rpc GetCommands(GetCommandsRequest) returns (GetCommandsResponse);
+  // Execute runs a leaf command previously returned by GetCommands.
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+}
+
+enum FlagType {
+  FLAG_TYPE_STRING = 0;
+  FLAG_TYPE_BOOL = 1;
+}
+
+message FlagSpec {
+  string name = 1;
+  string shorthand = 2;
+  string usage = 3;
+  FlagType type = 4;
+  // Default value, encoded as a string regardless of type.
+  string default = 5;
+}
+
+message CommandSpec {
+  string use = 1;
+  string short = 2;
+  string long = 3;
+  repeated FlagSpec flags = 4;
+  repeated CommandSpec subcommands = 5;
+}
+
+message GetCommandsRequest {}
+
+message GetCommandsResponse {
+  repeated CommandSpec commands = 1;
+}
+
+message ExecuteRequest {
+  // Names of the commands from the plugin's top-level command down to the leaf
+  // being executed, e.g. ["k8s", "ctx"].
+  repeated string command_path = 1;
+  repeated string args = 2;
+  // Flag values keyed by flag name, encoded as strings.
+  map<string, string> flags = 3;
+}
+
+message ExecuteResponse {
+  int32 exit_code = 1;
+  string error = 2;
+}

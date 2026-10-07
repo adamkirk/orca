@@ -14,10 +14,19 @@ func NewMockTui(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MockTui {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MockTui{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -53,9 +62,9 @@ type MockTui_Error_Call struct {
 
 // Error is a helper method to define mock.On call
 //   - msg ...string
-func (_e *MockTui_Expecter) Error(msg ...interface{}) *MockTui_Error_Call {
+func (_e *MockTui_Expecter) Error(msg ...any) *MockTui_Error_Call {
 	return &MockTui_Error_Call{Call: _e.mock.On("Error",
-		append([]interface{}{}, msg...)...)}
+		append([]any{}, msg...)...)}
 }
 
 func (_c *MockTui_Error_Call) Run(run func(msg ...string)) *MockTui_Error_Call {
@@ -101,9 +110,9 @@ type MockTui_Info_Call struct {
 
 // Info is a helper method to define mock.On call
 //   - msg ...string
-func (_e *MockTui_Expecter) Info(msg ...interface{}) *MockTui_Info_Call {
+func (_e *MockTui_Expecter) Info(msg ...any) *MockTui_Info_Call {
 	return &MockTui_Info_Call{Call: _e.mock.On("Info",
-		append([]interface{}{}, msg...)...)}
+		append([]any{}, msg...)...)}
 }
 
 func (_c *MockTui_Info_Call) Run(run func(msg ...string)) *MockTui_Info_Call {
@@ -189,7 +198,7 @@ type MockTui_RecordIfError_Call struct {
 // RecordIfError is a helper method to define mock.On call
 //   - msg string
 //   - err error
-func (_e *MockTui_Expecter) RecordIfError(msg interface{}, err interface{}) *MockTui_RecordIfError_Call {
+func (_e *MockTui_Expecter) RecordIfError(msg any, err any) *MockTui_RecordIfError_Call {
 	return &MockTui_RecordIfError_Call{Call: _e.mock.On("RecordIfError", msg, err)}
 }
 
@@ -239,9 +248,9 @@ type MockTui_Success_Call struct {
 
 // Success is a helper method to define mock.On call
 //   - msg ...string
-func (_e *MockTui_Expecter) Success(msg ...interface{}) *MockTui_Success_Call {
+func (_e *MockTui_Expecter) Success(msg ...any) *MockTui_Success_Call {
 	return &MockTui_Success_Call{Call: _e.mock.On("Success",
-		append([]interface{}{}, msg...)...)}
+		append([]any{}, msg...)...)}
 }
 
 func (_c *MockTui_Success_Call) Run(run func(msg ...string)) *MockTui_Success_Call {
