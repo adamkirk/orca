@@ -23,9 +23,10 @@ var wsSwitchCmd = &cobra.Command{
 var wsInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialises a workspace.",
-	Long: `Initialises a new workspace with orca. Either a local directory or a git repository can be supplied.
+	Long: `Initialises a new workspace with orca. Either a local directory or a GitHub repository can be supplied.
 When using a local directory, will locate an orca workspace config and clone the relevant projects.
-When using a git url, will clone the given repository, and then clone any other required repositories based on an orca workspace file within the repo.`,
+When using a GitHub repository (--repo owner/repo), will check the workspace config on its default branch is valid, clone the repository over SSH into the target, and then clone any other required repositories based on that workspace config.
+Set GH_TOKEN or GITHUB_TOKEN to use a private repository.`,
 	RunE: handleErrors(handleWsInit),
 }
 

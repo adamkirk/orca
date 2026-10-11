@@ -204,20 +204,30 @@ Everyone else (and you, on a fresh machine) sets up the environment like this.
 
 ```sh
 $ mkdir -p ~/code/acme && cd ~/code/acme
-$ git clone git@github.com:acme/local-env.git
-$ cd local-env
-$ orca ws init
+$ orca ws init --repo acme/local-env
 ```
 
-[`orca ws init`](../CLI/orca_ws_init.md) reads `orca.workspace.yaml` from the current directory and registers the `acme` workspace in your [user config](../configuration/user_config.md). It then sets up each project:
+[`orca ws init`](../CLI/orca_ws_init.md) fetches `orca.workspace.yaml` from the `acme/local-env` repository on GitHub and checks it's valid, then clones the repository into `~/code/acme/local-env`. It registers the `acme` workspace in your [user config](../configuration/user_config.md), and then sets up each project:
 
-- `local-env` is registered where it is, because it's `self: true`.
+- `local-env` is registered where it was just cloned, because it's `self: true`.
 - `api` and `web` are cloned next to it, into `~/code/acme/api` and `~/code/acme/web`. Each project is cloned into a directory named after the project.
 
 Repositories you've already cloned in those locations are detected (by their git remote) and registered, rather than cloned again.
 
+If the repository is private, set `GH_TOKEN` or `GITHUB_TOKEN` first, so orca can read the workspace config through the GitHub API. See [Initialising a workspace](../usage/workspaces.md#from-github).
+
+??? tip "Already cloned the workspace repository?"
+    Run `orca ws init` without `--repo` from inside it instead:
+
+    ```sh
+    $ cd ~/code/acme/local-env
+    $ orca ws init
+    ```
+
+    This reads `orca.workspace.yaml` from the current directory, and clones the other projects into its parent directory.
+
 ??? tip "Cloning somewhere else"
-    By default projects are cloned into the parent of the directory you run `ws init` from. Use `--target` to choose another directory, e.g. `orca ws init --target ~/src`.
+    With `--repo`, everything is cloned into the current directory; without it, into the parent of the current directory. Use `--target` to choose another directory, e.g. `orca ws init --repo acme/local-env --target ~/src`.
 
 Make it your current workspace, so commands work from anywhere:
 

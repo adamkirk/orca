@@ -57,3 +57,9 @@ These environment variables change where orca looks for things:
 | `ORCA_CONFIG_PATH` | The user config file to use. | `~/.orca/orca.yaml` |
 | `ORCA_PLUGINS_PATH` | The default plugins directory (`plugins.dirs` are still searched as well). | `~/.orca/plugins` |
 | `ORCA_TOOLS_PATH` | Where [`orca sys install`](../CLI/orca_sys_install.md) puts tools. | `~/.orca/bin` |
+
+Orca also reads these, in the same way as the [GitHub CLI](https://cli.github.com/manual/gh_help_environment):
+
+| Environment variable | Effect |
+| -------------------- | ------ |
+| `GH_TOKEN`, `GITHUB_TOKEN` | A token to authenticate GitHub API requests with. `GH_TOKEN` is used if both are set. It's needed to [initialise a workspace](../usage/workspaces.md#from-github) from a private repository, and raises GitHub's rate limits for everything else (e.g. checking for orca updates). |

@@ -4,21 +4,45 @@ The `orca ws` commands register workspaces on your machine, clone their projects
 
 ## Initialising a workspace
 
+You can initialise a workspace straight from its GitHub repository, or from a copy of the repository you've already cloned.
+
+### From GitHub
+
+```sh
+$ mkdir -p ~/code/acme && cd ~/code/acme
+$ orca ws init --repo acme/local-env
+```
+
+With `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
+
+1. Fetches the workspace config from the repository's default branch through the GitHub API, and checks that it's [valid](../configuration/workspace_config.md#validation). If it's missing or invalid, orca stops before cloning anything.
+2. Clones the repository over SSH (`git@github.com:acme/local-env.git`) into `{target}/{repo name}`, here `~/code/acme/local-env`. If that directory already exists, orca stops with an error rather than touch it.
+3. Carries on as if you'd run `orca ws init` from inside the clone (see [below](#from-a-local-directory)), so the other projects are cloned next to it.
+
+`--repo` only accepts GitHub repositories, in the form `owner/repo`. You'll need SSH access to the repository for the clone.
+
+For a private repository, set `GH_TOKEN` or `GITHUB_TOKEN` to a token that can read it, as you would for the [GitHub CLI](https://cli.github.com/manual/gh_help_environment). `GH_TOKEN` is used if both are set. Without a token, a private repository looks the same as one without a workspace config.
+
+### From a local directory
+
 ```sh
 $ cd ~/code/acme/local-env      # a repository containing orca.workspace.yaml
 $ orca ws init
 ```
 
-[`orca ws init`](../CLI/orca_ws_init.md):
+Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 
-1. Reads the workspace config from the current directory, and registers the workspace in your [user config](../configuration/user_config.md).
+1. Reads the workspace config from the current directory, checks that it's [valid](../configuration/workspace_config.md#validation), and registers the workspace in your [user config](../configuration/user_config.md).
 2. Sets up every project in it, as [`orca ws clone`](#cloning-projects) does.
+
+### Flags
 
 | Flag | Description | Default |
 | ---- | ----------- | ------- |
+| `-r`, `--repo` | The GitHub repository to initialise from, as `owner/repo`. Can't be used with `--source`. | |
 | `-s`, `--source` | The directory containing the workspace config. | The current directory |
-| `-c`, `--config` | The workspace config's file name. | `orca.workspace.yaml` |
-| `-t`, `--target` | The directory to clone projects into. | The parent of the current directory |
+| `-c`, `--config` | The workspace config's file name, relative to the source directory or the repository's root. | `orca.workspace.yaml` |
+| `-t`, `--target` | The directory to clone projects into. | The current directory with `--repo`, otherwise its parent |
 
 It doesn't make the workspace current; use `orca ws switch` for that.
 
