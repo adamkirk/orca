@@ -38,12 +38,11 @@ One workspace can be selected as the **current workspace** with [`orca ws switch
 Assuming someone has already written the `orca.workspace.yaml` and `orca.project.yaml` files for your environment:
 
 ```sh
-# Clone the repository containing the workspace config, and go into it
-$ git clone git@github.com:acme/local-env.git ~/code/acme/local-env
-$ cd ~/code/acme/local-env
-
-# Register the workspace and clone all of its projects next to this repository
-$ orca ws init
+# Clone the repository containing the workspace config, register the
+# workspace, and clone all of its projects next to it
+$ mkdir -p ~/code/acme && cd ~/code/acme
+$ orca ws init --repo acme/local-env
+$ cd local-env
 
 # Make it the current workspace
 $ orca ws switch acme

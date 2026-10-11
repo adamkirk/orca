@@ -31,9 +31,14 @@ type git interface {
 	DirectoryHasOrigin(dir string, origin string) (bool, error)
 }
 
+type githubClient interface {
+	GetFileContents(owner string, repo string, path string) ([]byte, bool, error)
+}
+
 type workspaceRepo interface {
 	Load(name string) (*common.Workspace, error)
 	LoadUnconfiguredWorkspace(path string) (*common.UnconfiguredWorkspace, error)
+	ParseUnconfiguredWorkspace(contents []byte, path string) (*common.UnconfiguredWorkspace, error)
 }
 
 type contextResolver interface {
@@ -45,16 +50,18 @@ type Manager struct {
 	tui             tui
 	configManager   config
 	git             git
+	githubClient    githubClient
 	workspaceRepo   workspaceRepo
 	contextResolver contextResolver
 }
 
-func NewManager(fs afero.Fs, tui tui, configManager config, git git, workspaceRepo workspaceRepo, contextResolver contextResolver) *Manager {
+func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo, contextResolver contextResolver) *Manager {
 	return &Manager{
 		fs:              fs,
 		tui:             tui,
 		configManager:   configManager,
 		git:             git,
+		githubClient:    githubClient,
 		workspaceRepo:   workspaceRepo,
 		contextResolver: contextResolver,
 	}

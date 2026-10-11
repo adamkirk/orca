@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -62,8 +63,65 @@ func (self *GithubClient) VersionExists(owner string, repo string, v string) (bo
 	}
 }
 
-func NewGithubClient() *GithubClient {
+// GetFileContents fetches the contents of the file at the given path on the
+// repository's default branch. The bool is false if the file does not exist.
+func (self *GithubClient) GetFileContents(owner string, repo string, path string) ([]byte, bool, error) {
+	file, _, resp, err := self.client.Repositories.GetContents(context.TODO(), owner, repo, path, nil)
+
+	var rateLimitErr *github.RateLimitError
+	var abuseRateLimitErr *github.AbuseRateLimitError
+
+	if errors.As(err, &rateLimitErr) || errors.As(err, &abuseRateLimitErr) {
+		return nil, false, common.ErrRateLimitedByApi{
+			Api: "github",
+		}
+	}
+
+	if resp == nil {
+		return nil, false, common.ErrUnexpectedApiError{
+			Msg: fmt.Sprintf("error from client: %s", err.Error()),
+		}
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// A directory at this path comes back without a file
+		if file == nil {
+			return nil, false, nil
+		}
+
+		contents, err := file.GetContent()
+
+		if err != nil {
+			return nil, false, common.ErrUnexpectedApiError{
+				Msg: fmt.Sprintf("failed to decode file contents: %s", err.Error()),
+			}
+		}
+
+		return []byte(contents), true, nil
+	case http.StatusNotFound:
+		return nil, false, nil
+	case http.StatusTooManyRequests:
+		return nil, false, common.ErrRateLimitedByApi{
+			Api: "github",
+		}
+	default:
+		return nil, false, common.ErrUnexpectedApiError{
+			Msg: fmt.Sprintf("got %d response when getting file contents", resp.StatusCode),
+		}
+	}
+}
+
+// NewGithubClient creates a client for the github API, if the token is empty
+// then requests are unauthenticated.
+func NewGithubClient(token string) *GithubClient {
+	client := github.NewClient(nil)
+
+	if token != "" {
+		client = client.WithAuthToken(token)
+	}
+
 	return &GithubClient{
-		client: github.NewClient(nil),
+		client: client,
 	}
 }

@@ -211,6 +211,10 @@ func (wcr *WorkspaceRepository) loadConfigFromPath(path string) (*model.Workspac
 		return nil, err
 	}
 
+	return parseWorkspaceConfig(contents, path)
+}
+
+func parseWorkspaceConfig(contents []byte, path string) (*model.WorkspaceConfig, error) {
 	cfg := &model.WorkspaceConfig{}
 
 	if err := yaml.Unmarshal(contents, cfg); err != nil {
@@ -220,16 +224,48 @@ func (wcr *WorkspaceRepository) loadConfigFromPath(path string) (*model.Workspac
 		}
 	}
 
-	return cfg, nil
-}
-
-func (wcr *WorkspaceRepository) LoadUnconfiguredWorkspace(path string) (*common.UnconfiguredWorkspace, error) {
-	ws, err := wcr.loadConfigFromPath(path)
-
-	if err != nil {
+	if err := validateWorkspaceConfig(cfg, path); err != nil {
 		return nil, err
 	}
 
+	return cfg, nil
+}
+
+// validateWorkspaceConfig checks the required fields of a workspace config are
+// present.
+func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
+	problems := []string{}
+
+	if cfg.Name == "" {
+		problems = append(problems, "'name' is required")
+	}
+
+	for i, p := range cfg.Projects {
+		label := fmt.Sprintf("project '%s'", p.Name)
+
+		if p.Name == "" {
+			label = fmt.Sprintf("project at index %d", i)
+			problems = append(problems, fmt.Sprintf("%s: 'name' is required", label))
+		}
+
+		hasSSH := p.Repository.SSH != ""
+
+		if hasSSH == p.Repository.Self {
+			problems = append(problems, fmt.Sprintf("%s: exactly one of 'repository.ssh' or 'repository.self' is required", label))
+		}
+	}
+
+	if len(problems) > 0 {
+		return common.ErrInvalidWorkspaceConfig{
+			Path:     path,
+			Problems: problems,
+		}
+	}
+
+	return nil
+}
+
+func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *common.UnconfiguredWorkspace {
 	projects := make([]common.UnconfiguredProject, len(ws.Projects))
 
 	for i, p := range ws.Projects {
@@ -246,7 +282,29 @@ func (wcr *WorkspaceRepository) LoadUnconfiguredWorkspace(path string) (*common.
 		Name:       ws.Name,
 		ConfigPath: path,
 		Projects:   projects,
-	}, nil
+	}
+}
+
+func (wcr *WorkspaceRepository) LoadUnconfiguredWorkspace(path string) (*common.UnconfiguredWorkspace, error) {
+	ws, err := wcr.loadConfigFromPath(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buildUnconfiguredWorkspace(ws, path), nil
+}
+
+// ParseUnconfiguredWorkspace loads a workspace from raw config contents, e.g.
+// when fetched from a remote. The path is only used for reporting.
+func (wcr *WorkspaceRepository) ParseUnconfiguredWorkspace(contents []byte, path string) (*common.UnconfiguredWorkspace, error) {
+	ws, err := parseWorkspaceConfig(contents, path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return buildUnconfiguredWorkspace(ws, path), nil
 }
 
 func (wcr *WorkspaceRepository) Load(name string) (*common.Workspace, error) {

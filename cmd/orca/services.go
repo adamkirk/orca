@@ -149,7 +149,7 @@ func (s *services) GetGithubClient() *github.GithubClient {
 		return s.githubClient
 	}
 
-	s.githubClient = github.NewGithubClient()
+	s.githubClient = github.NewGithubClient(getGithubToken())
 
 	return s.githubClient
 }
@@ -177,6 +177,7 @@ func (s *services) GetWorkspaceManager() *workspaces.Manager {
 		s.GetTui(),
 		s.GetConfig(),
 		s.GetGit(),
+		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
 		s.GetContextResolver(),
 	)

@@ -280,6 +280,15 @@ func (err ErrConfigIsNotValidYAML) Error() string {
 	return fmt.Sprintf("config at '%s' was not valid yaml: %s", err.Path, err.ParseError)
 }
 
+type ErrInvalidWorkspaceConfig struct {
+	Path     string
+	Problems []string
+}
+
+func (err ErrInvalidWorkspaceConfig) Error() string {
+	return fmt.Sprintf("workspace config at '%s' is invalid: %s", err.Path, strings.Join(err.Problems, "; "))
+}
+
 type ErrInvalidValueForOverlayModifier struct {
 	Label   string
 	Message string

@@ -23,9 +23,10 @@ var wsSwitchCmd = &cobra.Command{
 var wsInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialises a workspace.",
-	Long: `Initialises a new workspace with orca. Either a local directory or a git repository can be supplied.
+	Long: `Initialises a new workspace with orca. Either a local directory or a GitHub repository can be supplied.
 When using a local directory, will locate an orca workspace config and clone the relevant projects.
-When using a git url, will clone the given repository, and then clone any other required repositories based on an orca workspace file within the repo.`,
+When using a GitHub repository (--repo owner/repo), will check the workspace config on its default branch is valid, clone the repository over SSH into the target, and then clone any other required repositories based on that workspace config.
+Set GH_TOKEN or GITHUB_TOKEN to use a private repository.`,
 	RunE: handleErrors(handleWsInit),
 }
 
@@ -60,8 +61,10 @@ func init() {
 	wsCmd.AddCommand(wsSwitchCmd)
 
 	wsInitCmd.Flags().StringP("source", "s", getWorkingDir(), "The directory of the workspace configuration.")
-	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects.")
+	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects. Defaults to the current directory when --repo is used.")
+	wsInitCmd.Flags().StringP("repo", "r", "", "The github repository to clone the workspace from, in the format 'owner/repo'.")
 	wsInitCmd.Flags().StringP("config", "c", workspaces.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
+	wsInitCmd.MarkFlagsMutuallyExclusive("repo", "source")
 	wsCmd.AddCommand(wsInitCmd)
 
 	wsCmd.AddCommand(wsLsCmd)
@@ -105,9 +108,17 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 
 	source := mustGetString(cmd, "source")
 	target := mustGetString(cmd, "target")
+	repo := mustGetString(cmd, "repo")
 	configFile := mustGetString(cmd, "config")
 
+	// When cloning the workspace repo, it lands inside the target alongside the
+	// other projects, so default to the current directory rather than its parent
+	if repo != "" && !cmd.Flags().Changed("target") {
+		target = getWorkingDir()
+	}
+
 	return manager.Initialise(workspaces.InitialiseDTO{
+		SourceRepo:        repo,
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,

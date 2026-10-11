@@ -59,6 +59,22 @@ Each project needs exactly one of these:
 | `ssh` | The git URL to clone the project from, e.g. `git@github.com:acme/api.git`. |
 | `self` | Set to `true` if the project is the repository containing this workspace config. Nothing is cloned; the repository's root is registered as the project's directory. |
 
+## Validation
+
+Orca checks the workspace config whenever it loads it, so every command fails if it's invalid. It checks that:
+
+- `name` is set.
+- Every project has a `name`.
+- Every project has exactly one of `repository.ssh` or `repository.self`.
+
+Every problem found is listed, e.g.:
+
+```
+Workspace config '/Users/me/code/acme/local-env/orca.workspace.yaml' is invalid:
+  - 'name' is required
+  - project 'api': exactly one of 'repository.ssh' or 'repository.self' is required
+```
+
 ## Dependencies between projects
 
 `requires` controls the order projects are started and stopped in, when you run a command against a whole workspace:
