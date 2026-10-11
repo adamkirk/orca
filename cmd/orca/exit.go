@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/cobra"
 )
 
@@ -31,11 +33,29 @@ func handleErrors(f runEHandlerFunc) runEHandlerFunc {
 			// Set as a debug level here as it should already be logged earlier
 			// in the stack
 			slog.Debug("unhandled error", "err", err)
+
+			// Config problems can surface from anywhere a workspace is loaded,
+			// so they're shown here rather than in each handler
+			var invalidCfg common.ErrInvalidWorkspaceConfig
+			if errors.As(err, &invalidCfg) {
+				showInvalidWorkspaceConfig(invalidCfg)
+			}
+
 			cmd.SilenceErrors = true
 			cmd.SilenceUsage = true
 		}
 
 		return err
+	}
+}
+
+func showInvalidWorkspaceConfig(err common.ErrInvalidWorkspaceConfig) {
+	tui := svcContainer.GetTui()
+
+	tui.Error(fmt.Sprintf("Workspace config '%s' is invalid:", err.Path))
+
+	for _, problem := range err.Problems {
+		tui.Error(fmt.Sprintf("  - %s", problem))
 	}
 }
 

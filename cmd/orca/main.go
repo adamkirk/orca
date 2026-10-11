@@ -21,6 +21,9 @@ const configFileOverrideEnv = "ORCA_CONFIG_PATH"
 const configToolsPathOverrideEnv = "ORCA_TOOLS_PATH"
 const configPluginsPathOverrideEnv = "ORCA_PLUGINS_PATH"
 
+// Checked in order of precedence, matching the gh cli
+var githubTokenEnvs = []string{"GH_TOKEN", "GITHUB_TOKEN"}
+
 type runEHandlerFunc func(cmd *cobra.Command, args []string) error
 
 var (
@@ -97,6 +100,16 @@ func getConfigFilePath() string {
 	}
 
 	return configFile
+}
+
+func getGithubToken() string {
+	for _, env := range githubTokenEnvs {
+		if token := os.Getenv(env); token != "" {
+			return token
+		}
+	}
+
+	return ""
 }
 
 func getWorkingDir() string {

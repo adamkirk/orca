@@ -60,8 +60,10 @@ func init() {
 	wsCmd.AddCommand(wsSwitchCmd)
 
 	wsInitCmd.Flags().StringP("source", "s", getWorkingDir(), "The directory of the workspace configuration.")
-	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects.")
+	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects. Defaults to the current directory when --repo is used.")
+	wsInitCmd.Flags().StringP("repo", "r", "", "The github repository to clone the workspace from, in the format 'owner/repo'.")
 	wsInitCmd.Flags().StringP("config", "c", workspaces.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
+	wsInitCmd.MarkFlagsMutuallyExclusive("repo", "source")
 	wsCmd.AddCommand(wsInitCmd)
 
 	wsCmd.AddCommand(wsLsCmd)
@@ -105,9 +107,17 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 
 	source := mustGetString(cmd, "source")
 	target := mustGetString(cmd, "target")
+	repo := mustGetString(cmd, "repo")
 	configFile := mustGetString(cmd, "config")
 
+	// When cloning the workspace repo, it lands inside the target alongside the
+	// other projects, so default to the current directory rather than its parent
+	if repo != "" && !cmd.Flags().Changed("target") {
+		target = getWorkingDir()
+	}
+
 	return manager.Initialise(workspaces.InitialiseDTO{
+		SourceRepo:        repo,
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,
