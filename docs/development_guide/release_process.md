@@ -9,6 +9,20 @@ The full process for shipping a new version of the application is shown below. T
 
 *See [Github Actions](./github_actions.md) for more info on the exact steps.*
 
+## Versioning before 1.0
+
+Orca is still on `0.x.x` versions, and follows the same approach as [Terraform](https://github.com/hashicorp/terraform/blob/main/README.md) did before its 1.0 release: until 1.0, orca is considered unstable, and **any release can include changes that would be breaking under semantic versioning**, such as removing a command, renaming a flag or changing the config format. The commit types still decide the version as usual, so features bump the minor version, and fixes and most other types bump the patch version.
+
+What that means in practice:
+
+- **Never mark a commit as breaking.** Don't use `!` after the type (`feat!:`) or a `BREAKING CHANGE:` footer. semantic-release turns a breaking commit into a major release, which on `0.x` would release `1.0.0`.
+- **Describe changes in behaviour in the commit body instead.** Use the normal type (`feat`, `fix`, `refactor`...). In the body, say what changed for users, and what they need to do about it, e.g. a removed command and what to use instead. That text ends up in the release notes.
+- **Document the change** in the user docs as part of the same PR, as with any other change in behaviour.
+
+### The 1.0 release
+
+The maintainer decides when orca reaches 1.0, and makes that release deliberately. Nothing else should cause it. From 1.0 onwards, orca follows semantic versioning properly: breaking changes are marked as breaking, and bump the major version.
+
 ??? tip "Workflow"
     ```mermaid
     flowchart TD
