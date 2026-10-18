@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 // TODO: guard against nil arguments
@@ -23,7 +23,7 @@ func (c *Compose) Up(ws *common.Workspace, p *common.Project) error {
 	cmd := buildBaseComposeCommand(ws, p, overlay)
 	cmd = append(cmd, "up", "-d")
 
-	err = c.cli.Exec(cmd[0], cmd[1:], hostsys.WithHostIO(), hostsys.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
 		return c.tui.RecordIfError(fmt.Sprintf("%s:%s[%s] failed!", p.Name, ws.Name, p.ProjectDir), err)

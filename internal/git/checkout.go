@@ -6,7 +6,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 const previousBranchAlias = "-"
@@ -36,7 +36,7 @@ func (g *Git) performCheckout(dir string, branch string, create bool) error {
 
 	args = append(args, branch)
 
-	return g.exec.Exec("git", args, withDir(dir, hostsys.WithHostIO())...)
+	return g.exec.Exec("git", args, withDir(dir, process.WithHostIO())...)
 }
 
 // checkoutOrCreate checks out the branch matching name exactly, creating it if

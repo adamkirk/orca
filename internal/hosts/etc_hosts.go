@@ -1,4 +1,4 @@
-package hostsys
+package hosts
 
 import (
 	"fmt"

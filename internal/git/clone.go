@@ -2,7 +2,7 @@ package git
 
 import (
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 func (g *Git) Clone(repoURL string, target string, dir string) error {
@@ -19,6 +19,6 @@ func (g *Git) Clone(repoURL string, target string, dir string) error {
 			repoURL,
 			target,
 		},
-		withDir(dir, hostsys.WithHostIO())...,
+		withDir(dir, process.WithHostIO())...,
 	)
 }

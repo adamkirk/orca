@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/sys"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ var sysInstallCmd = &cobra.Command{
 	Short: "Installs a tool system tool that is needed.",
 	Long: fmt.Sprintf(`Tools are installed 'locally' rather than globally, they will be stored within %s.
 
-The first argument must be one of: %s`, getToolsDir(), hostsys.AllAvailableToolsCsv()),
+The first argument must be one of: %s`, getToolsDir(), sys.AllAvailableToolsCsv()),
 	RunE:         handleErrors(handleSysInstall),
 	SilenceUsage: true,
 }
@@ -49,7 +49,7 @@ func init() {
 }
 
 func handleCheck(cmd *cobra.Command, _ []string) error {
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.CheckSetupQuery{})
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.CheckSetupQuery{})
 
 	return err
 }
@@ -67,8 +67,8 @@ func handleSysInstall(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.InstallCommand{
-		Tool: hostsys.AvailableTool(args[0]),
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.InstallCommand{
+		Tool: sys.AvailableTool(args[0]),
 	})
 
 	return err
@@ -77,12 +77,12 @@ func handleSysInstall(cmd *cobra.Command, args []string) error {
 func handleSysSelfUpdate(cmd *cobra.Command, _ []string) error {
 	to := mustGetString(cmd, "to")
 
-	strategy := hostsys.VersioningStrategyLatest
+	strategy := sys.VersioningStrategyLatest
 
 	if to != "" {
-		strategy = hostsys.VersioningStrategySpecific
+		strategy = sys.VersioningStrategySpecific
 	}
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.UpdateSelfCommand{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.UpdateSelfCommand{
 		Strategy:         strategy,
 		SpecifiedVersion: to,
 	})

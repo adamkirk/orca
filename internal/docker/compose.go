@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type composeOverlayGenerator interface {
@@ -21,7 +21,7 @@ type tui interface {
 }
 
 type cli interface {
-	Exec(cmdName string, args []string, opts ...hostsys.ExecOpt) (err error)
+	Exec(cmdName string, args []string, opts ...process.ExecOpt) (err error)
 }
 
 type Compose struct {

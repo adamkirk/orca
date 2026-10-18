@@ -7,7 +7,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type StatusQuery struct {
@@ -87,7 +87,7 @@ func parseStatusPorcelain(output string) workingTreeChanges {
 }
 
 func (g *Git) getWorkingTreeChanges(dir string) (workingTreeChanges, error) {
-	opt, stdout := hostsys.WithStdout()
+	opt, stdout := process.WithStdout()
 
 	err := g.exec.Exec("git", []string{
 		"status",

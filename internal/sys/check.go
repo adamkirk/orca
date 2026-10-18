@@ -1,4 +1,4 @@
-package hostsys
+package sys
 
 import (
 	"context"

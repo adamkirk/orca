@@ -4,7 +4,7 @@ import (
 	"os/exec"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 // TODO: guard against nil inputs
@@ -22,7 +22,7 @@ func (c *Compose) Run(ws *common.Workspace, p *common.Project, service string, c
 	cmd = append(cmd, "run", "-it", "--rm", service)
 	cmd = append(cmd, cmdArgs...)
 
-	err = c.cli.Exec(cmd[0], cmd[1:], hostsys.WithHostIO(), hostsys.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
 		// If it's exit code 130, it's because they exited an interactive container

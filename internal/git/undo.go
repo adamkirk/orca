@@ -6,7 +6,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type UndoLastXCommitsCommand struct {
@@ -52,5 +52,5 @@ func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) e
 		"reset",
 		"--hard",
 		fmt.Sprintf("HEAD~%d", cmd.Amount),
-	}, withDir(cmd.Dir, hostsys.WithHostIO())...)
+	}, withDir(cmd.Dir, process.WithHostIO())...)
 }

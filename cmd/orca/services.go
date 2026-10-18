@@ -12,10 +12,12 @@ import (
 	"github.com/adamkirk/orca/internal/docker"
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/adamkirk/orca/internal/plugins"
+	"github.com/adamkirk/orca/internal/process"
 	"github.com/adamkirk/orca/internal/provisioner"
 	"github.com/adamkirk/orca/internal/repository"
+	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
 	"github.com/adamkirk/orca/internal/tui"
 	"github.com/adamkirk/orca/internal/workspaces"
@@ -31,10 +33,10 @@ type services struct {
 
 	tui *tui.Tui
 
-	hostSystem      *hostsys.HostSystem
-	etcHostsManager *hostsys.EtcHostsManager
+	hostSystem      *sys.HostSystem
+	etcHostsManager *hosts.EtcHostsManager
 
-	executor *hostsys.Executor
+	executor *process.Executor
 
 	git *git.Git
 
@@ -97,12 +99,12 @@ func (s *services) GetTui() *tui.Tui {
 	return s.tui
 }
 
-func (s *services) GetHostSystem() *hostsys.HostSystem {
+func (s *services) GetHostSystem() *sys.HostSystem {
 	if s.hostSystem != nil {
 		return s.hostSystem
 	}
 
-	s.hostSystem = hostsys.NewHostSystem(
+	s.hostSystem = sys.NewHostSystem(
 		s.GetTui(),
 		s.GetFs(),
 		s.GetGithubClient(),
@@ -112,22 +114,22 @@ func (s *services) GetHostSystem() *hostsys.HostSystem {
 	return s.hostSystem
 }
 
-func (s *services) GetExecutor() *hostsys.Executor {
+func (s *services) GetExecutor() *process.Executor {
 	if s.executor != nil {
 		return s.executor
 	}
 
-	s.executor = hostsys.NewExecutor()
+	s.executor = process.NewExecutor()
 
 	return s.executor
 }
 
-func (s *services) GetEtcHostsManager() *hostsys.EtcHostsManager {
+func (s *services) GetEtcHostsManager() *hosts.EtcHostsManager {
 	if s.etcHostsManager != nil {
 		return s.etcHostsManager
 	}
 
-	mgr, err := hostsys.NewEtcHostsManager()
+	mgr, err := hosts.NewEtcHostsManager()
 
 	checkErr(err)
 
@@ -338,9 +340,9 @@ func (s *services) GetBus() *bus.Bus {
 
 	b.HandleVoid(lazy(s.GetCertificateManager, (*tls.CertificateManager).Generate))
 
-	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).CheckSetup))
-	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).Install))
-	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).UpdateSelf))
+	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).CheckSetup))
+	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).Install))
+	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).UpdateSelf))
 
 	s.bus = b
 

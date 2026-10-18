@@ -2,7 +2,7 @@ package docker
 
 import (
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 // TODO: guard against nil arguments
@@ -22,7 +22,7 @@ func (c *Compose) Logs(ws *common.Workspace, p *common.Project, service string) 
 		cmd = append(cmd, service)
 	}
 
-	err = c.cli.Exec(cmd[0], cmd[1:], hostsys.WithHostIO(), hostsys.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
 		return c.tui.RecordIfError("Failed to tail logs!", err)

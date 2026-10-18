@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type LoglQuery struct {
@@ -26,7 +26,7 @@ func (g *Git) Logl(_ context.Context, query LoglQuery) error {
 		return err
 	}
 
-	opt, stdout := hostsys.WithStdout()
+	opt, stdout := process.WithStdout()
 	err := g.exec.Exec("git", []string{
 		"log",
 		"--oneline",

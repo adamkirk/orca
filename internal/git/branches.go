@@ -7,7 +7,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type Branch struct {
@@ -113,7 +113,7 @@ func (g *Git) searchBranches(dto searchBranchesOpts) (Branches, error) {
 		return nil, err
 	}
 
-	opt, stdout := hostsys.WithStdout()
+	opt, stdout := process.WithStdout()
 	err := g.exec.Exec("git", []string{
 		"branch",
 		"-l",
@@ -214,7 +214,7 @@ func (g *Git) PullBranch(dto PullBranchOpts) error {
 
 	args = append(args, "origin", current)
 
-	err = g.exec.Exec("git", args, withDir(dto.Dir, hostsys.WithHostIO())...)
+	err = g.exec.Exec("git", args, withDir(dto.Dir, process.WithHostIO())...)
 
 	return g.tui.RecordIfError("Failed to pull branch!", err)
 }

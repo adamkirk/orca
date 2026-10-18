@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type RebaseInteractivelyCommand struct {
@@ -30,5 +30,5 @@ func (g *Git) RebaseInteractively(_ context.Context, cmd RebaseInteractivelyComm
 		"rebase",
 		"-i",
 		fmt.Sprintf("HEAD~%d", cmd.Amount),
-	}, withDir(cmd.Dir, hostsys.WithHostIO())...)
+	}, withDir(cmd.Dir, process.WithHostIO())...)
 }

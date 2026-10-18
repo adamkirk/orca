@@ -1,4 +1,4 @@
-package hostsys
+package sys
 
 import (
 	"github.com/Masterminds/semver/v3"

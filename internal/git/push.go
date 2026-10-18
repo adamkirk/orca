@@ -5,7 +5,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 type PushBranchOpts struct {
@@ -35,7 +35,7 @@ func (g *Git) PushBranch(cmd PushBranchOpts) error {
 
 	args = append(args, "origin", branch)
 
-	return g.exec.Exec("git", args, withDir(cmd.Dir, hostsys.WithHostIO())...)
+	return g.exec.Exec("git", args, withDir(cmd.Dir, process.WithHostIO())...)
 }
 
 type PushCommand struct {

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 // TODO: guard against nil arguments
@@ -22,10 +22,10 @@ func (c *Compose) IsSvcRunning(ws *common.Workspace, p *common.Project, service 
 	baseCmd := buildBaseComposeCommand(ws, p, overlay)
 	psCmd := append(baseCmd, "ps", "-q", service)
 
-	withStdout, outBuff := hostsys.WithStdout()
-	withStderr, errBuff := hostsys.WithStderr()
+	withStdout, outBuff := process.WithStdout()
+	withStderr, errBuff := process.WithStderr()
 
-	err = c.cli.Exec(psCmd[0], psCmd[1:], withStdout, withStderr, hostsys.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(psCmd[0], psCmd[1:], withStdout, withStderr, process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
 		slog.Debug("stderr from docker compose ps", "stderr", errBuff.String())
@@ -38,8 +38,8 @@ func (c *Compose) IsSvcRunning(ws *common.Workspace, p *common.Project, service 
 		return false, nil
 	}
 
-	withStdout, outBuff = hostsys.WithStdout()
-	withStderr, errBuff = hostsys.WithStderr()
+	withStdout, outBuff = process.WithStdout()
+	withStderr, errBuff = process.WithStderr()
 
 	err = c.cli.Exec("docker", []string{"inspect", "-f", "{{.State.Running}}", containerID}, withStdout, withStderr)
 

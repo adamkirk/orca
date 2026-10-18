@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
 )
 
 const ConfirmYes = "Yes"
@@ -23,16 +23,16 @@ type tui interface {
 }
 
 type executor interface {
-	Exec(cmdName string, args []string, opts ...hostsys.ExecOpt) error
+	Exec(cmdName string, args []string, opts ...process.ExecOpt) error
 }
 
 // withDir prepends a ChdirOpt to the given opts when dir is not empty
-func withDir(dir string, opts ...hostsys.ExecOpt) []hostsys.ExecOpt {
+func withDir(dir string, opts ...process.ExecOpt) []process.ExecOpt {
 	if dir == "" {
 		return opts
 	}
 
-	return append([]hostsys.ExecOpt{hostsys.ChdirOpt(dir)}, opts...)
+	return append([]process.ExecOpt{process.ChdirOpt(dir)}, opts...)
 }
 
 type Git struct {
@@ -61,15 +61,15 @@ func (g *Git) isInGitRepository(dir string) bool {
 }
 
 func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
-	stdoutOpt, stdout := hostsys.WithStdout()
-	stderrOpt, stderr := hostsys.WithStderr()
+	stdoutOpt, stdout := process.WithStdout()
+	stderrOpt, stderr := process.WithStderr()
 
 	dir := filepath.Dir(path)
 
 	err := g.exec.Exec("git", []string{
 		"rev-parse",
 		"--show-toplevel",
-	}, hostsys.ChdirOpt(dir), stdoutOpt, stderrOpt)
+	}, process.ChdirOpt(dir), stdoutOpt, stderrOpt)
 
 	if err != nil {
 		errOutput := stderr.String()
@@ -84,13 +84,13 @@ func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
 }
 
 func (g *Git) DirectoryHasOrigin(dir string, origin string) (bool, error) {
-	stdoutOpt, stdout := hostsys.WithStdout()
+	stdoutOpt, stdout := process.WithStdout()
 
 	err := g.exec.Exec("git", []string{
 		"remote",
 		"get-url",
 		"origin",
-	}, hostsys.ChdirOpt(dir), stdoutOpt)
+	}, process.ChdirOpt(dir), stdoutOpt)
 
 	if err != nil {
 		return false, err
