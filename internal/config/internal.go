@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/adamkirk/orca/internal/workspace"
@@ -70,9 +71,7 @@ func (c *config) getWorkspace(name string) (configWorkspace, error) {
 	i := c.workspaceIndex(name)
 
 	if i == -1 {
-		return configWorkspace{}, workspace.ErrUnknownWorkspace{
-			Name: name,
-		}
+		return configWorkspace{}, fmt.Errorf("%w: %s", workspace.ErrUnknownWorkspace, name)
 	}
 
 	return c.Workspaces[i], nil
@@ -98,9 +97,7 @@ func (c *config) getProject(wsName string, name string) (configProject, error) {
 	i := ws.projectIndex(name)
 
 	if i == -1 {
-		return configProject{}, workspace.ErrUnknownProject{
-			Name: name,
-		}
+		return configProject{}, fmt.Errorf("%w: %s", workspace.ErrUnknownProject, name)
 	}
 
 	return ws.Projects[i], nil

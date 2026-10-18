@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"fmt"
 	"slices"
 )
 
@@ -109,9 +110,7 @@ func (p Project) FindExtension(name string) (Extension, error) {
 		}
 	}
 
-	return Extension{}, ErrUnknownExtension{
-		Name: name,
-	}
+	return Extension{}, fmt.Errorf("%w: %s", ErrUnknownExtension, name)
 }
 
 type NetworkOverlayConfig struct {
@@ -138,9 +137,7 @@ func (ws *Workspace) GetProject(name string) (*Project, error) {
 	})
 
 	if i == -1 {
-		return nil, ErrUnknownProject{
-			Name: name,
-		}
+		return nil, fmt.Errorf("%w: %s", ErrUnknownProject, name)
 	}
 
 	return &ws.Projects[i], nil

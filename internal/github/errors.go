@@ -1,16 +1,8 @@
 package github
 
-import (
-	"errors"
-	"fmt"
+import "errors"
+
+var (
+	ErrUnexpectedAPIResponse = errors.New("unexpected API response")
+	ErrRateLimited           = errors.New("rate limit exceeded")
 )
-
-var ErrUnexpectedApiError = errors.New("unexpected API error")
-
-type ErrRateLimitedByApi struct {
-	Api string
-}
-
-func (err ErrRateLimitedByApi) Error() string {
-	return fmt.Sprintf("rate limit exceeded for '%s'", err.Api)
-}

@@ -29,7 +29,7 @@ Failed to create certificates directory!
 
 If there's more than one message in the chain, only the innermost one is shown, as it's the most specific. Errors without a message are shown as `Error: <error>`.
 
-Errors the user caused by aborting a prompt (`tui.ErrUserAbortedExecution`) aren't shown at all. Problems with a workspace config (`workspace.ErrInvalidWorkspaceConfig`) are listed in full.
+Errors the user caused by aborting a prompt (`tui.ErrUserAbortedExecution`) aren't shown at all. Problems with a workspace config (`workspace.InvalidWorkspaceConfigError`) are listed in full.
 
 ## Adding context
 
@@ -46,25 +46,28 @@ Always use `errors.Is` and `errors.AsType` (or `errors.As`), never compare error
 ```go
 if errors.Is(err, tui.ErrUserAbortedExecution) { ... }
 
-if notFound, ok := errors.AsType[workspace.ErrUnknownProject](err); ok { ... }
+if invalidCfg, ok := errors.AsType[workspace.InvalidWorkspaceConfigError](err); ok { ... }
 ```
 
 ## Defining errors
 
-Errors live in the package that returns them, in its `errors.go`.
+Errors live in the package that returns them, in its `errors.go`. Follow the standard library's naming: error values start with `Err` (`io.EOF`, `fs.ErrNotExist`), and error types end in `Error` (`os.PathError`).
 
-- If callers only need to know which error it was, use a sentinel, and wrap it with any detail:
+Use a sentinel value by default, and wrap it with any detail where it's returned. Callers can still check for it with `errors.Is`:
 
-  ```go
-  var ErrInvalidExecutionContext = errors.New("invalid execution context")
+```go
+var ErrUnknownProject = errors.New("unknown project")
 
-  return fmt.Errorf("%w: this command must be run in a singular project context", ErrInvalidExecutionContext)
-  ```
+return fmt.Errorf("%w: %s", ErrUnknownProject, name) // "unknown project: api"
+```
 
-- If callers need data from the error, use a struct:
+Only define a type when callers need data from the error, and name it `...Error`:
 
-  ```go
-  type ErrUnknownWorkspace struct {
-  	Name string
-  }
-  ```
+```go
+type InvalidWorkspaceConfigError struct {
+	Path     string
+	Problems []string
+}
+```
+
+Use value receivers for its `Error` method, as the existing types do, so callers match it with `errors.AsType[T]` rather than `errors.AsType[*T]`. If it wraps another error, give it an `Unwrap` method too (see `bus.HookFailedError`).

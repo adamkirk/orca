@@ -173,10 +173,7 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx workspace.Exec
 func (g *Git) handleCreate(execCtx workspace.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Name == "" || cmd.Name == previousBranchAlias {
 		return usererr.Wrap(
-			workspace.ErrInvalidInput{
-				To:  "co",
-				Msg: "an exact branch name must be supplied when creating a branch",
-			},
+			fmt.Errorf("%w to 'co': an exact branch name must be supplied when creating a branch", workspace.ErrInvalidInput),
 			"A branch name must be supplied when creating a branch!",
 		)
 	}
@@ -205,10 +202,7 @@ func (g *Git) handleCheckout(execCtx workspace.ExecutionContext, cmd CheckoutCom
 
 	if cmd.Name == previousBranchAlias {
 		return usererr.Wrap(
-			workspace.ErrInvalidInput{
-				To:  "co",
-				Msg: fmt.Sprintf("cannot use '%s' when checking out multiple projects", previousBranchAlias),
-			},
+			fmt.Errorf("%w to 'co': cannot use '%s' when checking out multiple projects", workspace.ErrInvalidInput, previousBranchAlias),
 			fmt.Sprintf("Cannot use '%s' when checking out multiple projects!", previousBranchAlias),
 		)
 	}

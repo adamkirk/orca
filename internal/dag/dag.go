@@ -1,28 +1,15 @@
 package dag
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 )
 
-type ErrVertexAlreadyExists struct {
-	Key string
-}
+var ErrVertexAlreadyExists = errors.New("vertex already exists in graph")
 
-func (err ErrVertexAlreadyExists) Error() string {
-	return fmt.Sprintf("vertex with key '%s' already exists in graph", err.Key)
-}
-
-type ErrVertexNotFoundForEdge struct {
-	Source  string
-	Missing string
-	Type    string
-}
-
-func (err ErrVertexNotFoundForEdge) Error() string {
-	return fmt.Sprintf("cannot add %s '%s' to '%s'", err.Type, err.Missing, err.Source)
-}
+var ErrVertexNotFoundForEdge = errors.New("vertex not found for edge")
 
 type Graphable interface {
 	GetKey() string
@@ -98,9 +85,7 @@ func (g *Graph) GetVertex(key string) *Vertex {
 
 func (g *Graph) AddVertex(key string) error {
 	if g.GetVertex(key) != nil {
-		return ErrVertexAlreadyExists{
-			Key: key,
-		}
+		return fmt.Errorf("%w: %s", ErrVertexAlreadyExists, key)
 	}
 
 	g.vertices[key] = &Vertex{
@@ -131,19 +116,11 @@ func (g *Graph) AddEdge(from string, to string) error {
 	destination := g.GetVertex(to)
 
 	if source == nil {
-		return ErrVertexNotFoundForEdge{
-			Missing: from,
-			Source:  to,
-			Type:    "parent",
-		}
+		return fmt.Errorf("%w: cannot add parent '%s' to '%s'", ErrVertexNotFoundForEdge, from, to)
 	}
 
 	if destination == nil {
-		return ErrVertexNotFoundForEdge{
-			Missing: to,
-			Source:  from,
-			Type:    "child",
-		}
+		return fmt.Errorf("%w: cannot add child '%s' to '%s'", ErrVertexNotFoundForEdge, to, from)
 	}
 
 	source.AddChild(to, destination)

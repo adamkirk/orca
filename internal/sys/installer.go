@@ -125,9 +125,7 @@ func (hs *HostSystem) getHostctlOSForDownload() (string, error) {
 	case "windows":
 		return "windows", nil
 	default:
-		return "", ErrUnsupportedOS{
-			OS: os,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedOS, os)
 	}
 }
 
@@ -138,9 +136,7 @@ func (hs *HostSystem) getHostctlArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", ErrUnsupportedArchitecture{
-			Arch: arch,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedArchitecture, arch)
 	}
 }
 
@@ -199,9 +195,7 @@ func (hs *HostSystem) getSopsOSForDownload() (string, error) {
 	case "linux":
 		return "linux", nil
 	default:
-		return "", ErrUnsupportedOS{
-			OS: os,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedOS, os)
 	}
 }
 
@@ -212,9 +206,7 @@ func (hs *HostSystem) getSopsArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", ErrUnsupportedArchitecture{
-			Arch: arch,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedArchitecture, arch)
 	}
 }
 
@@ -279,9 +271,7 @@ func (InstallCommand) MessageName() string {
 func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	if !cmd.Tool.IsKnown() {
 		return usererr.Wrap(
-			ErrUnknownTool{
-				Tool: string(cmd.Tool),
-			},
+			fmt.Errorf("%w: %s", ErrUnknownTool, string(cmd.Tool)),
 			fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)),
 		)
 	}
@@ -294,7 +284,7 @@ func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 		err = hs.installSops()
 	default:
 		return usererr.Wrap(
-			fmt.Errorf("%w: %s", ErrNotImplemented, "installation has not been implemented for this tool"),
+			fmt.Errorf("%w: installation has not been implemented for this tool", ErrNotImplemented),
 			"This tool is not supported!",
 		)
 	}
@@ -317,9 +307,7 @@ func (hs *HostSystem) getOrcaOSForDownload() (string, error) {
 	case "windows":
 		return "Windows", nil
 	default:
-		return "", ErrUnsupportedOS{
-			OS: os,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedOS, os)
 	}
 }
 
@@ -330,8 +318,6 @@ func (hs *HostSystem) getOrcaArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", ErrUnsupportedArchitecture{
-			Arch: arch,
-		}
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedArchitecture, arch)
 	}
 }

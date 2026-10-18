@@ -36,7 +36,7 @@ func (m *Manager) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
 	}
 
 	if !svcExists {
-		return usererr.Wrap(ErrUnknownService{Name: cmd.Service}, fmt.Sprintf("No such service: %s", cmd.Service))
+		return usererr.Wrap(fmt.Errorf("%w: %s", ErrUnknownService, cmd.Service), fmt.Sprintf("No such service: %s", cmd.Service))
 	}
 
 	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, cmd.Service)

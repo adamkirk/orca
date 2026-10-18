@@ -43,8 +43,8 @@ func (hs *HostSystem) checkByPathLookup(tool Tool) error {
 	if _, err := exec.LookPath(tool.Cmd); err != nil {
 		hs.tui.Error(fmt.Sprintf("'%s' was not found in the PATH", tool.Cmd))
 
-		return ErrToolsNotFoundOnSystem{
-			Errs: []ErrToolNotFoundOnSystem{
+		return ToolsNotFoundError{
+			Errs: []ToolNotFoundError{
 				{
 					Tool: tool.Cmd,
 				},
@@ -71,8 +71,8 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 			if exiterr.ExitCode() != 0 {
 				hs.tui.Error(fmt.Sprintf("'%s' returned a non-zero exit code!", fullCmdString))
 
-				return ErrToolsNotFoundOnSystem{
-					Errs: []ErrToolNotFoundOnSystem{
+				return ToolsNotFoundError{
+					Errs: []ToolNotFoundError{
 						{
 							Tool: tool.Cmd,
 						},
@@ -106,11 +106,11 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 
 	parents = append(parents, tool)
 
-	subErrs := []ErrToolNotFoundOnSystem{}
+	subErrs := []ToolNotFoundError{}
 
 	for _, sub := range tool.SubCmds {
 		if err := hs.ensureToolExists(sub, parents); err != nil {
-			if notFoundErr, ok := errors.AsType[ErrToolsNotFoundOnSystem](err); ok {
+			if notFoundErr, ok := errors.AsType[ToolsNotFoundError](err); ok {
 				subErrs = append(subErrs, notFoundErr.Errs...)
 			}
 
@@ -119,7 +119,7 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 	}
 
 	if len(subErrs) > 0 {
-		return ErrToolsNotFoundOnSystem{
+		return ToolsNotFoundError{
 			Errs: subErrs,
 		}
 	}
@@ -128,13 +128,13 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 }
 
 func (hs *HostSystem) VerifySetup() error {
-	errs := []ErrToolNotFoundOnSystem{}
+	errs := []ToolNotFoundError{}
 
 	for _, t := range defaultRequirements() {
 		err := hs.ensureToolExists(t, []Tool{})
 
 		if err != nil {
-			if toolNotFoundErr, ok := errors.AsType[ErrToolsNotFoundOnSystem](err); ok {
+			if toolNotFoundErr, ok := errors.AsType[ToolsNotFoundError](err); ok {
 				errs = append(errs, toolNotFoundErr.Errs...)
 				continue
 			}
@@ -144,7 +144,7 @@ func (hs *HostSystem) VerifySetup() error {
 	}
 
 	if len(errs) > 0 {
-		return ErrToolsNotFoundOnSystem{
+		return ToolsNotFoundError{
 			Errs: errs,
 		}
 	}

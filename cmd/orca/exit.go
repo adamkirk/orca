@@ -66,7 +66,7 @@ func reportError(out errorPrinter, err error) {
 
 	// Config problems can surface from anywhere a workspace is loaded, so
 	// they're shown here, in full, rather than in each handler
-	if invalidCfg, ok := errors.AsType[workspace.ErrInvalidWorkspaceConfig](err); ok {
+	if invalidCfg, ok := errors.AsType[workspace.InvalidWorkspaceConfigError](err); ok {
 		out.Error(fmt.Sprintf("Workspace config '%s' is invalid:", invalidCfg.Path))
 
 		for _, problem := range invalidCfg.Problems {

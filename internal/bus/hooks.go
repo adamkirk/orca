@@ -71,7 +71,7 @@ func (b *Bus) runWithHooks(ctx context.Context, msg Named, h erasedHandler) (any
 		ev := Event{Phase: PhaseBefore, Name: name, Message: msg}
 
 		if err := hook(ctx, ev); err != nil {
-			return nil, ErrHookFailed{Phase: PhaseBefore, Name: name, Err: err}
+			return nil, HookFailedError{Phase: PhaseBefore, Name: name, Err: err}
 		}
 	}
 
@@ -83,7 +83,7 @@ func (b *Bus) runWithHooks(ctx context.Context, msg Named, h erasedHandler) (any
 		ev := Event{Phase: PhaseAfter, Name: name, Message: msg, Result: res, Err: err}
 
 		if hookErr := hook(ctx, ev); hookErr != nil {
-			hookErrs = append(hookErrs, ErrHookFailed{Phase: PhaseAfter, Name: name, Err: hookErr})
+			hookErrs = append(hookErrs, HookFailedError{Phase: PhaseAfter, Name: name, Err: hookErr})
 		}
 	}
 
@@ -95,16 +95,16 @@ func (b *Bus) runWithHooks(ctx context.Context, msg Named, h erasedHandler) (any
 	return res, errors.Join(append([]error{err}, hookErrs...)...)
 }
 
-type ErrHookFailed struct {
+type HookFailedError struct {
 	Phase Phase
 	Name  string
 	Err   error
 }
 
-func (e ErrHookFailed) Error() string {
+func (e HookFailedError) Error() string {
 	return fmt.Sprintf("%s hook for '%s' failed: %s", e.Phase, e.Name, e.Err)
 }
 
-func (e ErrHookFailed) Unwrap() error {
+func (e HookFailedError) Unwrap() error {
 	return e.Err
 }

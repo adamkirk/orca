@@ -33,28 +33,13 @@ type expectation struct {
 
 type expectations map[string]expectation
 
-func Test_ErrorMessages(t *testing.T) {
-	errVertexAlreadyExists := ErrVertexAlreadyExists{
-		Key: "blah",
-	}
-
-	assert.Equal(t, "vertex with key 'blah' already exists in graph", errVertexAlreadyExists.Error())
-
-	errVertexNotFoundForEdge := ErrVertexNotFoundForEdge{
-		Source:  "blah",
-		Missing: "meh",
-		Type:    "child",
-	}
-
-	assert.Equal(t, "cannot add child 'meh' to 'blah'", errVertexNotFoundForEdge.Error())
-}
-
 func Test_NewGraph(t *testing.T) {
 	tests := []struct {
-		name      string
-		in        []graphable
-		expectErr error
-		expect    expectations
+		name         string
+		in           []graphable
+		expectErr    error
+		expectErrMsg string
+		expect       expectations
 	}{
 		{
 			name: "graph with no edges",
@@ -95,9 +80,8 @@ func Test_NewGraph(t *testing.T) {
 					children: []string{},
 				},
 			},
-			expectErr: ErrVertexAlreadyExists{
-				Key: "v1",
-			},
+			expectErr:    ErrVertexAlreadyExists,
+			expectErrMsg: "vertex already exists in graph: v1",
 		},
 		{
 			name: "graph with with parent and children defined in graphable",
@@ -210,11 +194,8 @@ func Test_NewGraph(t *testing.T) {
 					children: []string{},
 				},
 			},
-			expectErr: ErrVertexNotFoundForEdge{
-				Source:  "v1",
-				Missing: "v3",
-				Type:    "child",
-			},
+			expectErr:    ErrVertexNotFoundForEdge,
+			expectErrMsg: "vertex not found for edge: cannot add child 'v3' to 'v1'",
 		},
 		{
 			name: "adding edge to missing parent vertex",
@@ -232,11 +213,8 @@ func Test_NewGraph(t *testing.T) {
 					children: []string{},
 				},
 			},
-			expectErr: ErrVertexNotFoundForEdge{
-				Source:  "v1",
-				Missing: "v3",
-				Type:    "parent",
-			},
+			expectErr:    ErrVertexNotFoundForEdge,
+			expectErrMsg: "vertex not found for edge: cannot add parent 'v3' to 'v1'",
 		},
 		{
 			name: "graph with many edges",
@@ -333,7 +311,13 @@ func Test_NewGraph(t *testing.T) {
 		t.Run(test.name, func(tt *testing.T) {
 			g, err := NewGraph(test.in)
 
-			require.Equal(tt, test.expectErr, err)
+			if test.expectErr != nil {
+				require.ErrorIs(tt, err, test.expectErr)
+				require.EqualError(tt, err, test.expectErrMsg)
+			} else {
+				require.NoError(tt, err)
+			}
+
 			assertGraphMatchesExpectations(tt, g, test.expect)
 		})
 	}

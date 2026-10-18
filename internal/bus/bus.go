@@ -9,6 +9,7 @@ package bus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -88,7 +89,7 @@ func (b *Bus) Dispatch[R any](ctx context.Context, msg Message[R]) (R, error) {
 	h, ok := b.handlers[reflect.TypeOf(msg)]
 
 	if !ok {
-		return zero, ErrNoHandler{Name: msg.MessageName()}
+		return zero, fmt.Errorf("%w: '%s'", ErrNoHandler, msg.MessageName())
 	}
 
 	next := func(ctx context.Context) (any, error) {
@@ -126,10 +127,4 @@ func (b *Bus) HandledTypes() []string {
 	return types
 }
 
-type ErrNoHandler struct {
-	Name string
-}
-
-func (e ErrNoHandler) Error() string {
-	return fmt.Sprintf("no handler registered for message '%s'", e.Name)
-}
+var ErrNoHandler = errors.New("no handler registered for message")

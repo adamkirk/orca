@@ -7,15 +7,19 @@ import (
 )
 
 var (
-	ErrInvalidArchive = errors.New("invalid archive used")
-	ErrNotImplemented = errors.New("not implemented")
+	ErrInvalidArchive          = errors.New("invalid archive used")
+	ErrNotImplemented          = errors.New("not implemented")
+	ErrVersionNotFound         = errors.New("version not found")
+	ErrUnsupportedOS           = errors.New("unsupported OS")
+	ErrUnsupportedArchitecture = errors.New("unsupported architecture")
+	ErrUnknownTool             = errors.New("unknown tool")
 )
 
-type ErrToolsNotFoundOnSystem struct {
-	Errs []ErrToolNotFoundOnSystem
+type ToolsNotFoundError struct {
+	Errs []ToolNotFoundError
 }
 
-func (err ErrToolsNotFoundOnSystem) Error() string {
+func (err ToolsNotFoundError) Error() string {
 	tools := make([]string, len(err.Errs))
 
 	for i, e := range err.Errs {
@@ -25,42 +29,10 @@ func (err ErrToolsNotFoundOnSystem) Error() string {
 	return fmt.Sprintf("tools not available on PATH: %s", strings.Join(tools, ", "))
 }
 
-type ErrToolNotFoundOnSystem struct {
+type ToolNotFoundError struct {
 	Tool string
 }
 
-func (err ErrToolNotFoundOnSystem) Error() string {
+func (err ToolNotFoundError) Error() string {
 	return fmt.Sprintf("tool not available on PATH: %s", err.Tool)
-}
-
-type ErrVersionNotFound struct {
-	Version string
-}
-
-func (err ErrVersionNotFound) Error() string {
-	return fmt.Sprintf("version did not exist: %s", err.Version)
-}
-
-type ErrUnsupportedOS struct {
-	OS string
-}
-
-func (err ErrUnsupportedOS) Error() string {
-	return fmt.Sprintf("unsupported OS: %s", err.OS)
-}
-
-type ErrUnsupportedArchitecture struct {
-	Arch string
-}
-
-func (err ErrUnsupportedArchitecture) Error() string {
-	return fmt.Sprintf("unsupported architecture: %s", err.Arch)
-}
-
-type ErrUnknownTool struct {
-	Tool string
-}
-
-func (err ErrUnknownTool) Error() string {
-	return fmt.Sprintf("unknown tool: %s", err.Tool)
 }

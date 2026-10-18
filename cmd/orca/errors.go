@@ -1,20 +1,8 @@
 package main
 
-import "fmt"
+import "errors"
 
-type ErrArgumentRequired struct {
-	Name  string
-	Index int
-}
-
-func (err ErrArgumentRequired) Error() string {
-	return fmt.Sprintf("the '%s' argument must be supplied at position %d", err.Name, err.Index)
-}
-
-type ErrTooManyArguments struct {
-	Expected int
-}
-
-func (err ErrTooManyArguments) Error() string {
-	return fmt.Sprintf("too many arguments supplied, expected only %d", err.Expected)
-}
+var (
+	ErrArgumentRequired = errors.New("argument required")
+	ErrTooManyArguments = errors.New("too many arguments")
+)

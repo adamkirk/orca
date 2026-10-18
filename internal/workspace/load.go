@@ -169,9 +169,7 @@ func (wcr *Repository) loadProject(projectMeta ProjectMeta) (*model.ProjectConfi
 	}
 
 	if !found {
-		return nil, ErrProjectConfigNotFound{
-			Path: path,
-		}
+		return nil, fmt.Errorf("%w: %s", ErrProjectConfigNotFound, path)
 	}
 
 	contents, err := afero.ReadFile(wcr.fs, path)
@@ -183,10 +181,7 @@ func (wcr *Repository) loadProject(projectMeta ProjectMeta) (*model.ProjectConfi
 	cfg := &model.ProjectConfig{}
 
 	if err := yaml.Unmarshal(contents, cfg); err != nil {
-		return nil, ErrConfigIsNotValidYAML{
-			Path:       path,
-			ParseError: err.Error(),
-		}
+		return nil, fmt.Errorf("%w: %s: %w", ErrConfigIsNotValidYAML, path, err)
 	}
 
 	return cfg, nil
@@ -200,9 +195,7 @@ func (wcr *Repository) loadConfigFromPath(path string) (*model.WorkspaceConfig, 
 	}
 
 	if !found {
-		return nil, ErrWorkspaceConfigNotFound{
-			Path: path,
-		}
+		return nil, fmt.Errorf("%w: %s", ErrWorkspaceConfigNotFound, path)
 	}
 
 	contents, err := afero.ReadFile(wcr.fs, path)
@@ -218,10 +211,7 @@ func parseWorkspaceConfig(contents []byte, path string) (*model.WorkspaceConfig,
 	cfg := &model.WorkspaceConfig{}
 
 	if err := yaml.Unmarshal(contents, cfg); err != nil {
-		return nil, ErrConfigIsNotValidYAML{
-			Path:       path,
-			ParseError: err.Error(),
-		}
+		return nil, fmt.Errorf("%w: %s: %w", ErrConfigIsNotValidYAML, path, err)
 	}
 
 	if err := validateWorkspaceConfig(cfg, path); err != nil {
@@ -256,7 +246,7 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	}
 
 	if len(problems) > 0 {
-		return ErrInvalidWorkspaceConfig{
+		return InvalidWorkspaceConfigError{
 			Path:     path,
 			Problems: problems,
 		}
@@ -337,7 +327,7 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		projectMeta, err := wcr.userConfig.GetProjectMeta(wsMeta.Name, pCfg.Name)
 
 		if err != nil {
-			if _, ok := errors.AsType[ErrUnknownProject](err); ok {
+			if errors.Is(err, ErrUnknownProject) {
 				ws.Projects[i] = Project{
 					Name: pCfg.Name,
 					RepositoryConfig: ProjectRepositoryConfig{

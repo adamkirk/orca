@@ -1,11 +1,5 @@
 package stack
 
-import "fmt"
+import "errors"
 
-type ErrUnknownService struct {
-	Name string
-}
-
-func (err ErrUnknownService) Error() string {
-	return fmt.Sprintf("unknown service: %s", err.Name)
-}
+var ErrUnknownService = errors.New("unknown service")

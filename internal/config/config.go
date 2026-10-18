@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/adamkirk/orca/internal/workspace"
@@ -56,9 +57,7 @@ func (c *Config) save() error {
 // update the inUse configuration.
 func (c *Config) SwitchWorkspace(workspaceName string) error {
 	if !c.persisted.workspaceExists(workspaceName) {
-		return workspace.ErrUnknownWorkspace{
-			Name: workspaceName,
-		}
+		return fmt.Errorf("%w: %s", workspace.ErrUnknownWorkspace, workspaceName)
 	}
 
 	c.persisted.CurrentWorkspace = workspaceName
@@ -78,9 +77,7 @@ func (c *Config) ClearCurrentWorkspace() error {
 // config as it cannot be overridden by any CLI arguments or environment variables.
 func (c *Config) AddWorkspace(path string, name string) error {
 	if c.persisted.workspaceExists(name) {
-		return workspace.ErrWorkspaceAlreadyExists{
-			Name: name,
-		}
+		return fmt.Errorf("%w: %s", workspace.ErrWorkspaceAlreadyExists, name)
 	}
 
 	c.persisted.Workspaces = append(c.persisted.Workspaces, configWorkspace{
@@ -119,9 +116,7 @@ func (c *Config) GetProjectMeta(wsName string, projectName string) (workspace.Pr
 	i := ws.projectIndex(projectName)
 
 	if i == -1 {
-		return workspace.ProjectMeta{}, workspace.ErrUnknownProject{
-			Name: projectName,
-		}
+		return workspace.ProjectMeta{}, fmt.Errorf("%w: %s", workspace.ErrUnknownProject, projectName)
 	}
 
 	return workspace.ProjectMeta{
@@ -137,9 +132,7 @@ func (c *Config) GetWorkspaceMeta(name string) (workspace.WorkspaceMeta, error) 
 	i := c.persisted.workspaceIndex(name)
 
 	if i == -1 {
-		return workspace.WorkspaceMeta{}, workspace.ErrUnknownWorkspace{
-			Name: name,
-		}
+		return workspace.WorkspaceMeta{}, fmt.Errorf("%w: %s", workspace.ErrUnknownWorkspace, name)
 	}
 
 	return workspace.WorkspaceMeta{
@@ -175,7 +168,7 @@ func (c *Config) SetProjectPath(wsName string, name string, path string) error {
 	project, err := c.persisted.getProject(wsName, name)
 
 	if err != nil {
-		if _, ok := errors.AsType[workspace.ErrUnknownProject](err); !ok {
+		if !errors.Is(err, workspace.ErrUnknownProject) {
 			return err
 		}
 

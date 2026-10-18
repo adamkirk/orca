@@ -57,9 +57,7 @@ func (hs *HostSystem) ensureSelfVersionExists(v *semver.Version) error {
 	}
 
 	if !exists {
-		return ErrVersionNotFound{
-			Version: v.String(),
-		}
+		return fmt.Errorf("%w: %s", ErrVersionNotFound, v.String())
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/adamkirk/orca/internal/workspace"
@@ -146,9 +147,7 @@ currentWorkspace: blah
 
 	err = cfg.AddWorkspace("/other/path/meh", "meh")
 
-	assert.Equal(t, workspace.ErrWorkspaceAlreadyExists{
-		Name: "meh",
-	}, err)
+	assert.ErrorIs(t, err, workspace.ErrWorkspaceAlreadyExists)
 }
 
 func Test_AddWorkspace(t *testing.T) {
@@ -177,9 +176,7 @@ currentWorkspace: meh
 	assert.Equal(t, expectedContents, string(contents))
 
 	err = cfg.SwitchWorkspace("missing")
-	require.Equal(t, workspace.ErrUnknownWorkspace{
-		Name: "missing",
-	}, err)
+	require.ErrorIs(t, err, workspace.ErrUnknownWorkspace)
 	assertInternalConfigsAreDifferent(t, cfg)
 }
 
@@ -230,9 +227,7 @@ func Test_GetWorkspaceMeta(t *testing.T) {
 	}, location)
 
 	_, err = cfg.GetWorkspaceMeta("missing")
-	require.Equal(t, workspace.ErrUnknownWorkspace{
-		Name: "missing",
-	}, err)
+	require.ErrorIs(t, err, workspace.ErrUnknownWorkspace)
 }
 
 func Test_LoggingGetters(t *testing.T) {
@@ -331,9 +326,7 @@ func Test_ProjectExists(t *testing.T) {
 
 	exists, err = cfg.ProjectExists("missing", "blah")
 
-	require.Equal(t, workspace.ErrUnknownWorkspace{
-		Name: "missing",
-	}, err)
+	require.ErrorIs(t, err, workspace.ErrUnknownWorkspace)
 	assert.False(t, exists)
 }
 
@@ -545,15 +538,13 @@ currentWorkspace: blah
 		},
 
 		{
-			name:        "updating a project in a workspace that doesn't exist",
-			initialFile: existingWithMultipleWorkspacesAndProjects,
-			wsName:      "missing",
-			projectName: "blah2",
-			projectPath: "/other/path/blah/2",
-			expect:      nil,
-			expectErr: workspace.ErrUnknownWorkspace{
-				Name: "missing",
-			},
+			name:             "updating a project in a workspace that doesn't exist",
+			initialFile:      existingWithMultipleWorkspacesAndProjects,
+			wsName:           "missing",
+			projectName:      "blah2",
+			projectPath:      "/other/path/blah/2",
+			expect:           nil,
+			expectErr:        fmt.Errorf("%w: missing", workspace.ErrUnknownWorkspace),
 			expectFileOnDisk: existingWithMultipleWorkspacesAndProjects,
 		},
 	}

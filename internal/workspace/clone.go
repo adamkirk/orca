@@ -97,10 +97,7 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 			)
 		}
 
-		return ErrDirectoryDoesNotMatchOrigin{
-			Path:   into,
-			Origin: project.RepositoryConfig.SSH,
-		}
+		return fmt.Errorf("%w: '%s' (expected %s)", ErrDirectoryDoesNotMatchOrigin, into, project.RepositoryConfig.SSH)
 	}
 
 	parentDir := filepath.Dir(into)
@@ -167,7 +164,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
-		if _, ok := errors.AsType[ErrUnknownWorkspace](err); ok {
+		if errors.Is(err, ErrUnknownWorkspace) {
 			return usererr.Wrap(err, fmt.Sprintf("Unknown workspace: %s", wsName))
 		}
 
@@ -207,7 +204,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	}
 
 	if cloneErr != nil {
-		if _, ok := cloneErr.(ErrDirectoryAlreadyExists); ok {
+		if errors.Is(cloneErr, ErrDirectoryAlreadyExists) {
 			return usererr.Wrap(cloneErr, "Cannot clone into the given directory, it already exists!")
 		}
 

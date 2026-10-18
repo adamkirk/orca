@@ -57,17 +57,12 @@ func handleCheck(cmd *cobra.Command, _ []string) error {
 func handleSysInstall(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return usererr.Wrap(
-			ErrArgumentRequired{
-				Name:  "tool",
-				Index: 1,
-			},
+			fmt.Errorf("%w: 'tool' at position 1", ErrArgumentRequired),
 			"Must provide the name of the tool as the first argument",
 		)
 	} else if len(args) > 1 {
 		return usererr.Wrap(
-			ErrTooManyArguments{
-				Expected: 1,
-			},
+			fmt.Errorf("%w, expected only 1", ErrTooManyArguments),
 			"Too many arguments provided!",
 		)
 	}

@@ -21,7 +21,7 @@ func (p *stubPrinter) Error(msg ...string) {
 
 func Test_ReportError(t *testing.T) {
 	cause := errors.New("permission denied")
-	invalidCfg := workspace.ErrInvalidWorkspaceConfig{
+	invalidCfg := workspace.InvalidWorkspaceConfigError{
 		Path:     "/code/orca.workspace.yaml",
 		Problems: []string{"name is required"},
 	}

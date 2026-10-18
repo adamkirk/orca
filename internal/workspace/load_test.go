@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -38,13 +39,13 @@ projects:
 	t.Run("invalid yaml", func(t *testing.T) {
 		_, err := repo.ParseUnconfiguredWorkspace([]byte("name: [acme"), "orca.workspace.yaml")
 
-		assert.IsType(t, ErrConfigIsNotValidYAML{}, err)
+		assert.ErrorIs(t, err, ErrConfigIsNotValidYAML)
 	})
 
 	t.Run("wrong shape", func(t *testing.T) {
 		_, err := repo.ParseUnconfiguredWorkspace([]byte("projects: acme"), "orca.workspace.yaml")
 
-		assert.IsType(t, ErrConfigIsNotValidYAML{}, err)
+		assert.ErrorIs(t, err, ErrConfigIsNotValidYAML)
 	})
 
 	t.Run("missing required fields", func(t *testing.T) {
@@ -61,7 +62,7 @@ projects:
 
 		_, err := repo.ParseUnconfiguredWorkspace(contents, "orca.workspace.yaml")
 
-		assert.Equal(t, ErrInvalidWorkspaceConfig{
+		assert.Equal(t, InvalidWorkspaceConfigError{
 			Path: "orca.workspace.yaml",
 			Problems: []string{
 				"'name' is required",
@@ -81,14 +82,14 @@ func (s stubUserConfig) GetWorkspaceMeta(name string) (WorkspaceMeta, error) {
 	meta, ok := s.workspaces[name]
 
 	if !ok {
-		return WorkspaceMeta{}, ErrUnknownWorkspace{Name: name}
+		return WorkspaceMeta{}, fmt.Errorf("%w: %s", ErrUnknownWorkspace, name)
 	}
 
 	return meta, nil
 }
 
 func (s stubUserConfig) GetProjectMeta(wsName string, projectName string) (ProjectMeta, error) {
-	return ProjectMeta{}, ErrUnknownProject{Name: projectName}
+	return ProjectMeta{}, fmt.Errorf("%w: %s", ErrUnknownProject, projectName)
 }
 
 func TestLoadValidatesConfig(t *testing.T) {
@@ -105,7 +106,7 @@ func TestLoadValidatesConfig(t *testing.T) {
 
 	_, err := repo.Load("acme")
 
-	assert.Equal(t, ErrInvalidWorkspaceConfig{
+	assert.Equal(t, InvalidWorkspaceConfigError{
 		Path: path,
 		Problems: []string{
 			"'name' is required",

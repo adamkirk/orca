@@ -66,8 +66,8 @@ func Test_ExecutionContextMiddleware_Resolve(t *testing.T) {
 		Workspace:        &workspace.Workspace{Name: "acme"},
 		WorkingDirectory: "/somewhere",
 	}
-	noWorkspace := fmt.Errorf("%w: %s", workspace.ErrCouldNotDetermineWorkspace, "nope")
-	otherErr := workspace.ErrUnknownWorkspace{Name: "missing"}
+	noWorkspace := fmt.Errorf("%w: nope", workspace.ErrCouldNotDetermineWorkspace)
+	otherErr := fmt.Errorf("%w: missing", workspace.ErrUnknownWorkspace)
 
 	tests := []struct {
 		name       string

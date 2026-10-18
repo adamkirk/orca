@@ -186,11 +186,7 @@ func (cog *ComposeOverlayGenerator) addTLSInjectionOverlay(ctx *overlayGeneratio
 	path = fmt.Sprintf("%s/", strings.TrimSuffix(path, "/"))
 
 	if err := validateBindMountTarget(path); err != nil {
-		return ErrInvalidValueForOverlayModifier{
-			Service: s,
-			Message: err.Error(),
-			Label:   tlsInjectCertsLabel,
-		}
+		return fmt.Errorf("%w: label '%s' (service=%s): %w", ErrInvalidValueForOverlayModifier, tlsInjectCertsLabel, s, err)
 	}
 
 	svc.Volumes = append(svc.Volumes, types.ServiceVolumeConfig{

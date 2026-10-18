@@ -31,7 +31,7 @@ func (p *Runner) RunAll(ws *workspace.Workspace, project *workspace.Project) err
 
 func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provisioner workspace.Provisioner) error {
 	if provisioner.ExampleFile == nil {
-		return fmt.Errorf("%w: %s", ErrUnsupportedProvisioner, "the example file provisioner must be defined")
+		return fmt.Errorf("%w: the example file provisioner must be defined", ErrUnsupportedProvisioner)
 	}
 
 	srcPath := filepath.Join(project.ProjectDir, provisioner.ExampleFile.Src)
@@ -55,9 +55,7 @@ func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provis
 
 	if !srcExists {
 		return usererr.Wrap(
-			workspace.ErrFileNotFound{
-				Path: srcPath,
-			},
+			fmt.Errorf("%w: %s", workspace.ErrFileNotFound, srcPath),
 			"Failed to run provisioner, source file not found",
 		)
 	}

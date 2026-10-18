@@ -43,7 +43,8 @@ func Test_Dispatch_NoHandler(t *testing.T) {
 
 	_, err := b.Dispatch(context.Background(), doCommand{})
 
-	assert.Equal(t, bus.ErrNoHandler{Name: "do"}, err)
+	assert.ErrorIs(t, err, bus.ErrNoHandler)
+	assert.EqualError(t, err, "no handler registered for message: 'do'")
 }
 
 func Test_Handle_PanicsOnDuplicate(t *testing.T) {
@@ -155,7 +156,7 @@ func Test_Hooks_BeforeErrorStopsDispatch(t *testing.T) {
 
 	assert.ErrorIs(t, err, hookErr)
 
-	var hookFailed bus.ErrHookFailed
+	var hookFailed bus.HookFailedError
 	require.ErrorAs(t, err, &hookFailed)
 	assert.Equal(t, bus.PhaseBefore, hookFailed.Phase)
 	assert.Equal(t, "do", hookFailed.Name)
