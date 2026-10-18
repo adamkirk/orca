@@ -1,6 +1,7 @@
 package tls_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/adamkirk/orca/internal/common"
@@ -12,17 +13,17 @@ import (
 
 func Test_CertificateManager_Generate(t *testing.T) {
 	tests := []struct {
-		name            string
-		in              tls.GenerateDTO
-		expect          error
-		configureTui    func(*testing.T, *tls_mocks.MockTui)
-		configureWsRepo func(*testing.T, *tls_mocks.MockWorkspaceRepo)
-		reRun           bool
+		name              string
+		in                tls.GenerateCommand
+		expect            error
+		configureTui      func(*testing.T, *tls_mocks.MockTui)
+		configureResolver func(*testing.T, *tls_mocks.MockContextResolver)
+		reRun             bool
 	}{
 		{
 			name: "success - no certificates",
-			in: tls.GenerateDTO{
-				WorkspaceName: "test",
+			in: tls.GenerateCommand{
+				Workspace: "test",
 			},
 			expect: nil,
 			configureTui: func(tt *testing.T, tui *tls_mocks.MockTui) {
@@ -32,16 +33,16 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Creating certificate: /some/path/cert.pem"})
 				tui.EXPECT().Success([]string{"Certificate /some/path/cert.pem created successfully!"})
 			},
-			configureWsRepo: func(tt *testing.T, repo *tls_mocks.MockWorkspaceRepo) {
-				repo.EXPECT().Load("test").Return(&common.Workspace{
+			configureResolver: func(tt *testing.T, resolver *tls_mocks.MockContextResolver) {
+				resolver.EXPECT().Resolve("test", "").Return(common.ExecutionContext{Workspace: &common.Workspace{
 					Projects: []common.Project{},
-				}, nil)
+				}}, nil)
 			},
 		},
 		{
 			name: "success - generate 1 certificate",
-			in: tls.GenerateDTO{
-				WorkspaceName: "test",
+			in: tls.GenerateCommand{
+				Workspace: "test",
 			},
 			expect: nil,
 			configureTui: func(tt *testing.T, tui *tls_mocks.MockTui) {
@@ -58,8 +59,8 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Creating certificate: /some/path/certs/_.example.com.cert"})
 				tui.EXPECT().Success([]string{"Certificate /some/path/certs/_.example.com.cert created successfully!"})
 			},
-			configureWsRepo: func(tt *testing.T, repo *tls_mocks.MockWorkspaceRepo) {
-				repo.EXPECT().Load("test").Return(&common.Workspace{
+			configureResolver: func(tt *testing.T, resolver *tls_mocks.MockContextResolver) {
+				resolver.EXPECT().Resolve("test", "").Return(common.ExecutionContext{Workspace: &common.Workspace{
 					Projects: []common.Project{
 						{
 							Config: common.ProjectConfig{
@@ -69,14 +70,14 @@ func Test_CertificateManager_Generate(t *testing.T) {
 							},
 						},
 					},
-				}, nil)
+				}}, nil)
 			},
 		},
 
 		{
 			name: "success - re-run",
-			in: tls.GenerateDTO{
-				WorkspaceName: "test",
+			in: tls.GenerateCommand{
+				Workspace: "test",
 			},
 			expect: nil,
 			reRun:  true,
@@ -102,8 +103,8 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/_.example.com.cert already exists, skipping creation."})
 				// tui.EXPECT().Info([]string{"Key /some/path/key.pem already exists, skipping creation."})
 			},
-			configureWsRepo: func(tt *testing.T, repo *tls_mocks.MockWorkspaceRepo) {
-				repo.EXPECT().Load("test").Return(&common.Workspace{
+			configureResolver: func(tt *testing.T, resolver *tls_mocks.MockContextResolver) {
+				resolver.EXPECT().Resolve("test", "").Return(common.ExecutionContext{Workspace: &common.Workspace{
 					Projects: []common.Project{
 						{
 							Config: common.ProjectConfig{
@@ -113,14 +114,14 @@ func Test_CertificateManager_Generate(t *testing.T) {
 							},
 						},
 					},
-				}, nil)
+				}}, nil)
 			},
 		},
 
 		{
 			name: "success - re-run with multiple",
-			in: tls.GenerateDTO{
-				WorkspaceName: "test",
+			in: tls.GenerateCommand{
+				Workspace: "test",
 			},
 			expect: nil,
 			reRun:  true,
@@ -155,8 +156,8 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().RecordIfError("Failed to load key /some/path/certs/blah.test.key", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/blah.test.cert already exists, skipping creation."})
 			},
-			configureWsRepo: func(tt *testing.T, repo *tls_mocks.MockWorkspaceRepo) {
-				repo.EXPECT().Load("test").Return(&common.Workspace{
+			configureResolver: func(tt *testing.T, resolver *tls_mocks.MockContextResolver) {
+				resolver.EXPECT().Resolve("test", "").Return(common.ExecutionContext{Workspace: &common.Workspace{
 					Projects: []common.Project{
 						{
 							Config: common.ProjectConfig{
@@ -167,7 +168,7 @@ func Test_CertificateManager_Generate(t *testing.T) {
 							},
 						},
 					},
-				}, nil)
+				}}, nil)
 			},
 		},
 	}
@@ -179,22 +180,22 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				test.configureTui(tt, tui)
 			}
 
-			wsRepo := tls_mocks.NewMockWorkspaceRepo(t)
-			if test.configureWsRepo != nil {
-				test.configureWsRepo(tt, wsRepo)
+			resolver := tls_mocks.NewMockContextResolver(t)
+			if test.configureResolver != nil {
+				test.configureResolver(tt, resolver)
 			}
 
 			fs := afero.NewMemMapFs()
 
-			cm := tls.NewCertificateManager(fs, wsRepo, tui, "/some/path")
+			cm := tls.NewCertificateManager(fs, resolver, tui, "/some/path")
 
-			assert.Equal(tt, test.expect, cm.Generate(test.in))
+			assert.Equal(tt, test.expect, cm.Generate(context.Background(), test.in))
 
 			if !test.reRun {
 				return
 			}
 
-			assert.Equal(tt, test.expect, cm.Generate(test.in))
+			assert.Equal(tt, test.expect, cm.Generate(context.Background(), test.in))
 		})
 	}
 }

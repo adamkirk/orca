@@ -1,9 +1,20 @@
 package workspaces
 
-type LsDTO struct {
+import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
+)
+
+type LsQuery struct {
+	bus.Returns[bus.Void]
 }
 
-func (m *Manager) Ls(dto LsDTO) error {
+func (LsQuery) MessageName() string {
+	return "ws.ls"
+}
+
+func (m *Manager) Ls(_ context.Context, query LsQuery) error {
 	current := m.configManager.GetCurrentWorkspace()
 	locs := m.configManager.GetAllWorkspaceMeta()
 

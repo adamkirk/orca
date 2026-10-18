@@ -1,13 +1,17 @@
 package git
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
 
-type UndoLastXCommitsDTO struct {
+type UndoLastXCommitsCommand struct {
+	bus.Returns[bus.Void]
+
 	// The amount of commits to remoe
 	Amount           int
 	SkipConfirmation bool
@@ -15,12 +19,16 @@ type UndoLastXCommitsDTO struct {
 	Dir string
 }
 
-func (g *Git) UndoLastXCommits(dto UndoLastXCommitsDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (UndoLastXCommitsCommand) MessageName() string {
+	return "g.undo"
+}
+
+func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) error {
+	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	if !dto.SkipConfirmation {
+	if !cmd.SkipConfirmation {
 		result, err := g.tui.PresentChoices([]string{
 			ConfirmNo,
 			ConfirmYes,
@@ -43,6 +51,6 @@ func (g *Git) UndoLastXCommits(dto UndoLastXCommitsDTO) error {
 	return g.exec.Exec("git", []string{
 		"reset",
 		"--hard",
-		fmt.Sprintf("HEAD~%d", dto.Amount),
-	}, withDir(dto.Dir, hostsys.WithHostIO())...)
+		fmt.Sprintf("HEAD~%d", cmd.Amount),
+	}, withDir(cmd.Dir, hostsys.WithHostIO())...)
 }

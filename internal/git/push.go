@@ -1,6 +1,9 @@
 package git
 
 import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
@@ -11,12 +14,12 @@ type PushBranchDTO struct {
 	Dir string
 }
 
-func (g *Git) PushBranch(dto PushBranchDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (g *Git) PushBranch(cmd PushBranchDTO) error {
+	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	branch, err := g.GetCurrentBranch(dto.Dir)
+	branch, err := g.GetCurrentBranch(cmd.Dir)
 
 	if err != nil {
 		return g.tui.RecordIfError("Failed to determine current branch, and no branch was supplied!", err)
@@ -26,20 +29,26 @@ func (g *Git) PushBranch(dto PushBranchDTO) error {
 		"push",
 	}
 
-	if dto.Force {
+	if cmd.Force {
 		args = append(args, "-f")
 	}
 
 	args = append(args, "origin", branch)
 
-	return g.exec.Exec("git", args, withDir(dto.Dir, hostsys.WithHostIO())...)
+	return g.exec.Exec("git", args, withDir(cmd.Dir, hostsys.WithHostIO())...)
 }
 
-type PushDTO struct {
+type PushCommand struct {
+	bus.Returns[bus.Void]
+
 	AllProjects bool
 	Workspace   string
 	Project     string
 	Force       bool
+}
+
+func (PushCommand) MessageName() string {
+	return "g.push"
 }
 
 // pushInContext pushes the current branch for the resolved project (or working
@@ -62,12 +71,12 @@ func (g *Git) pushInContext(ctx common.ExecutionContext, allProjects bool, force
 	return nil
 }
 
-func (g *Git) Push(dto PushDTO) error {
-	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
+func (g *Git) Push(_ context.Context, cmd PushCommand) error {
+	ctx, err := g.resolveContext(cmd.Workspace, cmd.Project, cmd.AllProjects)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pushInContext(ctx, dto.AllProjects, dto.Force)
+	return g.pushInContext(ctx, cmd.AllProjects, cmd.Force)
 }

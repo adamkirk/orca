@@ -39,25 +39,25 @@ func init() {
 }
 
 func handleDebugShowComposeConfig(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	return ctrl.ShowComposeConfig(controller.ShowComposeConfigDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ShowComposeConfigQuery{
 		Workspace: ws,
 		Project:   project,
 	})
+
+	return err
 }
 
 func handleDebugShowComposeCommand(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	return ctrl.ShowComposeCommand(controller.ShowComposeCommandDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ShowComposeCommandQuery{
 		Workspace: ws,
 		Project:   project,
 	})
+
+	return err
 }

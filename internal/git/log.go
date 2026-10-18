@@ -1,20 +1,28 @@
 package git
 
 import (
+	"context"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
 
-type LoglDTO struct {
+type LoglQuery struct {
+	bus.Returns[bus.Void]
+
 	// The amount of commits to show
 	Amount int
 	// The directory to run the command in, defaults to the current directory
 	Dir string
 }
 
-func (g *Git) Logl(dto LoglDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (LoglQuery) MessageName() string {
+	return "g.logl"
+}
+
+func (g *Git) Logl(_ context.Context, query LoglQuery) error {
+	if err := g.mustBeInAGitRepository(query.Dir); err != nil {
 		return err
 	}
 
@@ -22,7 +30,7 @@ func (g *Git) Logl(dto LoglDTO) error {
 	err := g.exec.Exec("git", []string{
 		"log",
 		"--oneline",
-	}, withDir(dto.Dir, opt)...)
+	}, withDir(query.Dir, opt)...)
 
 	if err != nil {
 		return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
@@ -32,7 +40,7 @@ func (g *Git) Logl(dto LoglDTO) error {
 
 	lines := strings.Split(linesOutput, "\n")
 
-	lineCount := min(dto.Amount, len(lines))
+	lineCount := min(query.Amount, len(lines))
 
 	output := strings.Join(lines[0:lineCount], "\n")
 

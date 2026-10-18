@@ -16,7 +16,7 @@ func init() {
 }
 
 func handleProvision(cmd *cobra.Command, args []string) error {
-	c := svcContainer.GetController()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ProvisionCommand{})
 
-	return c.Provision(controller.ProvisionDTO{})
+	return err
 }

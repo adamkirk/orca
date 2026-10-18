@@ -1,9 +1,20 @@
 package workspaces
 
-type ClearCurrentDTO struct {
+import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
+)
+
+type ClearCurrentCommand struct {
+	bus.Returns[bus.Void]
 }
 
-func (m *Manager) ClearCurrent(dto ClearCurrentDTO) error {
+func (ClearCurrentCommand) MessageName() string {
+	return "ws.clear-current"
+}
+
+func (m *Manager) ClearCurrent(_ context.Context, cmd ClearCurrentCommand) error {
 	current := m.configManager.GetCurrentWorkspace()
 
 	if current == "" {

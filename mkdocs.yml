@@ -97,6 +97,7 @@ nav:
       - development_guide/index.md
       - Release process: development_guide/release_process.md
       - Github Actions: development_guide/github_actions.md
+      - Command bus: development_guide/command_bus.md
 
 plugins:
   - open-in-new-tab

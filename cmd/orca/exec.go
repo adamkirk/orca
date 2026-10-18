@@ -20,16 +20,16 @@ func init() {
 }
 
 func handleExec(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 	service := mustGetString(cmd, "service")
 
-	return ctrl.ExecOrRun(controller.ExecDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ExecCommand{
 		Workspace: ws,
 		Project:   project,
 		Service:   service,
 		Args:      args,
 	})
+
+	return err
 }

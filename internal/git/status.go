@@ -1,16 +1,24 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
 
-type StatusDTO struct {
+type StatusQuery struct {
+	bus.Returns[bus.Void]
+
 	AllProjects bool
 	Workspace   string
 	Project     string
+}
+
+func (StatusQuery) MessageName() string {
+	return "g.status"
 }
 
 type workingTreeChanges struct {
@@ -115,8 +123,8 @@ func (g *Git) statusRow(name string, dir string) []string {
 	return []string{name, branch, changes, dir}
 }
 
-func (g *Git) Status(dto StatusDTO) error {
-	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
+func (g *Git) Status(_ context.Context, query StatusQuery) error {
+	ctx, err := g.resolveContext(query.Workspace, query.Project, query.AllProjects)
 
 	if err != nil {
 		return err
@@ -125,7 +133,7 @@ func (g *Git) Status(dto StatusDTO) error {
 	rows := [][]string{}
 
 	switch {
-	case dto.AllProjects:
+	case query.AllProjects:
 		for _, p := range ctx.Workspace.Projects {
 			rows = append(rows, g.statusRow(p.Name, p.ProjectDir))
 		}

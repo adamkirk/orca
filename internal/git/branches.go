@@ -1,9 +1,11 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
@@ -132,8 +134,20 @@ func (g *Git) searchBranches(dto SearchBranchesDTO) (Branches, error) {
 	return branches.StrictSearch(dto.Search), nil
 }
 
-func (g *Git) ShowBranches(dto SearchBranchesDTO) error {
-	branches, err := g.searchBranches(dto)
+type BranchesQuery struct {
+	bus.Returns[bus.Void]
+
+	Search string
+}
+
+func (BranchesQuery) MessageName() string {
+	return "g.branches"
+}
+
+func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
+	branches, err := g.searchBranches(SearchBranchesDTO{
+		Search: query.Search,
+	})
 	if err != nil {
 		return g.tui.RecordIfError(
 			"Failed to list branches!",

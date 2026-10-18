@@ -23,6 +23,7 @@ type config interface {
 	SetProjectPath(wsName string, name string, into string) error
 	ProjectExists(wsName string, name string) (bool, error)
 	ClearCurrentWorkspace() error
+	SwitchWorkspace(workspaceName string) error
 }
 
 type git interface {

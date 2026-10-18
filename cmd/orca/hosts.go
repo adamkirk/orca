@@ -17,11 +17,11 @@ func init() {
 }
 
 func handleHosts(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 
-	return ctrl.Hosts(controller.HostsDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.HostsCommand{
 		Workspace: ws,
 	})
+
+	return err
 }

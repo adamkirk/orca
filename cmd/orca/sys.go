@@ -48,23 +48,13 @@ func init() {
 	rootCmd.AddCommand(sysCmd)
 }
 
-func handleCheck(_ *cobra.Command, _ []string) error {
-	tui := svcContainer.GetTui()
+func handleCheck(cmd *cobra.Command, _ []string) error {
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.CheckSetupQuery{})
 
-	hs := svcContainer.GetHostSystem()
-
-	err := hs.VerifySetup()
-
-	if err != nil {
-		return err
-	}
-
-	tui.Success("All requirements met!")
-
-	return nil
+	return err
 }
 
-func handleSysInstall(_ *cobra.Command, args []string) error {
+func handleSysInstall(cmd *cobra.Command, args []string) error {
 	tui := svcContainer.GetTui()
 	if len(args) < 1 {
 		return tui.RecordIfError("Must provide the name of the tool as the first argument", common.ErrArgumentRequired{
@@ -77,16 +67,14 @@ func handleSysInstall(_ *cobra.Command, args []string) error {
 		})
 	}
 
-	sys := svcContainer.GetHostSystem()
-
-	return sys.Install(hostsys.InstallDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.InstallCommand{
 		Tool: hostsys.AvailableTool(args[0]),
 	})
+
+	return err
 }
 
 func handleSysSelfUpdate(cmd *cobra.Command, _ []string) error {
-	sys := svcContainer.GetHostSystem()
-
 	to := mustGetString(cmd, "to")
 
 	strategy := hostsys.VersioningStrategyLatest
@@ -94,8 +82,10 @@ func handleSysSelfUpdate(cmd *cobra.Command, _ []string) error {
 	if to != "" {
 		strategy = hostsys.VersioningStrategySpecific
 	}
-	return sys.UpdateSelf(hostsys.UpdateSelfDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hostsys.UpdateSelfCommand{
 		Strategy:         strategy,
 		SpecifiedVersion: to,
 	})
+
+	return err
 }

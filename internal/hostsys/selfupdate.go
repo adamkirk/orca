@@ -2,9 +2,11 @@ package hostsys
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/minio/selfupdate"
 )
@@ -63,9 +65,9 @@ func (s *HostSystem) ensureSelfVersionExists(v *semver.Version) error {
 	return nil
 }
 
-func (s *HostSystem) getVersionForSelf(dto UpdateSelfDTO) (*semver.Version, error) {
-	if dto.Strategy == VersioningStrategySpecific {
-		v, err := semver.NewVersion(dto.SpecifiedVersion)
+func (s *HostSystem) getVersionForSelf(cmd UpdateSelfCommand) (*semver.Version, error) {
+	if cmd.Strategy == VersioningStrategySpecific {
+		v, err := semver.NewVersion(cmd.SpecifiedVersion)
 
 		if err != nil {
 			return nil, err
@@ -81,13 +83,19 @@ func (s *HostSystem) getVersionForSelf(dto UpdateSelfDTO) (*semver.Version, erro
 	return s.github.LatestVersion(orcaRepoOrg, orcaRepoName)
 }
 
-type UpdateSelfDTO struct {
+type UpdateSelfCommand struct {
+	bus.Returns[bus.Void]
+
 	Strategy         VersioningStrategy
 	SpecifiedVersion string
 }
 
-func (self *HostSystem) UpdateSelf(dto UpdateSelfDTO) error {
-	v, err := self.getVersionForSelf(dto)
+func (UpdateSelfCommand) MessageName() string {
+	return "sys.self-update"
+}
+
+func (self *HostSystem) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error {
+	v, err := self.getVersionForSelf(cmd)
 
 	if err != nil {
 		return self.tui.RecordIfError("Failed to find version!", err)

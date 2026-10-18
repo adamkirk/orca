@@ -20,12 +20,12 @@ func init() {
 }
 
 func handleRestart(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
+	b := svcContainer.GetBus()
 
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	err := ctrl.Down(controller.DownDTO{
+	_, err := b.Dispatch(cmd.Context(), controller.DownCommand{
 		Workspace: ws,
 		Project:   project,
 	})
@@ -34,8 +34,10 @@ func handleRestart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return ctrl.Up(controller.UpDTO{
+	_, err = b.Dispatch(cmd.Context(), controller.UpCommand{
 		Workspace: ws,
 		Project:   project,
 	})
+
+	return err
 }

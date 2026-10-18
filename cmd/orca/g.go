@@ -131,8 +131,6 @@ func handleGCo(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	g := svcContainer.GetGit()
-
 	searchTerm := ""
 
 	if len(args) > 0 {
@@ -144,7 +142,7 @@ func handleGCo(cmd *cobra.Command, args []string) error {
 	shouldPull := mustGetBool(cmd, "pull")
 	shouldRebase := mustGetBool(cmd, "rebase")
 
-	err := g.Checkout(git.CheckoutDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.CheckoutCommand{
 		Name:        searchTerm,
 		AllProjects: allProjects,
 		Workspace:   ws,
@@ -154,73 +152,69 @@ func handleGCo(cmd *cobra.Command, args []string) error {
 		Create:      shouldCreate,
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func handleGBranches(cmd *cobra.Command, args []string) error {
-	g := svcContainer.GetGit()
-
 	searchTerm := ""
 
 	if len(args) > 0 {
 		searchTerm = args[0]
 	}
 
-	return g.ShowBranches(git.SearchBranchesDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.BranchesQuery{
 		Search: searchTerm,
 	})
+
+	return err
 }
 
 func handleGRebaseInteractively(cmd *cobra.Command, args []string) error {
-	g := svcContainer.GetGit()
-
 	amount := mustGetInt(cmd, "number")
 
-	return g.RebaseInteractively(git.RebaseInteractivelyDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.RebaseInteractivelyCommand{
 		Amount: amount,
 	})
+
+	return err
 }
 
 func handleGPush(cmd *cobra.Command, args []string) error {
-	g := svcContainer.GetGit()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 	allProjects := mustGetBool(cmd, "all")
 	force := mustGetBool(cmd, "force")
 
-	return g.Push(git.PushDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.PushCommand{
 		AllProjects: allProjects,
 		Workspace:   ws,
 		Project:     project,
 		Force:       force,
 	})
+
+	return err
 }
 
 func handleGUndo(cmd *cobra.Command, args []string) error {
-	g := svcContainer.GetGit()
-
 	autoConfirm := mustGetBool(cmd, "yes")
 	amount := mustGetInt(cmd, "number")
 
-	return g.UndoLastXCommits(git.UndoLastXCommitsDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.UndoLastXCommitsCommand{
 		Amount:           amount,
 		SkipConfirmation: autoConfirm,
 	})
+
+	return err
 }
 
 func handleGLogl(cmd *cobra.Command, args []string) error {
-	g := svcContainer.GetGit()
-
 	amount := mustGetInt(cmd, "number")
 
-	return g.Logl(git.LoglDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.LoglQuery{
 		Amount: amount,
 	})
+
+	return err
 }
 
 func handleGStatus(cmd *cobra.Command, args []string) error {
@@ -228,13 +222,13 @@ func handleGStatus(cmd *cobra.Command, args []string) error {
 	project := mustGetString(cmd, "project")
 	allProjects := mustGetBool(cmd, "all")
 
-	g := svcContainer.GetGit()
-
-	return g.Status(git.StatusDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.StatusQuery{
 		AllProjects: allProjects,
 		Workspace:   ws,
 		Project:     project,
 	})
+
+	return err
 }
 
 func handleGPull(cmd *cobra.Command, args []string) error {
@@ -243,12 +237,12 @@ func handleGPull(cmd *cobra.Command, args []string) error {
 	allProjects := mustGetBool(cmd, "all")
 	rebase := mustGetBool(cmd, "rebase")
 
-	g := svcContainer.GetGit()
-
-	return g.Pull(git.PullDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.PullCommand{
 		AllProjects: allProjects,
 		Workspace:   ws,
 		Project:     project,
 		Rebase:      rebase,
 	})
+
+	return err
 }

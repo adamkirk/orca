@@ -1,25 +1,33 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 )
 
-type ExecuteExtensionDTO struct {
+type ExecuteExtensionCommand struct {
+	bus.Returns[bus.Void]
+
 	Workspace string
 	Project   string
 	Name      string
 	Args      []string
 }
 
+func (ExecuteExtensionCommand) MessageName() string {
+	return "ext"
+}
+
 // TODO: de-dupe this by reusing the ExecOrRun method
-func (c *Controller) executeExtensionInService(dto ExecuteExtensionDTO, ctx common.ExecutionContext, ext common.Extension) error {
+func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, ctx common.ExecutionContext, ext common.Extension) error {
 	cmdArgs := strings.Split(ext.Command, " ")
 
-	if len(dto.Args) > 0 {
-		cmdArgs = append(cmdArgs, dto.Args...)
+	if len(cmd.Args) > 0 {
+		cmdArgs = append(cmdArgs, cmd.Args...)
 	} else {
 		cmdArgs = append(cmdArgs, ext.DefaultArgs...)
 	}
@@ -37,8 +45,8 @@ func (c *Controller) executeExtensionInService(dto ExecuteExtensionDTO, ctx comm
 	return c.compose.Exec(ctx.Workspace, ctx.Project, ext.Service, cmdArgs)
 }
 
-func (c *Controller) ExecuteExtension(dto ExecuteExtensionDTO) error {
-	ctx, err := c.contextResolver.Resolve(dto.Workspace, dto.Project)
+func (c *Controller) ExecuteExtension(_ context.Context, cmd ExecuteExtensionCommand) error {
+	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
 
 	if err != nil {
 		return err
@@ -50,14 +58,14 @@ func (c *Controller) ExecuteExtension(dto ExecuteExtensionDTO) error {
 		}
 	}
 
-	ext, err := ctx.Project.FindExtension(dto.Name)
+	ext, err := ctx.Project.FindExtension(cmd.Name)
 
 	if err != nil {
 		return c.tui.RecordIfError("Extension does not exist in project context.", err)
 	}
 
 	if ext.Service != "" {
-		return c.executeExtensionInService(dto, ctx, ext)
+		return c.executeExtensionInService(cmd, ctx, ext)
 	}
 
 	return c.tui.RecordIfError("Extension must have a service defined", errors.New("alternative is not yet implemented"))

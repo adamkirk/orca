@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/workspaces"
 	"github.com/spf13/cobra"
@@ -92,20 +90,14 @@ func handleWsSwitch(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	manager := svcContainer.GetConfig()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.SwitchCommand{
+		Workspace: args[0],
+	})
 
-	if err := manager.SwitchWorkspace(args[0]); err != nil {
-		return tui.RecordIfError("Failed to switch workspace!", err)
-	}
-
-	tui.Success(fmt.Sprintf("Switched to %s", args[0]))
-
-	return nil
+	return err
 }
 
 func handleWsInit(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
-
 	source := mustGetString(cmd, "source")
 	target := mustGetString(cmd, "target")
 	repo := mustGetString(cmd, "repo")
@@ -117,42 +109,44 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 		target = getWorkingDir()
 	}
 
-	return manager.Initialise(workspaces.InitialiseDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.InitialiseCommand{
 		SourceRepo:        repo,
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,
 	})
+
+	return err
 }
 
 func handleWsLs(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.LsQuery{})
 
-	return manager.Ls(workspaces.LsDTO{})
+	return err
 }
 
 func handleWsCurrent(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.ShowCurrentQuery{})
 
-	return manager.ShowCurrent(workspaces.ShowCurrentDTO{})
+	return err
 }
 
 func handleWsClearCurrent(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.ClearCurrentCommand{})
 
-	return manager.ClearCurrent(workspaces.ClearCurrentDTO{})
+	return err
 }
 
 func handleWsClone(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
-
 	name := mustGetString(cmd, "workspace")
 	projectName := mustGetString(cmd, "project")
 	to := mustGetString(cmd, "target")
 
-	return manager.Clone(workspaces.CloneDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspaces.CloneCommand{
 		WorkspaceName: name,
 		Project:       projectName,
 		To:            to,
 	})
+
+	return err
 }

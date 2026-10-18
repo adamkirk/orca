@@ -1,11 +1,23 @@
 package controller
 
-type HostsDTO struct {
+import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
+)
+
+type HostsCommand struct {
+	bus.Returns[bus.Void]
+
 	Workspace string
 }
 
-func (c *Controller) Hosts(dto HostsDTO) error {
-	ctx, err := c.contextResolver.Resolve(dto.Workspace, "")
+func (HostsCommand) MessageName() string {
+	return "hosts"
+}
+
+func (c *Controller) Hosts(_ context.Context, cmd HostsCommand) error {
+	ctx, err := c.contextResolver.Resolve(cmd.Workspace, "")
 
 	if err != nil {
 		return err

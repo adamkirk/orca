@@ -20,15 +20,15 @@ func init() {
 }
 
 func handleLogs(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 	service := mustGetString(cmd, "service")
 
-	return ctrl.Logs(controller.LogsDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.LogsQuery{
 		Workspace: ws,
 		Project:   project,
 		Service:   service,
 	})
+
+	return err
 }

@@ -1,14 +1,25 @@
 package controller
 
-import "github.com/adamkirk/orca/internal/common"
+import (
+	"context"
 
-type ShowComposeConfigDTO struct {
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
+)
+
+type ShowComposeConfigQuery struct {
+	bus.Returns[bus.Void]
+
 	Workspace string
 	Project   string
 }
 
-func (c *Controller) ShowComposeConfig(dto ShowComposeConfigDTO) error {
-	ctx, err := c.contextResolver.Resolve(dto.Workspace, dto.Project)
+func (ShowComposeConfigQuery) MessageName() string {
+	return "debug.show-compose-config"
+}
+
+func (c *Controller) ShowComposeConfig(_ context.Context, query ShowComposeConfigQuery) error {
+	ctx, err := c.contextResolver.Resolve(query.Workspace, query.Project)
 
 	if err != nil {
 		return err

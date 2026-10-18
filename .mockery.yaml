@@ -9,7 +9,7 @@ packages:
         interfaces:
             # select the interfaces you want mocked
             tui:
-            workspaceRepo:
+            contextResolver:
     github.com/adamkirk/orca/internal/git:
         config:
             dir: 'tests/mocks/git'

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/config"
 	"github.com/adamkirk/orca/internal/controller"
@@ -53,6 +55,8 @@ type services struct {
 	provisionerRunner *provisioner.Runner
 
 	pluginManager *plugins.Manager
+
+	bus *bus.Bus
 }
 
 func (s *services) GetFs() afero.Fs {
@@ -223,7 +227,7 @@ func (s *services) GetCertificateManager() *tls.CertificateManager {
 
 	s.certificateManager = tls.NewCertificateManager(
 		s.GetFs(),
-		s.GetWorkspaceRepository(),
+		s.GetContextResolver(),
 		s.GetTui(),
 		getTLSDir(),
 	)
@@ -293,6 +297,62 @@ func (s *services) GetPluginManager() *plugins.Manager {
 	s.pluginManager = plugins.NewManager(slog.Default())
 
 	return s.pluginManager
+}
+
+// GetBus returns the command bus, with every command handler registered.
+func (s *services) GetBus() *bus.Bus {
+	if s.bus != nil {
+		return s.bus
+	}
+
+	b := bus.New()
+
+	b.Use(bus.LoggingMiddleware)
+
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Up))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Down))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ExecOrRun))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ExecuteExtension))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Logs))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Hosts))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Provision))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ShowComposeConfig))
+	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ShowComposeCommand))
+
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).Checkout))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).ShowBranches))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).RebaseInteractively))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).Push))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).UndoLastXCommits))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).Logl))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).Status))
+	b.HandleVoid(lazy(s.GetGit, (*git.Git).Pull))
+
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Initialise))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Switch))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Ls))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).ShowCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).ClearCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Clone))
+
+	b.HandleVoid(lazy(s.GetCertificateManager, (*tls.CertificateManager).Generate))
+
+	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).CheckSetup))
+	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).Install))
+	b.HandleVoid(lazy(s.GetHostSystem, (*hostsys.HostSystem).UpdateSelf))
+
+	s.bus = b
+
+	return s.bus
+}
+
+// lazy turns a service method into a handler, which only gets (and so builds)
+// the service when a message is dispatched to it, rather than when the bus is
+// built.
+func lazy[S any, M bus.Message[bus.Void]](get func() S, method func(S, context.Context, M) error) func(context.Context, M) error {
+	return func(ctx context.Context, msg M) error {
+		return method(get(), ctx, msg)
+	}
 }
 
 // KillPlugins stops any running plugin processes. Unlike GetPluginManager it

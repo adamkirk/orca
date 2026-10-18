@@ -1,12 +1,23 @@
 package git
 
-import "github.com/adamkirk/orca/internal/common"
+import (
+	"context"
 
-type PullDTO struct {
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
+)
+
+type PullCommand struct {
+	bus.Returns[bus.Void]
+
 	AllProjects bool
 	Workspace   string
 	Project     string
 	Rebase      bool
+}
+
+func (PullCommand) MessageName() string {
+	return "g.pull"
 }
 
 // pullInContext pulls the current branch for the resolved project (or working
@@ -29,12 +40,12 @@ func (g *Git) pullInContext(ctx common.ExecutionContext, allProjects bool, rebas
 	return nil
 }
 
-func (g *Git) Pull(dto PullDTO) error {
-	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
+func (g *Git) Pull(_ context.Context, cmd PullCommand) error {
+	ctx, err := g.resolveContext(cmd.Workspace, cmd.Project, cmd.AllProjects)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pullInContext(ctx, dto.AllProjects, dto.Rebase)
+	return g.pullInContext(ctx, cmd.AllProjects, cmd.Rebase)
 }

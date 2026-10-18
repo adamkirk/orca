@@ -8,6 +8,7 @@
 package tls
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -18,6 +19,7 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -25,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
@@ -42,14 +45,14 @@ type issuer struct {
 	cert *x509.Certificate
 }
 
-type workspaceRepo interface {
-	Load(name string) (*common.Workspace, error)
+type contextResolver interface {
+	Resolve(ws string, project string) (common.ExecutionContext, error)
 }
 type CertificateManager struct {
-	fs            afero.Fs
-	workspaceRepo workspaceRepo
-	tui           tui
-	tlsDir        string
+	fs              afero.Fs
+	contextResolver contextResolver
+	tui             tui
+	tlsDir          string
 }
 
 func (cm *CertificateManager) GetCertsDir() string {
@@ -358,11 +361,34 @@ func (cm *CertificateManager) generateCertificateIfNotPresent(issuer *issuer, do
 	return nil
 }
 
-type GenerateDTO struct {
-	WorkspaceName string
+type GenerateCommand struct {
+	bus.Returns[bus.Void]
+
+	Workspace string
 }
 
-func (cm *CertificateManager) Generate(dto GenerateDTO) error {
+func (GenerateCommand) MessageName() string {
+	return "tls.gen"
+}
+
+func (cm *CertificateManager) Generate(_ context.Context, cmd GenerateCommand) error {
+	// Resolve the workspace as other commands do, so it can come from the project
+	// we're in or the current workspace, rather than requiring --workspace
+	execCtx, err := cm.contextResolver.Resolve(cmd.Workspace, "")
+
+	if err != nil {
+		var noWorkspaceErr common.ErrCouldNotDetermineWorkspace
+
+		if errors.As(err, &noWorkspaceErr) {
+			return cm.tui.RecordIfError(
+				"Could not determine the workspace; run this from within a project, pass --workspace, or choose one with 'orca ws switch'.",
+				err,
+			)
+		}
+
+		return cm.tui.RecordIfError("Failed to determine the workspace!", err)
+	}
+
 	cm.tui.Info("Generating Root certificate if required...")
 	if err := cm.createTLSDirsIfMissing(); err != nil {
 		return cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificates directory at: %s", cm.GetCertsDir()), err)
@@ -373,13 +399,7 @@ func (cm *CertificateManager) Generate(dto GenerateDTO) error {
 		return err
 	}
 
-	ws, err := cm.workspaceRepo.Load(dto.WorkspaceName)
-
-	if err != nil {
-		return err
-	}
-
-	certsToGenerate := ws.GetUniqueTLSCertificates()
+	certsToGenerate := execCtx.Workspace.GetUniqueTLSCertificates()
 
 	for _, c := range certsToGenerate {
 		cm.tui.NewLine()
@@ -392,11 +412,11 @@ func (cm *CertificateManager) Generate(dto GenerateDTO) error {
 	return nil
 }
 
-func NewCertificateManager(fs afero.Fs, workspaceRepo workspaceRepo, tui tui, tlsDir string) *CertificateManager {
+func NewCertificateManager(fs afero.Fs, contextResolver contextResolver, tui tui, tlsDir string) *CertificateManager {
 	return &CertificateManager{
-		fs:            fs,
-		tlsDir:        tlsDir,
-		workspaceRepo: workspaceRepo,
-		tui:           tui,
+		fs:              fs,
+		tlsDir:          tlsDir,
+		contextResolver: contextResolver,
+		tui:             tui,
 	}
 }

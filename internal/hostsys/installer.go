@@ -4,12 +4,14 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"runtime"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
@@ -264,19 +266,25 @@ func (self *HostSystem) installSops() error {
 	return afero.WriteFile(self.fs, targetPath, contents, 0755)
 }
 
-type InstallDTO struct {
+type InstallCommand struct {
+	bus.Returns[bus.Void]
+
 	Tool AvailableTool
 }
 
-func (self *HostSystem) Install(dto InstallDTO) error {
-	if !dto.Tool.IsKnown() {
-		return self.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(dto.Tool)), common.ErrUnknownTool{
-			Tool: string(dto.Tool),
+func (InstallCommand) MessageName() string {
+	return "sys.install"
+}
+
+func (self *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
+	if !cmd.Tool.IsKnown() {
+		return self.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), common.ErrUnknownTool{
+			Tool: string(cmd.Tool),
 		})
 	}
 
 	var err error
-	switch dto.Tool {
+	switch cmd.Tool {
 	case ToolHostCtl:
 		err = self.installHostCtl()
 	case ToolSops:

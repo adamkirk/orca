@@ -18,8 +18,6 @@ func init() {
 }
 
 func handleExt(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
@@ -27,10 +25,12 @@ func handleExt(cmd *cobra.Command, args []string) error {
 	extensionName := args[0]
 	extensionArgs := args[1:]
 
-	return ctrl.ExecuteExtension(controller.ExecuteExtensionDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ExecuteExtensionCommand{
 		Workspace: ws,
 		Project:   project,
 		Name:      extensionName,
 		Args:      extensionArgs,
 	})
+
+	return err
 }

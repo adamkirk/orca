@@ -1,13 +1,22 @@
 package controller
 
 import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/pkg/dag"
 )
 
-type UpDTO struct {
+type UpCommand struct {
+	bus.Returns[bus.Void]
+
 	Workspace string
 	Project   string
+}
+
+func (UpCommand) MessageName() string {
+	return "up"
 }
 
 func determineStartupOrder(ctx common.ExecutionContext) ([]string, error) {
@@ -50,8 +59,8 @@ func (c *Controller) startServices(ctx common.ExecutionContext) error {
 	return nil
 }
 
-func (c *Controller) Up(dto UpDTO) error {
-	ctx, err := c.contextResolver.Resolve(dto.Workspace, dto.Project)
+func (c *Controller) Up(_ context.Context, cmd UpCommand) error {
+	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
 
 	if err != nil {
 		return err

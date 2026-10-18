@@ -1,9 +1,20 @@
 package workspaces
 
-type ShowCurrentDTO struct {
+import (
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
+)
+
+type ShowCurrentQuery struct {
+	bus.Returns[bus.Void]
 }
 
-func (m *Manager) ShowCurrent(dto ShowCurrentDTO) error {
+func (ShowCurrentQuery) MessageName() string {
+	return "ws.current"
+}
+
+func (m *Manager) ShowCurrent(_ context.Context, query ShowCurrentQuery) error {
 	current := m.configManager.GetCurrentWorkspace()
 
 	if current == "" {

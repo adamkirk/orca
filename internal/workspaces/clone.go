@@ -1,17 +1,25 @@
 package workspaces
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
 
-type CloneDTO struct {
+type CloneCommand struct {
+	bus.Returns[bus.Void]
+
 	WorkspaceName string
 	Project       string
 	To            string
+}
+
+func (CloneCommand) MessageName() string {
+	return "ws.clone"
 }
 
 func (m *Manager) setupAllProjects(ws *common.Workspace, into string) error {
@@ -142,8 +150,8 @@ func (m *Manager) getCloneTargetDir(wsConfigPath string, target string) (string,
 	return filepath.Abs(fmt.Sprintf("%s/..", wsRoot))
 }
 
-func (m *Manager) Clone(dto CloneDTO) error {
-	ctx, err := m.contextResolver.Resolve(dto.WorkspaceName, "")
+func (m *Manager) Clone(_ context.Context, cmd CloneCommand) error {
+	ctx, err := m.contextResolver.Resolve(cmd.WorkspaceName, "")
 
 	if err != nil {
 		return m.tui.RecordIfError("could not resolve execution context", err)
@@ -153,7 +161,7 @@ func (m *Manager) Clone(dto CloneDTO) error {
 
 	if err != nil {
 		if _, ok := err.(common.ErrUnknownWorkspace); ok {
-			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", dto.WorkspaceName), err)
+			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", cmd.WorkspaceName), err)
 		}
 
 		return err
@@ -165,7 +173,7 @@ func (m *Manager) Clone(dto CloneDTO) error {
 		return err
 	}
 
-	targetDir, err := m.getCloneTargetDir(wsMeta.Path, dto.To)
+	targetDir, err := m.getCloneTargetDir(wsMeta.Path, cmd.To)
 
 	if err != nil {
 		return m.tui.RecordIfError("Failed to determine target directory!", err)
@@ -173,8 +181,8 @@ func (m *Manager) Clone(dto CloneDTO) error {
 
 	var cloneErr error = nil
 
-	if dto.Project != "" {
-		project, err := cfg.GetProject(dto.Project)
+	if cmd.Project != "" {
+		project, err := cfg.GetProject(cmd.Project)
 
 		if err != nil {
 			return m.tui.RecordIfError("Failed to clone specified project!", err)
@@ -182,7 +190,7 @@ func (m *Manager) Clone(dto CloneDTO) error {
 
 		targetDir := targetDir
 
-		if dto.To == "" {
+		if cmd.To == "" {
 			targetDir = fmt.Sprintf("%s/%s", targetDir, project.Name)
 		}
 

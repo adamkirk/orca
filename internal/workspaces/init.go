@@ -1,17 +1,21 @@
 package workspaces
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
 
-type InitialiseDTO struct {
+type InitialiseCommand struct {
+	bus.Returns[bus.Void]
+
 	// A github repository in the format 'owner/repo' to clone the workspace
 	// config from, takes precedence over SourceDirectory
 	SourceRepo string
@@ -21,15 +25,19 @@ type InitialiseDTO struct {
 	Into              string
 }
 
-func (m *Manager) Initialise(dto InitialiseDTO) error {
-	if dto.SourceRepo != "" {
-		return m.InitialiseFromRemoteRepo(dto.SourceRepo, dto.WorkspaceFileName, dto.Into)
-	}
-
-	return m.InitialiseFromLocalDirectory(dto.SourceDirectory, dto.WorkspaceFileName, dto.Into)
+func (InitialiseCommand) MessageName() string {
+	return "ws.init"
 }
 
-func (m *Manager) InitialiseFromLocalDirectory(dir string, workspaceFile string, into string) error {
+func (m *Manager) Initialise(ctx context.Context, cmd InitialiseCommand) error {
+	if cmd.SourceRepo != "" {
+		return m.InitialiseFromRemoteRepo(ctx, cmd.SourceRepo, cmd.WorkspaceFileName, cmd.Into)
+	}
+
+	return m.InitialiseFromLocalDirectory(ctx, cmd.SourceDirectory, cmd.WorkspaceFileName, cmd.Into)
+}
+
+func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, workspaceFile string, into string) error {
 	workspaceConfigPath := fmt.Sprintf("%s/%s", dir, workspaceFile)
 	exists, err := afero.Exists(m.fs, workspaceConfigPath)
 
@@ -63,7 +71,7 @@ func (m *Manager) InitialiseFromLocalDirectory(dir string, workspaceFile string,
 		return m.tui.RecordIfError("Failed to register workspace, this is likely a bug!", err)
 	}
 
-	err = m.Clone(CloneDTO{
+	err = m.Clone(ctx, CloneCommand{
 		WorkspaceName: cfg.Name,
 		Project:       "",
 		To:            into,
@@ -104,7 +112,7 @@ func parseGithubRepo(input string) (githubRepo, error) {
 	}, nil
 }
 
-func (m *Manager) InitialiseFromRemoteRepo(repoName string, workspaceFile string, into string) error {
+func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string, workspaceFile string, into string) error {
 	repo, err := parseGithubRepo(repoName)
 
 	if err != nil {
@@ -173,5 +181,5 @@ func (m *Manager) InitialiseFromRemoteRepo(repoName string, workspaceFile string
 		return m.tui.RecordIfError("Clone failed!", err)
 	}
 
-	return m.InitialiseFromLocalDirectory(cloneDir, workspaceFile, into)
+	return m.InitialiseFromLocalDirectory(ctx, cloneDir, workspaceFile, into)
 }
