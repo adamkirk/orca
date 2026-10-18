@@ -2,6 +2,8 @@
 
 Commands are dispatched through a command bus (`internal/bus`) rather than the CLI handlers calling services directly. This gives a single place for behaviour that applies to every command, through middleware and hooks.
 
+See [architecture](./architecture.md#adding-a-command) for how to add a command end to end.
+
 The exceptions are commands that only inspect orca itself, rather than doing anything, such as `version`, `config`, `plugins ls` and `util gen-docs`, and commands provided by plugins.
 
 ## Messages
@@ -32,7 +34,7 @@ func (m *Manager) Up(ctx context.Context, cmd UpCommand) error
 They're registered in `GetBus()` in `cmd/orca/services.go`. `lazy` wraps the method so the service is only built when its message is dispatched, rather than every service being built with the bus. `HandleVoid` is for messages that return `bus.Void`, and `Handle` for everything else.
 
 ```go
-b.HandleVoid(lazy(s.GetController, (*stack.Manager).Up))
+b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
 ```
 
 A message without a handler only fails when it's dispatched, so `Test_AllDispatchedMessagesHaveHandlers` checks that every message the commands dispatch has one. For that to work, messages must be dispatched as literals.
@@ -84,7 +86,7 @@ ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
 
 Set `WorkspaceOptional` for commands that still work without a workspace, such as the git commands, which then get an `ExecutionContext` with only the working directory.
 
-If it can't be resolved, the middleware shows the error and the command isn't run. Hooks run after the middleware, so they can read the `ExecutionContext` too.
+If it can't be resolved, the middleware returns an error with a message for the user (see [errors](./errors.md)), and the command isn't run. Hooks run after the middleware, so they can read the `ExecutionContext` too.
 
 `Test_ExecutionContextHandlersHaveTargets` checks that every handler calling `workspace.ExecutionContextFrom` has a target registered for its message, so it should only be called from the handler itself, and helpers should take the `ExecutionContext` as an argument.
 
