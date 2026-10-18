@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -336,7 +337,7 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		projectMeta, err := wcr.userConfig.GetProjectMeta(wsMeta.Name, pCfg.Name)
 
 		if err != nil {
-			if _, ok := err.(ErrUnknownProject); ok {
+			if _, ok := errors.AsType[ErrUnknownProject](err); ok {
 				ws.Projects[i] = Project{
 					Name: pCfg.Name,
 					RepositoryConfig: ProjectRepositoryConfig{

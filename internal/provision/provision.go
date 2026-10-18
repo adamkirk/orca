@@ -5,16 +5,13 @@ import (
 	"log/slog"
 	"path/filepath"
 
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
 type tui interface {
-	Info(msg ...string)
-	Error(msg ...string)
 	Success(msg ...string)
-	NewLine()
-	RecordIfError(msg string, err error) error
 }
 
 type Runner struct {
@@ -34,9 +31,7 @@ func (p *Runner) RunAll(ws *workspace.Workspace, project *workspace.Project) err
 
 func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provisioner workspace.Provisioner) error {
 	if provisioner.ExampleFile == nil {
-		return ErrUnsupportedProvisioner{
-			Message: "the example file provisioner must be defined",
-		}
+		return fmt.Errorf("%w: %s", ErrUnsupportedProvisioner, "the example file provisioner must be defined")
 	}
 
 	srcPath := filepath.Join(project.ProjectDir, provisioner.ExampleFile.Src)
@@ -59,9 +54,12 @@ func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provis
 	}
 
 	if !srcExists {
-		p.tui.RecordIfError("Failed to run provisioner, source file not found", workspace.ErrFileNotFound{
-			Path: srcPath,
-		})
+		return usererr.Wrap(
+			workspace.ErrFileNotFound{
+				Path: srcPath,
+			},
+			"Failed to run provisioner, source file not found",
+		)
 	}
 
 	srcContents, err := afero.ReadFile(p.fs, srcPath)

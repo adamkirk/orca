@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -16,7 +17,7 @@ func (c *Compose) IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, se
 
 	overlay, err := c.getOverlay(ws, p)
 	if err != nil {
-		return false, c.tui.RecordIfError("Failed to generate overlays!", err)
+		return false, usererr.Wrap(err, "Failed to generate overlays!")
 	}
 
 	baseCmd := buildBaseComposeCommand(ws, p, overlay)
@@ -29,7 +30,7 @@ func (c *Compose) IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, se
 
 	if err != nil {
 		slog.Debug("stderr from docker compose ps", "stderr", errBuff.String())
-		return false, c.tui.RecordIfError("Failed to check if pod is running", err)
+		return false, usererr.Wrap(err, "Failed to check if pod is running")
 	}
 
 	containerID := strings.TrimSpace(outBuff.String())
@@ -45,7 +46,7 @@ func (c *Compose) IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, se
 
 	if err != nil {
 		slog.Debug("stderr from docker inspect", "stderr", errBuff.String())
-		return false, c.tui.RecordIfError("Failed to inspect pod", err)
+		return false, usererr.Wrap(err, "Failed to inspect pod")
 	}
 
 	state := strings.TrimSpace(outBuff.String())

@@ -92,10 +92,8 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Success([]string{"Certificate /some/path/certs/_.example.com.cert created successfully!"})
 
 				tui.EXPECT().Info([]string{"Key /some/path/key.pem already exists, skipping creation."})
-				tui.EXPECT().RecordIfError("Failed to load key /some/path/key.pem", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/cert.pem already exists, skipping creation."})
 				tui.EXPECT().Info([]string{"Key /some/path/certs/_.example.com.key already exists, skipping creation."})
-				tui.EXPECT().RecordIfError("Failed to load key /some/path/certs/_.example.com.key", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/_.example.com.cert already exists, skipping creation."})
 				// tui.EXPECT().Info([]string{"Key /some/path/key.pem already exists, skipping creation."})
 			},
@@ -140,14 +138,11 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Success([]string{"Certificate /some/path/certs/blah.test.cert created successfully!"})
 
 				tui.EXPECT().Info([]string{"Key /some/path/key.pem already exists, skipping creation."})
-				tui.EXPECT().RecordIfError("Failed to load key /some/path/key.pem", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/cert.pem already exists, skipping creation."})
 				tui.EXPECT().Info([]string{"Key /some/path/certs/_.example.com.key already exists, skipping creation."})
-				tui.EXPECT().RecordIfError("Failed to load key /some/path/certs/_.example.com.key", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/_.example.com.cert already exists, skipping creation."})
 
 				tui.EXPECT().Info([]string{"Key /some/path/certs/blah.test.key already exists, skipping creation."})
-				tui.EXPECT().RecordIfError("Failed to load key /some/path/certs/blah.test.key", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/blah.test.cert already exists, skipping creation."})
 			},
 			workspace: &workspace.Workspace{

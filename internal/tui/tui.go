@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"io"
-	"log/slog"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -38,18 +37,6 @@ func (t *Tui) Info(msgs ...string) {
 	for _, msg := range msgs {
 		fmt.Fprintln(t.std, msg)
 	}
-}
-
-func (t *Tui) RecordIfError(msg string, err error) error {
-	if err == nil {
-		return nil
-	}
-
-	t.Error(msg)
-
-	slog.Error(err.Error())
-
-	return err
 }
 
 func (t *Tui) Table(header []string, rows [][]string) {

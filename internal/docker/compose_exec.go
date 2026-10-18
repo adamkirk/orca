@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"errors"
 	"os/exec"
 
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -15,7 +17,7 @@ func (c *Compose) Exec(ws *workspace.Workspace, p *workspace.Project, service st
 
 	overlay, err := c.getOverlay(ws, p)
 	if err != nil {
-		return c.tui.RecordIfError("Failed to generate overlays!", err)
+		return usererr.Wrap(err, "Failed to generate overlays!")
 	}
 
 	cmd := buildBaseComposeCommand(ws, p, overlay)
@@ -28,11 +30,11 @@ func (c *Compose) Exec(ws *workspace.Workspace, p *workspace.Project, service st
 		// If it's exit code 130, it's because they exited an interactive container
 		// typically. Not sure if this is always true though, need to see how this
 		// works across more use-cases.
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ProcessState.ExitCode() == 130 {
+		if exitError, ok := errors.AsType[*exec.ExitError](err); ok && exitError.ProcessState.ExitCode() == 130 {
 			return nil
 		}
 
-		return c.tui.RecordIfError("Command failed!", err)
+		return usererr.Wrap(err, "Command failed!")
 	}
 
 	return nil

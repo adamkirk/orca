@@ -7,6 +7,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/minio/selfupdate"
 )
 
@@ -97,7 +98,7 @@ func (hs *HostSystem) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error
 	v, err := hs.getVersionForSelf(cmd)
 
 	if err != nil {
-		return hs.tui.RecordIfError("Failed to find version!", err)
+		return usererr.Wrap(err, "Failed to find version!")
 	}
 
 	hs.tui.Info(fmt.Sprintf("Switching to version: %s", v.String()))
@@ -105,9 +106,9 @@ func (hs *HostSystem) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error
 	err = hs.replaceSelf(v.String())
 
 	if err != nil {
-		return hs.tui.RecordIfError(
-			"Failed to apply update!",
+		return usererr.Wrap(
 			err,
+			"Failed to apply update!",
 		)
 	}
 

@@ -1,11 +1,5 @@
 package provision
 
-import "fmt"
+import "errors"
 
-type ErrUnsupportedProvisioner struct {
-	Message string
-}
-
-func (err ErrUnsupportedProvisioner) Error() string {
-	return fmt.Sprintf("unsupported provisioner: %s", err.Message)
-}
+var ErrUnsupportedProvisioner = errors.New("unsupported provisioner")

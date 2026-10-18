@@ -196,10 +196,7 @@ func (s *services) GetStack() *stack.Manager {
 		return s.stack
 	}
 
-	s.stack = stack.NewManager(
-		s.GetCompose(),
-		s.GetTui(),
-	)
+	s.stack = stack.NewManager(s.GetCompose())
 
 	return s.stack
 }
@@ -366,10 +363,7 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 		return s.executionContextMiddleware
 	}
 
-	ec := workspace.NewExecutionContextMiddleware(
-		s.GetContextResolver(),
-		s.GetTui(),
-	)
+	ec := workspace.NewExecutionContextMiddleware(s.GetContextResolver())
 
 	ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}

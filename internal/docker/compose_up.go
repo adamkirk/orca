@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -15,7 +16,7 @@ func (c *Compose) Up(ws *workspace.Workspace, p *workspace.Project) error {
 
 	overlay, err := c.getOverlay(ws, p)
 	if err != nil {
-		return c.tui.RecordIfError("Failed to generate overlays!", err)
+		return usererr.Wrap(err, "Failed to generate overlays!")
 	}
 
 	c.tui.Info(fmt.Sprintf("%s:%s[%s] starting...", p.Name, ws.Name, p.ProjectDir))
@@ -26,7 +27,7 @@ func (c *Compose) Up(ws *workspace.Workspace, p *workspace.Project) error {
 	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
-		return c.tui.RecordIfError(fmt.Sprintf("%s:%s[%s] failed!", p.Name, ws.Name, p.ProjectDir), err)
+		return usererr.Wrap(err, fmt.Sprintf("%s:%s[%s] failed!", p.Name, ws.Name, p.ProjectDir))
 	}
 
 	c.tui.Success(fmt.Sprintf("%s:%s[%s] complete!", p.Name, ws.Name, p.ProjectDir))

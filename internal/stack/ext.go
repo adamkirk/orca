@@ -3,9 +3,11 @@ package stack
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -53,20 +55,18 @@ func (m *Manager) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionComm
 	}
 
 	if execCtx.Project == nil {
-		return workspace.ErrInvalidExecutionContext{
-			Msg: "Extensions must be executed within a project context!",
-		}
+		return fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "Extensions must be executed within a project context!")
 	}
 
 	ext, err := execCtx.Project.FindExtension(cmd.Name)
 
 	if err != nil {
-		return m.tui.RecordIfError("Extension does not exist in project context.", err)
+		return usererr.Wrap(err, "Extension does not exist in project context.")
 	}
 
 	if ext.Service != "" {
 		return m.executeExtensionInService(cmd, execCtx, ext)
 	}
 
-	return m.tui.RecordIfError("Extension must have a service defined", errors.New("alternative is not yet implemented"))
+	return usererr.Wrap(errors.New("alternative is not yet implemented"), "Extension must have a service defined")
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -79,14 +80,8 @@ If a single project is being clone then it will be cloned into {target}.`)
 }
 
 func handleWsSwitch(cmd *cobra.Command, args []string) error {
-	tui := svcContainer.GetTui()
-
 	if len(args) < 1 {
-		tui.Error("Must supply a workspace!")
-
-		return workspace.ErrUnknownWorkspace{
-			Name: "",
-		}
+		return usererr.Wrap(ErrArgumentRequired{Name: "workspace", Index: 1}, "Must supply a workspace!")
 	}
 
 	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.SwitchCommand{

@@ -1,7 +1,5 @@
 package tui
 
-type ErrUserAbortedExecution struct{}
+import "errors"
 
-func (err ErrUserAbortedExecution) Error() string {
-	return "user aborted execution"
-}
+var ErrUserAbortedExecution = errors.New("user aborted execution")

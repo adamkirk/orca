@@ -2,11 +2,13 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/process"
 	orcatui "github.com/adamkirk/orca/internal/tui"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -103,29 +105,28 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 	branchesLength := len(branches)
 
 	if branchesLength == 0 {
-		g.tui.Error("No branches were found!")
-		return ErrNoBranchesFound{}
+		return usererr.Wrap(ErrNoBranchesFound, "No branches were found!")
 	}
 
 	if branchesLength == 1 {
 		err := g.performCheckout(dir, branches[0].Name, false)
 
-		return g.tui.RecordIfError("Failed to checkout branch", err)
+		return usererr.Wrap(err, "Failed to checkout branch")
 	}
 
 	chosen, err := g.tui.PresentChoices(branches.Names(), "Which branch?")
 
 	if err != nil {
-		if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
+		if errors.Is(err, orcatui.ErrUserAbortedExecution) {
 			return err
 		}
 
-		return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
+		return usererr.Wrap(err, "Something went wrong, this is most likely a bug!")
 	}
 
 	err = g.performCheckout(dir, chosen, false)
 
-	return g.tui.RecordIfError("Failed to checkout branch", err)
+	return usererr.Wrap(err, "Failed to checkout branch")
 }
 
 func (g *Git) checkoutSingle(search string, execCtx workspace.ExecutionContext) error {
@@ -153,7 +154,7 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx workspace.Exec
 		chosen, err := g.tui.PresentChoices(branches.Names(), fmt.Sprintf("Which branch? (%s:%s)", p.Name, p.ProjectDir))
 
 		if err != nil {
-			if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
+			if errors.Is(err, orcatui.ErrUserAbortedExecution) {
 				return nil, err
 			}
 
@@ -171,19 +172,22 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx workspace.Exec
 
 func (g *Git) handleCreate(execCtx workspace.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Name == "" || cmd.Name == previousBranchAlias {
-		return g.tui.RecordIfError("A branch name must be supplied when creating a branch!", workspace.ErrInvalidInput{
-			To:  "co",
-			Msg: "an exact branch name must be supplied when creating a branch",
-		})
+		return usererr.Wrap(
+			workspace.ErrInvalidInput{
+				To:  "co",
+				Msg: "an exact branch name must be supplied when creating a branch",
+			},
+			"A branch name must be supplied when creating a branch!",
+		)
 	}
 
 	if !cmd.AllProjects {
-		return g.tui.RecordIfError("Failed to checkout branch", g.checkoutOrCreate(execCtx.Dir(), cmd.Name))
+		return usererr.Wrap(g.checkoutOrCreate(execCtx.Dir(), cmd.Name), "Failed to checkout branch")
 	}
 
 	for _, p := range execCtx.Workspace.Projects {
 		if err := g.checkoutOrCreate(p.ProjectDir, cmd.Name); err != nil {
-			return g.tui.RecordIfError("Checkout failed, you should check the branches for all projects as this failed mid-flow", err)
+			return usererr.Wrap(err, "Checkout failed, you should check the branches for all projects as this failed mid-flow")
 		}
 	}
 
@@ -200,16 +204,19 @@ func (g *Git) handleCheckout(execCtx workspace.ExecutionContext, cmd CheckoutCom
 	}
 
 	if cmd.Name == previousBranchAlias {
-		return g.tui.RecordIfError(fmt.Sprintf("Cannot use '%s' when checking out multiple projects!", previousBranchAlias), workspace.ErrInvalidInput{
-			To:  "co",
-			Msg: fmt.Sprintf("cannot use '%s' when checking out multiple projects", previousBranchAlias),
-		})
+		return usererr.Wrap(
+			workspace.ErrInvalidInput{
+				To:  "co",
+				Msg: fmt.Sprintf("cannot use '%s' when checking out multiple projects", previousBranchAlias),
+			},
+			fmt.Sprintf("Cannot use '%s' when checking out multiple projects!", previousBranchAlias),
+		)
 	}
 
 	chosenBranches, err := g.chooseBranchesForAllProjects(cmd.Name, execCtx)
 
 	if err != nil {
-		return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
+		return usererr.Wrap(err, "Something went wrong, this is most likely a bug!")
 	}
 
 	for dir, b := range chosenBranches {
@@ -221,7 +228,7 @@ func (g *Git) handleCheckout(execCtx workspace.ExecutionContext, cmd CheckoutCom
 		err := g.performCheckout(dir, b.Name, false)
 
 		if err != nil {
-			return g.tui.RecordIfError("Checkout failed, you should check the branches for all projects as this failed mid-flow", err)
+			return usererr.Wrap(err, "Checkout failed, you should check the branches for all projects as this failed mid-flow")
 		}
 	}
 
@@ -236,12 +243,12 @@ func (g *Git) Checkout(ctx context.Context, cmd CheckoutCommand) error {
 	}
 
 	if err := g.handleCheckout(execCtx, cmd); err != nil {
-		return g.tui.RecordIfError("Failed to checkout", err)
+		return usererr.Wrap(err, "Failed to checkout")
 	}
 
 	if !cmd.Pull {
 		return nil
 	}
 
-	return g.tui.RecordIfError("Failed to pull", g.pullInContext(execCtx, cmd.AllProjects, cmd.Rebase))
+	return usererr.Wrap(g.pullInContext(execCtx, cmd.AllProjects, cmd.Rebase), "Failed to pull")
 }

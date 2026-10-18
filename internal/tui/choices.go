@@ -113,7 +113,7 @@ func (t *Tui) PresentChoices(opts []string, title string) (string, error) {
 	}
 
 	if m.quitting {
-		return "", ErrUserAbortedExecution{}
+		return "", ErrUserAbortedExecution
 	}
 
 	return m.choice, nil

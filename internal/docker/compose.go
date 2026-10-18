@@ -14,10 +14,8 @@ type composeOverlayGenerator interface {
 
 type tui interface {
 	Info(msg ...string)
-	Error(msg ...string)
 	Success(msg ...string)
 	NewLine()
-	RecordIfError(msg string, err error) error
 }
 
 type cli interface {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/sys"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/cobra"
 )
 
@@ -54,16 +55,21 @@ func handleCheck(cmd *cobra.Command, _ []string) error {
 }
 
 func handleSysInstall(cmd *cobra.Command, args []string) error {
-	tui := svcContainer.GetTui()
 	if len(args) < 1 {
-		return tui.RecordIfError("Must provide the name of the tool as the first argument", ErrArgumentRequired{
-			Name:  "tool",
-			Index: 1,
-		})
+		return usererr.Wrap(
+			ErrArgumentRequired{
+				Name:  "tool",
+				Index: 1,
+			},
+			"Must provide the name of the tool as the first argument",
+		)
 	} else if len(args) > 1 {
-		return tui.RecordIfError("Too many arguments provided!", ErrTooManyArguments{
-			Expected: 1,
-		})
+		return usererr.Wrap(
+			ErrTooManyArguments{
+				Expected: 1,
+			},
+			"Too many arguments provided!",
+		)
 	}
 
 	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.InstallCommand{

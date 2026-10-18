@@ -1,11 +1,13 @@
 package git
 
 import (
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -14,9 +16,7 @@ const ConfirmNo = "No"
 
 type tui interface {
 	Info(msg ...string)
-	Error(msg ...string)
 	Success(msg ...string)
-	RecordIfError(msg string, err error) error
 	NewLine()
 	PresentChoices(opts []string, title string) (string, error)
 	Table(header []string, rows [][]string)
@@ -45,11 +45,9 @@ func (g *Git) mustBeInAGitRepository(dir string) error {
 		return nil
 	}
 
-	return g.tui.RecordIfError(
+	return usererr.Wrap(
+		fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "this command must be executed from within a git repository"),
 		"You don't appear to be in a git repository!",
-		workspace.ErrInvalidExecutionContext{
-			Msg: "this command must be executed from within a git repository",
-		},
 	)
 
 }
@@ -75,9 +73,7 @@ func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
 		errOutput := stderr.String()
 		slog.Error("failed to execute 'git rev-parse --show-top-level'", "in", dir, "err", err, "stderr", errOutput)
 
-		return "", ErrCommandExecutionFailed{
-			Msg: errOutput,
-		}
+		return "", fmt.Errorf("%w: %s", ErrCommandExecutionFailed, errOutput)
 	}
 
 	return strings.TrimSpace(stdout.String()), nil

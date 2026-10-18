@@ -1,7 +1,9 @@
 package sys
 
 import (
+	"errors"
 	"fmt"
+	"github.com/adamkirk/orca/internal/usererr"
 	"os/exec"
 	"strings"
 )
@@ -65,7 +67,7 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 	}
 
 	if err := cmd.Wait(); err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
+		if exiterr, ok := errors.AsType[*exec.ExitError](err); ok {
 			if exiterr.ExitCode() != 0 {
 				hs.tui.Error(fmt.Sprintf("'%s' returned a non-zero exit code!", fullCmdString))
 
@@ -79,8 +81,7 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 			}
 		}
 
-		hs.tui.Error(fmt.Sprintf("Something wen wrong while checking '%s', this is most likely a bug! (whoopsie)", fullCmdString))
-		return err
+		return usererr.Wrap(err, fmt.Sprintf("Something went wrong while checking '%s', this is most likely a bug!", fullCmdString))
 	}
 
 	hs.tui.Success(fmt.Sprintf("'%s' could be executed!", fullCmdString))
@@ -109,7 +110,7 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 
 	for _, sub := range tool.SubCmds {
 		if err := hs.ensureToolExists(sub, parents); err != nil {
-			if notFoundErr, ok := err.(ErrToolsNotFoundOnSystem); ok {
+			if notFoundErr, ok := errors.AsType[ErrToolsNotFoundOnSystem](err); ok {
 				subErrs = append(subErrs, notFoundErr.Errs...)
 			}
 
@@ -133,7 +134,7 @@ func (hs *HostSystem) VerifySetup() error {
 		err := hs.ensureToolExists(t, []Tool{})
 
 		if err != nil {
-			if toolNotFoundErr, ok := err.(ErrToolsNotFoundOnSystem); ok {
+			if toolNotFoundErr, ok := errors.AsType[ErrToolsNotFoundOnSystem](err); ok {
 				errs = append(errs, toolNotFoundErr.Errs...)
 				continue
 			}

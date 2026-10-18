@@ -2,10 +2,12 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/afero"
 )
 
@@ -59,9 +61,9 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 	if project.RepositoryConfig.Self {
 		m.tui.Info(fmt.Sprintf("Registering workspace as project: %s", project.Name))
 
-		return m.tui.RecordIfError(
-			"Failed to register workspace as a project!",
+		return usererr.Wrap(
 			m.registerWorkspaceProject(ws, project),
+			"Failed to register workspace as a project!",
 		)
 	}
 
@@ -80,18 +82,18 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 		isCloned, err := m.projectIsAlreadyClonedAtLocation(project, into)
 
 		if err != nil {
-			return m.tui.RecordIfError(
-				"Failed to verify existing directory!",
+			return usererr.Wrap(
 				err,
+				"Failed to verify existing directory!",
 			)
 		}
 
 		if isCloned {
 			m.tui.Info(fmt.Sprintf("Skipping '%s' already cloned at '%s'!", project.Name, into))
 
-			return m.tui.RecordIfError(
-				"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
+			return usererr.Wrap(
 				m.configManager.SetProjectPath(ws.Name, project.Name, into),
+				"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
 			)
 		}
 
@@ -112,12 +114,12 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 	err = m.git.Clone(project.RepositoryConfig.SSH, into, "")
 
 	if err != nil {
-		return m.tui.RecordIfError("Clone failed!", err)
+		return usererr.Wrap(err, "Clone failed!")
 	}
 
-	return m.tui.RecordIfError(
-		"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
+	return usererr.Wrap(
 		m.configManager.SetProjectPath(ws.Name, project.Name, into),
+		"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
 	)
 }
 
@@ -165,8 +167,8 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
-		if _, ok := err.(ErrUnknownWorkspace); ok {
-			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", wsName), err)
+		if _, ok := errors.AsType[ErrUnknownWorkspace](err); ok {
+			return usererr.Wrap(err, fmt.Sprintf("Unknown workspace: %s", wsName))
 		}
 
 		return err
@@ -181,7 +183,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	targetDir, err := m.getCloneTargetDir(wsMeta.Path, to)
 
 	if err != nil {
-		return m.tui.RecordIfError("Failed to determine target directory!", err)
+		return usererr.Wrap(err, "Failed to determine target directory!")
 	}
 
 	var cloneErr error = nil
@@ -190,7 +192,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 		project, err := cfg.GetProject(project)
 
 		if err != nil {
-			return m.tui.RecordIfError("Failed to clone specified project!", err)
+			return usererr.Wrap(err, "Failed to clone specified project!")
 		}
 
 		targetDir := targetDir
@@ -206,7 +208,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 
 	if cloneErr != nil {
 		if _, ok := cloneErr.(ErrDirectoryAlreadyExists); ok {
-			return m.tui.RecordIfError("Cannot clone into the given directory, it already exists!", cloneErr)
+			return usererr.Wrap(cloneErr, "Cannot clone into the given directory, it already exists!")
 		}
 
 		return cloneErr

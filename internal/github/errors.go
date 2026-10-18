@@ -1,14 +1,11 @@
 package github
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-type ErrUnexpectedApiError struct {
-	Msg string
-}
-
-func (err ErrUnexpectedApiError) Error() string {
-	return fmt.Sprintf("unexpected API error: %s", err.Msg)
-}
+var ErrUnexpectedApiError = errors.New("unexpected API error")
 
 type ErrRateLimitedByApi struct {
 	Api string

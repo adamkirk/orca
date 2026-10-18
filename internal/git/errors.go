@@ -1,23 +1,9 @@
 package git
 
-import "fmt"
+import "errors"
 
-type ErrCommandExecutionFailed struct {
-	Msg string
-}
-
-func (err ErrCommandExecutionFailed) Error() string {
-	return fmt.Sprintf("command execution failed: %s", err.Msg)
-}
-
-type ErrCouldNotDetermineCurrentBranch struct{}
-
-func (err ErrCouldNotDetermineCurrentBranch) Error() string {
-	return "could not determine current branch"
-}
-
-type ErrNoBranchesFound struct{}
-
-func (err ErrNoBranchesFound) Error() string {
-	return "no branches found"
-}
+var (
+	ErrCommandExecutionFailed         = errors.New("command execution failed")
+	ErrCouldNotDetermineCurrentBranch = errors.New("could not determine current branch")
+	ErrNoBranchesFound                = errors.New("no branches found")
+)

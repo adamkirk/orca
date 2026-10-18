@@ -14,7 +14,6 @@ type tui interface {
 	Info(msg ...string)
 	Error(msg ...string)
 	Success(msg ...string)
-	RecordIfError(msg string, err error) error
 }
 
 type githubClient interface {

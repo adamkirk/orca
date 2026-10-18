@@ -8,7 +8,6 @@ type tui interface {
 	Info(msg ...string)
 	Error(msg ...string)
 	Success(msg ...string)
-	RecordIfError(msg string, err error) error
 	Table(header []string, rows [][]string)
 }
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"path/filepath"
 
 	"github.com/adamkirk/orca/internal/workspace"
@@ -174,7 +175,7 @@ func (c *Config) SetProjectPath(wsName string, name string, path string) error {
 	project, err := c.persisted.getProject(wsName, name)
 
 	if err != nil {
-		if _, ok := err.(workspace.ErrUnknownProject); !ok {
+		if _, ok := errors.AsType[workspace.ErrUnknownProject](err); !ok {
 			return err
 		}
 

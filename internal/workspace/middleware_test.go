@@ -2,10 +2,12 @@ package workspace_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,18 +24,6 @@ func (r *stubResolver) Resolve(ws string, project string) (workspace.ExecutionCo
 	r.calls = append(r.calls, [2]string{ws, project})
 
 	return r.execCtx, r.err
-}
-
-type stubTui struct {
-	recorded []string
-}
-
-func (t *stubTui) RecordIfError(msg string, err error) error {
-	if err != nil {
-		t.recorded = append(t.recorded, msg)
-	}
-
-	return err
 }
 
 type targetedCommand struct {
@@ -54,8 +44,8 @@ func (untargetedCommand) MessageName() string { return "untargeted" }
 
 const noWorkspaceMsg = "Could not determine the workspace; run this from within a project, pass --workspace, or choose one with 'orca ws switch'."
 
-func newMiddleware(resolver *stubResolver, tui *stubTui) *workspace.ExecutionContextMiddleware {
-	ec := workspace.NewExecutionContextMiddleware(resolver, tui)
+func newMiddleware(resolver *stubResolver) *workspace.ExecutionContextMiddleware {
+	ec := workspace.NewExecutionContextMiddleware(resolver)
 
 	ec.Target(func(cmd targetedCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{
@@ -76,17 +66,17 @@ func Test_ExecutionContextMiddleware_Resolve(t *testing.T) {
 		Workspace:        &workspace.Workspace{Name: "acme"},
 		WorkingDirectory: "/somewhere",
 	}
-	noWorkspace := workspace.ErrCouldNotDetermineWorkspace{Message: "nope"}
+	noWorkspace := fmt.Errorf("%w: %s", workspace.ErrCouldNotDetermineWorkspace, "nope")
 	otherErr := workspace.ErrUnknownWorkspace{Name: "missing"}
 
 	tests := []struct {
-		name           string
-		cmd            targetedCommand
-		resolveCtx     workspace.ExecutionContext
-		resolveErr     error
-		expectCtx      workspace.ExecutionContext
-		expectErr      error
-		expectRecorded []string
+		name       string
+		cmd        targetedCommand
+		resolveCtx workspace.ExecutionContext
+		resolveErr error
+		expectCtx  workspace.ExecutionContext
+		expectErr  error
+		expectMsg  string
 	}{
 		{
 			name:       "resolved context is passed to the handler",
@@ -100,34 +90,32 @@ func Test_ExecutionContextMiddleware_Resolve(t *testing.T) {
 			expectCtx:  workspace.ExecutionContext{WorkingDirectory: wd},
 		},
 		{
-			name:           "requires a workspace when it isn't optional",
-			cmd:            targetedCommand{All: true},
-			resolveErr:     noWorkspace,
-			expectErr:      noWorkspace,
-			expectRecorded: []string{noWorkspaceMsg},
+			name:       "requires a workspace when it isn't optional",
+			cmd:        targetedCommand{All: true},
+			resolveErr: noWorkspace,
+			expectErr:  noWorkspace,
+			expectMsg:  noWorkspaceMsg,
 		},
 		{
-			name:           "requires a workspace for a specific project",
-			cmd:            targetedCommand{Project: "api"},
-			resolveErr:     noWorkspace,
-			expectErr:      noWorkspace,
-			expectRecorded: []string{noWorkspaceMsg},
+			name:       "requires a workspace for a specific project",
+			cmd:        targetedCommand{Project: "api"},
+			resolveErr: noWorkspace,
+			expectErr:  noWorkspace,
+			expectMsg:  noWorkspaceMsg,
 		},
 		{
-			name:           "other errors are returned",
-			resolveErr:     otherErr,
-			expectErr:      otherErr,
-			expectRecorded: []string{"Failed to determine the workspace or project!"},
+			name:       "other errors are returned",
+			resolveErr: otherErr,
+			expectErr:  otherErr,
+			expectMsg:  "Failed to determine the workspace or project!",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resolver := &stubResolver{execCtx: tt.resolveCtx, err: tt.resolveErr}
-			tui := &stubTui{}
-
 			b := bus.New()
-			b.Use(newMiddleware(resolver, tui).Handle)
+			b.Use(newMiddleware(resolver).Handle)
 
 			handled := false
 			var hookCtx workspace.ExecutionContext
@@ -150,7 +138,8 @@ func Test_ExecutionContextMiddleware_Resolve(t *testing.T) {
 			_, err := b.Dispatch(context.Background(), tt.cmd)
 
 			assert.Equal(t, [][2]string{{tt.cmd.Workspace, tt.cmd.Project}}, resolver.calls)
-			assert.Equal(t, tt.expectRecorded, tui.recorded)
+			msg, _, _ := usererr.Message(err)
+			assert.Equal(t, tt.expectMsg, msg)
 
 			if tt.expectErr != nil {
 				assert.ErrorIs(t, err, tt.expectErr)
@@ -171,7 +160,7 @@ func Test_ExecutionContextMiddleware_UntargetedPassesThrough(t *testing.T) {
 	resolver := &stubResolver{}
 
 	b := bus.New()
-	b.Use(newMiddleware(resolver, &stubTui{}).Handle)
+	b.Use(newMiddleware(resolver).Handle)
 
 	var handlerErr error
 
@@ -185,11 +174,11 @@ func Test_ExecutionContextMiddleware_UntargetedPassesThrough(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Empty(t, resolver.calls)
-	assert.Equal(t, workspace.ErrNoExecutionContext{}, handlerErr)
+	assert.Equal(t, workspace.ErrNoExecutionContext, handlerErr)
 }
 
 func Test_ExecutionContextMiddleware_Target(t *testing.T) {
-	ec := newMiddleware(&stubResolver{}, &stubTui{})
+	ec := newMiddleware(&stubResolver{})
 
 	assert.Equal(t, []string{"workspace_test.targetedCommand"}, ec.TargetedTypes())
 
@@ -203,5 +192,5 @@ func Test_ExecutionContextMiddleware_Target(t *testing.T) {
 func Test_ExecutionContextFrom_Missing(t *testing.T) {
 	_, err := workspace.ExecutionContextFrom(context.Background())
 
-	assert.Equal(t, workspace.ErrNoExecutionContext{}, err)
+	assert.Equal(t, workspace.ErrNoExecutionContext, err)
 }

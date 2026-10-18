@@ -18,9 +18,7 @@ func (c *GithubClient) LatestVersion(owner string, repo string) (*semver.Version
 	rel, resp, err := c.client.Repositories.GetLatestRelease(context.TODO(), owner, repo)
 
 	if err != nil {
-		return nil, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("error from client: %s", err.Error()),
-		}
+		return nil, fmt.Errorf("%w: error from client: %w", ErrUnexpectedApiError, err)
 	}
 
 	switch resp.StatusCode {
@@ -31,9 +29,7 @@ func (c *GithubClient) LatestVersion(owner string, repo string) (*semver.Version
 			Api: "github",
 		}
 	default:
-		return nil, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("got %d response when getting release", resp.StatusCode),
-		}
+		return nil, fmt.Errorf("%w: got %d response when getting release", ErrUnexpectedApiError, resp.StatusCode)
 	}
 }
 
@@ -41,9 +37,7 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 	_, resp, err := c.client.Repositories.GetReleaseByTag(context.TODO(), owner, repo, v)
 
 	if err != nil {
-		return false, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("error from client: %s", err.Error()),
-		}
+		return false, fmt.Errorf("%w: error from client: %w", ErrUnexpectedApiError, err)
 	}
 
 	switch resp.StatusCode {
@@ -56,9 +50,7 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 			Api: "github",
 		}
 	default:
-		return false, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("got %d response when getting release", resp.StatusCode),
-		}
+		return false, fmt.Errorf("%w: got %d response when getting release", ErrUnexpectedApiError, resp.StatusCode)
 	}
 }
 
@@ -77,9 +69,7 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 	}
 
 	if resp == nil {
-		return nil, false, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("error from client: %s", err.Error()),
-		}
+		return nil, false, fmt.Errorf("%w: error from client: %w", ErrUnexpectedApiError, err)
 	}
 
 	switch resp.StatusCode {
@@ -92,9 +82,7 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 		contents, err := file.GetContent()
 
 		if err != nil {
-			return nil, false, ErrUnexpectedApiError{
-				Msg: fmt.Sprintf("failed to decode file contents: %s", err.Error()),
-			}
+			return nil, false, fmt.Errorf("%w: failed to decode file contents: %w", ErrUnexpectedApiError, err)
 		}
 
 		return []byte(contents), true, nil
@@ -105,9 +93,7 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 			Api: "github",
 		}
 	default:
-		return nil, false, ErrUnexpectedApiError{
-			Msg: fmt.Sprintf("got %d response when getting file contents", resp.StatusCode),
-		}
+		return nil, false, fmt.Errorf("%w: got %d response when getting file contents", ErrUnexpectedApiError, resp.StatusCode)
 	}
 }
 

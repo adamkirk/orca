@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/afero"
 )
 
@@ -41,33 +43,32 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 	exists, err := afero.Exists(m.fs, workspaceConfigPath)
 
 	if err != nil {
-		return m.tui.RecordIfError("Failed to find config, this is likely a bug!", err)
+		return usererr.Wrap(err, "Failed to find config, this is likely a bug!")
 	}
 
 	if !exists {
-		return m.tui.RecordIfError(
-			fmt.Sprintf("Could not find workspace config: %s", workspaceConfigPath),
+		return usererr.Wrap(
 			ErrFileNotFound{
 				Path: workspaceConfigPath,
 			},
+			fmt.Sprintf("Could not find workspace config: %s", workspaceConfigPath),
 		)
 	}
 
 	cfg, err := m.workspaceRepo.LoadUnconfiguredWorkspace(workspaceConfigPath)
 
 	if err != nil {
-		return m.tui.RecordIfError(fmt.Sprintf("Failed to load workspace config '%s'!", workspaceConfigPath), err)
+		return usererr.Wrap(err, fmt.Sprintf("Failed to load workspace config '%s'!", workspaceConfigPath))
 	}
 
 	err = m.configManager.AddWorkspace(workspaceConfigPath, cfg.Name)
 
 	if err != nil {
-		if _, ok := err.(ErrWorkspaceAlreadyExists); ok {
-			m.tui.Error("Workspace already exists!")
-			return err
+		if _, ok := errors.AsType[ErrWorkspaceAlreadyExists](err); ok {
+			return usererr.Wrap(err, "Workspace already exists!")
 		}
 
-		return m.tui.RecordIfError("Failed to register workspace, this is likely a bug!", err)
+		return usererr.Wrap(err, "Failed to register workspace, this is likely a bug!")
 	}
 
 	if err := m.clone(cfg.Name, "", into); err != nil {
@@ -109,7 +110,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 	repo, err := parseGithubRepo(repoName)
 
 	if err != nil {
-		return m.tui.RecordIfError(fmt.Sprintf("Invalid repository '%s', expected the format 'owner/repo'!", repoName), err)
+		return usererr.Wrap(err, fmt.Sprintf("Invalid repository '%s', expected the format 'owner/repo'!", repoName))
 	}
 
 	workspaceFilePath := strings.TrimPrefix(path.Clean(workspaceFile), "/")
@@ -119,34 +120,34 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 	contents, exists, err := m.githubClient.GetFileContents(repo.Owner, repo.Name, workspaceFilePath)
 
 	if err != nil {
-		return m.tui.RecordIfError("Failed to check repository for workspace config!", err)
+		return usererr.Wrap(err, "Failed to check repository for workspace config!")
 	}
 
 	if !exists {
-		return m.tui.RecordIfError(
+		return usererr.Wrap(
+			ErrFileNotFound{
+				Path: workspaceFilePath,
+			},
 			fmt.Sprintf(
 				"Could not find workspace config '%s' in %s/%s (if the repository is private, set GH_TOKEN or GITHUB_TOKEN)",
 				workspaceFilePath,
 				repo.Owner,
 				repo.Name,
 			),
-			ErrFileNotFound{
-				Path: workspaceFilePath,
-			},
 		)
 	}
 
 	if _, err := m.workspaceRepo.ParseUnconfiguredWorkspace(contents, workspaceFilePath); err != nil {
-		return m.tui.RecordIfError(
-			fmt.Sprintf("Workspace config '%s' in %s/%s is invalid!", workspaceFilePath, repo.Owner, repo.Name),
+		return usererr.Wrap(
 			err,
+			fmt.Sprintf("Workspace config '%s' in %s/%s is invalid!", workspaceFilePath, repo.Owner, repo.Name),
 		)
 	}
 
 	cloneDir, err := filepath.Abs(filepath.Join(into, repo.Name))
 
 	if err != nil {
-		return m.tui.RecordIfError("Failed to determine clone directory!", err)
+		return usererr.Wrap(err, "Failed to determine clone directory!")
 	}
 
 	dirExists, err := afero.Exists(m.fs, cloneDir)
@@ -156,22 +157,22 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 	}
 
 	if dirExists {
-		return m.tui.RecordIfError(
-			fmt.Sprintf("Cannot clone into '%s', it already exists!", cloneDir),
+		return usererr.Wrap(
 			ErrDirectoryAlreadyExists{
 				Path: cloneDir,
 			},
+			fmt.Sprintf("Cannot clone into '%s', it already exists!", cloneDir),
 		)
 	}
 
 	if err := m.fs.MkdirAll(into, 0755); err != nil {
-		return m.tui.RecordIfError("Failed to create target directory!", err)
+		return usererr.Wrap(err, "Failed to create target directory!")
 	}
 
 	m.tui.Info(fmt.Sprintf("Cloning '%s' into %s...", repo.CloneURL, cloneDir))
 
 	if err := m.git.Clone(repo.CloneURL, cloneDir, ""); err != nil {
-		return m.tui.RecordIfError("Clone failed!", err)
+		return usererr.Wrap(err, "Clone failed!")
 	}
 
 	return m.InitialiseFromLocalDirectory(ctx, cloneDir, workspaceFile, into)

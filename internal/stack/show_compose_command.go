@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/workspace"
@@ -26,9 +27,7 @@ func (m *Manager) ShowComposeCommand(ctx context.Context, query ShowComposeComma
 	}
 
 	if execCtx.Project == nil {
-		return workspace.ErrInvalidExecutionContext{
-			Msg: "this command must be run in a singular project context",
-		}
+		return fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "this command must be run in a singular project context")
 	}
 
 	return m.compose.ShowCommand(execCtx.Workspace, execCtx.Project)

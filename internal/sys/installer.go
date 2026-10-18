@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/afero"
 )
 
@@ -65,7 +66,7 @@ func (hs *HostSystem) extractExecutableFromArchive(archive []byte, path string) 
 
 		// if no more files are found return
 		case err == io.EOF:
-			return nil, ErrInvalidArchive{}
+			return nil, ErrInvalidArchive
 
 		// return any other error
 		case err != nil:
@@ -277,9 +278,12 @@ func (InstallCommand) MessageName() string {
 
 func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	if !cmd.Tool.IsKnown() {
-		return hs.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), ErrUnknownTool{
-			Tool: string(cmd.Tool),
-		})
+		return usererr.Wrap(
+			ErrUnknownTool{
+				Tool: string(cmd.Tool),
+			},
+			fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)),
+		)
 	}
 
 	var err error
@@ -289,14 +293,14 @@ func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	case ToolSops:
 		err = hs.installSops()
 	default:
-		return hs.tui.RecordIfError("This tool is not supported!", ErrNotImplemented{
-			Msg: "installation has not been implemented for this tool",
-		})
+		return usererr.Wrap(
+			fmt.Errorf("%w: %s", ErrNotImplemented, "installation has not been implemented for this tool"),
+			"This tool is not supported!",
+		)
 	}
 
 	if err != nil {
-		hs.tui.Error("Installation failed!")
-		return err
+		return usererr.Wrap(err, "Installation failed!")
 	}
 
 	hs.tui.Success("Installation successful!")

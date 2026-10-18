@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -9,8 +10,7 @@ func (c *Compose) DoesSvcExist(ws *workspace.Workspace, p *workspace.Project, se
 	spec, err := c.LoadSpec(ws, p)
 
 	if err != nil {
-		c.tui.RecordIfError("Failed to load docker compose spec for project", err)
-		return false, err
+		return false, usererr.Wrap(err, "Failed to load docker compose spec for project")
 	}
 
 	_, ok := spec.Services[service]

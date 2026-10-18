@@ -5,6 +5,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -22,7 +23,7 @@ func (g *Git) PushBranch(cmd PushBranchOpts) error {
 	branch, err := g.GetCurrentBranch(cmd.Dir)
 
 	if err != nil {
-		return g.tui.RecordIfError("Failed to determine current branch, and no branch was supplied!", err)
+		return usererr.Wrap(err, "Failed to determine current branch, and no branch was supplied!")
 	}
 
 	args := []string{
@@ -60,7 +61,7 @@ func (g *Git) pushInContext(execCtx workspace.ExecutionContext, allProjects bool
 
 	for _, p := range execCtx.Workspace.Projects {
 		if err := g.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
-			return g.tui.RecordIfError("Push failed, you should check the branches for all projects as this failed mid-flow", err)
+			return usererr.Wrap(err, "Push failed, you should check the branches for all projects as this failed mid-flow")
 		}
 	}
 

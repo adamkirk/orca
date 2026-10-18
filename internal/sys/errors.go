@@ -1,8 +1,14 @@
 package sys
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+)
+
+var (
+	ErrInvalidArchive = errors.New("invalid archive used")
+	ErrNotImplemented = errors.New("not implemented")
 )
 
 type ErrToolsNotFoundOnSystem struct {
@@ -51,24 +57,10 @@ func (err ErrUnsupportedArchitecture) Error() string {
 	return fmt.Sprintf("unsupported architecture: %s", err.Arch)
 }
 
-type ErrInvalidArchive struct{}
-
-func (err ErrInvalidArchive) Error() string {
-	return "invalid archive used"
-}
-
 type ErrUnknownTool struct {
 	Tool string
 }
 
 func (err ErrUnknownTool) Error() string {
 	return fmt.Sprintf("unknown tool: %s", err.Tool)
-}
-
-type ErrNotImplemented struct {
-	Msg string
-}
-
-func (err ErrNotImplemented) Error() string {
-	return fmt.Sprintf("not implemented: %s", err.Msg)
 }

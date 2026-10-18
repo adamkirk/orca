@@ -4,14 +4,6 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-type tui interface {
-	Info(msg ...string)
-	Error(msg ...string)
-	Success(msg ...string)
-	NewLine()
-	RecordIfError(msg string, err error) error
-}
-
 type compose interface {
 	Up(*workspace.Workspace, *workspace.Project) error
 	Down(ws *workspace.Workspace, p *workspace.Project) error
@@ -27,12 +19,10 @@ type compose interface {
 // Manager handles the commands that run a workspace or project's compose stack.
 type Manager struct {
 	compose compose
-	tui     tui
 }
 
-func NewManager(compose compose, tui tui) *Manager {
+func NewManager(compose compose) *Manager {
 	return &Manager{
 		compose: compose,
-		tui:     tui,
 	}
 }

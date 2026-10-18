@@ -2,11 +2,13 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/process"
 	orcatui "github.com/adamkirk/orca/internal/tui"
+	"github.com/adamkirk/orca/internal/usererr"
 )
 
 type UndoLastXCommitsCommand struct {
@@ -35,11 +37,11 @@ func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) e
 		}, "You might lose some precious changes, are you sure?")
 
 		if err != nil {
-			if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
+			if errors.Is(err, orcatui.ErrUserAbortedExecution) {
 				return err
 			}
 
-			return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
+			return usererr.Wrap(err, "Something went wrong, this is most likely a bug!")
 		}
 
 		if result == ConfirmNo {

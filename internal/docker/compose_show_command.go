@@ -3,6 +3,7 @@ package docker
 import (
 	"strings"
 
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -14,7 +15,7 @@ func (c *Compose) ShowCommand(ws *workspace.Workspace, p *workspace.Project) err
 
 	overlay, err := c.getOverlay(ws, p)
 	if err != nil {
-		return c.tui.RecordIfError("Failed to generate overlays!", err)
+		return usererr.Wrap(err, "Failed to generate overlays!")
 	}
 
 	cmd := buildBaseComposeCommand(ws, p, overlay)

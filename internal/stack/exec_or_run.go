@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -35,10 +36,7 @@ func (m *Manager) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
 	}
 
 	if !svcExists {
-		m.tui.Error(fmt.Sprintf("No such service: %s", cmd.Service))
-		return ErrUnknownService{
-			Name: cmd.Service,
-		}
+		return usererr.Wrap(ErrUnknownService{Name: cmd.Service}, fmt.Sprintf("No such service: %s", cmd.Service))
 	}
 
 	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, cmd.Service)

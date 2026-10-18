@@ -6,6 +6,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 )
 
 type LoglQuery struct {
@@ -33,7 +34,7 @@ func (g *Git) Logl(_ context.Context, query LoglQuery) error {
 	}, withDir(query.Dir, opt)...)
 
 	if err != nil {
-		return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
+		return usererr.Wrap(err, "Something went wrong, this is most likely a bug!")
 	}
 
 	linesOutput := stdout.String()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 )
 
 type SwitchCommand struct {
@@ -19,7 +20,7 @@ func (SwitchCommand) MessageName() string {
 
 func (m *Manager) Switch(_ context.Context, cmd SwitchCommand) error {
 	if err := m.configManager.SwitchWorkspace(cmd.Workspace); err != nil {
-		return m.tui.RecordIfError("Failed to switch workspace!", err)
+		return usererr.Wrap(err, "Failed to switch workspace!")
 	}
 
 	m.tui.Success(fmt.Sprintf("Switched to %s", cmd.Workspace))

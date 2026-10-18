@@ -7,6 +7,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -120,9 +121,7 @@ func (g *Git) searchBranches(dto searchBranchesOpts) (Branches, error) {
 	}, withDir(dto.Dir, opt)...)
 
 	if err != nil {
-		return nil, workspace.ErrInvalidExecutionContext{
-			Msg: "failed to execute 'git branch'",
-		}
+		return nil, fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "failed to execute 'git branch'")
 	}
 
 	branches := parseGitBranchOutput(stdout.String())
@@ -149,9 +148,9 @@ func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
 		Search: query.Search,
 	})
 	if err != nil {
-		return g.tui.RecordIfError(
-			"Failed to list branches!",
+		return usererr.Wrap(
 			err,
+			"Failed to list branches!",
 		)
 	}
 
@@ -182,7 +181,7 @@ func (g *Git) GetCurrentBranch(dir string) (string, error) {
 	}
 
 	if branches.GetCurrent() == nil {
-		return "", ErrCouldNotDetermineCurrentBranch{}
+		return "", ErrCouldNotDetermineCurrentBranch
 	}
 
 	return branches.GetCurrent().Name, nil
@@ -216,5 +215,5 @@ func (g *Git) PullBranch(dto PullBranchOpts) error {
 
 	err = g.exec.Exec("git", args, withDir(dto.Dir, process.WithHostIO())...)
 
-	return g.tui.RecordIfError("Failed to pull branch!", err)
+	return usererr.Wrap(err, "Failed to pull branch!")
 }

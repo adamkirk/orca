@@ -27,16 +27,15 @@ import (
 	"time"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
 type tui interface {
 	Info(msg ...string)
-	Error(msg ...string)
 	Success(msg ...string)
 	NewLine()
-	RecordIfError(msg string, err error) error
 }
 
 type issuer struct {
@@ -207,7 +206,7 @@ func (cm *CertificateManager) getOrCreateKey(path string) (crypto.Signer, error)
 		key, err := cm.createKey(path)
 
 		if err != nil {
-			return nil, cm.tui.RecordIfError(fmt.Sprintf("Failed to create key %s", path), err)
+			return nil, usererr.Wrap(err, fmt.Sprintf("Failed to create key %s", path))
 		}
 
 		cm.tui.Success(fmt.Sprintf("Key %s created successfully!", path))
@@ -218,7 +217,7 @@ func (cm *CertificateManager) getOrCreateKey(path string) (crypto.Signer, error)
 
 	cert, err := cm.readKey(path)
 
-	return cert, cm.tui.RecordIfError(fmt.Sprintf("Failed to load key %s", path), err)
+	return cert, usererr.Wrap(err, fmt.Sprintf("Failed to load key %s", path))
 }
 
 func (cm *CertificateManager) getOrCreateRootCert(key crypto.Signer) (*x509.Certificate, error) {
@@ -235,7 +234,7 @@ func (cm *CertificateManager) getOrCreateRootCert(key crypto.Signer) (*x509.Cert
 		cert, err := cm.createRootCert(key, path)
 
 		if err != nil {
-			return nil, cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificate %s", path), err)
+			return nil, usererr.Wrap(err, fmt.Sprintf("Failed to create certificate %s", path))
 		}
 
 		cm.tui.Success(fmt.Sprintf("Certificate %s created successfully!", path))
@@ -296,7 +295,7 @@ func (cm *CertificateManager) generateCertificateIfNotPresent(issuer *issuer, do
 	certPath := fmt.Sprintf("%s/%s.cert", cm.GetCertsDir(), certName)
 
 	returnErrMessage := func(err error) error {
-		return cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificate %s", certPath), err)
+		return usererr.Wrap(err, fmt.Sprintf("Failed to create certificate %s", certPath))
 	}
 
 	certExists, err := afero.Exists(cm.fs, certPath)
@@ -375,7 +374,7 @@ func (cm *CertificateManager) Generate(ctx context.Context, cmd GenerateCommand)
 
 	cm.tui.Info("Generating Root certificate if required...")
 	if err := cm.createTLSDirsIfMissing(); err != nil {
-		return cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificates directory at: %s", cm.GetCertsDir()), err)
+		return usererr.Wrap(err, fmt.Sprintf("Failed to create certificates directory at: %s", cm.GetCertsDir()))
 	}
 
 	issuer, err := cm.getRootIssuer()

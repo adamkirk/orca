@@ -1,17 +1,15 @@
 package workspace
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
-type ErrInvalidExecutionContext struct {
-	Msg string
-}
-
-func (err ErrInvalidExecutionContext) Error() string {
-	return fmt.Sprintf("invalid execution context: %s", err.Msg)
-}
+var (
+	ErrInvalidExecutionContext    = errors.New("invalid execution context")
+	ErrCouldNotDetermineWorkspace = errors.New("could not determine workspace")
+)
 
 type ErrUnknownWorkspace struct {
 	Name string
@@ -19,14 +17,6 @@ type ErrUnknownWorkspace struct {
 
 func (err ErrUnknownWorkspace) Error() string {
 	return fmt.Sprintf("unknown workspace: %s", err.Name)
-}
-
-type ErrCouldNotDetermineWorkspace struct {
-	Message string
-}
-
-func (err ErrCouldNotDetermineWorkspace) Error() string {
-	return fmt.Sprintf("could not determine workspace: %s", err.Message)
 }
 
 type ErrUnknownProject struct {

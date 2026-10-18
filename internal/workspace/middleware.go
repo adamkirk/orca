@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
 )
 
 // ExecutionTarget is the workspace and project a message runs against, as given
@@ -28,10 +29,6 @@ type resolver interface {
 	Resolve(ws string, project string) (ExecutionContext, error)
 }
 
-type errorRecorder interface {
-	RecordIfError(msg string, err error) error
-}
-
 // ExecutionContextMiddleware resolves the ExecutionContext for a message before
 // it's handled, and passes it along in the context.Context, to be read with
 // ExecutionContextFrom.
@@ -40,14 +37,12 @@ type errorRecorder interface {
 // passed through as they are.
 type ExecutionContextMiddleware struct {
 	resolver resolver
-	tui      errorRecorder
 	targets  map[reflect.Type]func(msg any) ExecutionTarget
 }
 
-func NewExecutionContextMiddleware(resolver resolver, tui errorRecorder) *ExecutionContextMiddleware {
+func NewExecutionContextMiddleware(resolver resolver) *ExecutionContextMiddleware {
 	return &ExecutionContextMiddleware{
 		resolver: resolver,
-		tui:      tui,
 		targets:  map[reflect.Type]func(msg any) ExecutionTarget{},
 	}
 }
@@ -104,17 +99,15 @@ func (m *ExecutionContextMiddleware) resolve(target ExecutionTarget) (ExecutionC
 		return execCtx, nil
 	}
 
-	var noWorkspaceErr ErrCouldNotDetermineWorkspace
-
-	if !errors.As(err, &noWorkspaceErr) {
-		return ExecutionContext{}, m.tui.RecordIfError("Failed to determine the workspace or project!", err)
+	if !errors.Is(err, ErrCouldNotDetermineWorkspace) {
+		return ExecutionContext{}, usererr.Wrap(err, "Failed to determine the workspace or project!")
 	}
 
 	// A specific project can't be found without its workspace
 	if !target.WorkspaceOptional || target.Project != "" {
-		return ExecutionContext{}, m.tui.RecordIfError(
-			"Could not determine the workspace; run this from within a project, pass --workspace, or choose one with 'orca ws switch'.",
+		return ExecutionContext{}, usererr.Wrap(
 			err,
+			"Could not determine the workspace; run this from within a project, pass --workspace, or choose one with 'orca ws switch'.",
 		)
 	}
 
@@ -142,7 +135,7 @@ func ExecutionContextFrom(ctx context.Context) (ExecutionContext, error) {
 	execCtx, ok := ctx.Value(executionContextKey{}).(ExecutionContext)
 
 	if !ok {
-		return ExecutionContext{}, ErrNoExecutionContext{}
+		return ExecutionContext{}, ErrNoExecutionContext
 	}
 
 	return execCtx, nil
@@ -150,8 +143,4 @@ func ExecutionContextFrom(ctx context.Context) (ExecutionContext, error) {
 
 // ErrNoExecutionContext means a handler needed an ExecutionContext, but its
 // message has no target registered, so it was never resolved. This is a bug.
-type ErrNoExecutionContext struct{}
-
-func (err ErrNoExecutionContext) Error() string {
-	return "no execution context was resolved for this message, it needs a target registering"
-}
+var ErrNoExecutionContext = errors.New("no execution context was resolved for this message, it needs a target registering")

@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -147,9 +148,7 @@ func (c *Resolver) Resolve(ws string, project string) (ExecutionContext, error) 
 
 		// If the current workspace is not defined
 		if ws == "" {
-			return ExecutionContext{}, ErrCouldNotDetermineWorkspace{
-				Message: "no global workspace chosen, and not in an orca project directory",
-			}
+			return ExecutionContext{}, fmt.Errorf("%w: %s", ErrCouldNotDetermineWorkspace, "no global workspace chosen, and not in an orca project directory")
 		}
 
 		return c.buildExecutionContext(ws, project)
@@ -178,9 +177,7 @@ func (c *Resolver) Resolve(ws string, project string) (ExecutionContext, error) 
 	current := c.cfg.GetCurrentWorkspace()
 
 	if current == "" {
-		return ExecutionContext{}, ErrCouldNotDetermineWorkspace{
-			Message: "no global workspace chosen, and not in an orca project directory",
-		}
+		return ExecutionContext{}, fmt.Errorf("%w: %s", ErrCouldNotDetermineWorkspace, "no global workspace chosen, and not in an orca project directory")
 	}
 
 	return c.buildExecutionContext(current, "")
