@@ -1,11 +1,11 @@
 package docker
 
 import (
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil inputs
-func (c *Compose) ShowConfig(ws *common.Workspace, p *common.Project) error {
+func (c *Compose) ShowConfig(ws *workspace.Workspace, p *workspace.Project) error {
 	spec, err := c.LoadRawSpec(ws, p)
 
 	if err != nil {

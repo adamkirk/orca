@@ -3,12 +3,12 @@ package docker
 import (
 	"errors"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) LoadRawSpec(ws *common.Workspace, p *common.Project) (string, error) {
+func (c *Compose) LoadRawSpec(ws *workspace.Workspace, p *workspace.Project) (string, error) {
 	if err := c.goToProject(p); err != nil {
 		return "", err
 	}

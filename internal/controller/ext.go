@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type ExecuteExtensionCommand struct {
@@ -23,7 +23,7 @@ func (ExecuteExtensionCommand) MessageName() string {
 }
 
 // TODO: de-dupe this by reusing the ExecOrRun method
-func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx common.ExecutionContext, ext common.Extension) error {
+func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx workspace.ExecutionContext, ext workspace.Extension) error {
 	cmdArgs := strings.Split(ext.Command, " ")
 
 	if len(cmd.Args) > 0 {
@@ -46,14 +46,14 @@ func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, exec
 }
 
 func (c *Controller) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
 	if execCtx.Project == nil {
-		return common.ErrInvalidExecutionContext{
+		return workspace.ErrInvalidExecutionContext{
 			Msg: "Extensions must be executed within a project context!",
 		}
 	}

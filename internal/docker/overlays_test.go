@@ -3,7 +3,7 @@ package docker
 import (
 	"testing"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,16 +29,16 @@ func Test_AddRootNetworkConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := &overlayGenerationContext{
-				ws: &common.Workspace{
+				ws: &workspace.Workspace{
 					Name: "acme",
-					OverlayConfig: common.OverlayConfig{
-						Network: common.NetworkOverlayConfig{
+					OverlayConfig: workspace.OverlayConfig{
+						Network: workspace.NetworkOverlayConfig{
 							Enabled:  true,
 							CreateIn: "local-env",
 						},
 					},
 				},
-				p:   &common.Project{Name: tt.project},
+				p:   &workspace.Project{Name: tt.project},
 				new: emptyOverlay(),
 			}
 

@@ -1,13 +1,13 @@
 package controller
 
 import (
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type config interface {
-	GetAllProjectMeta() []common.ProjectMeta
+	GetAllProjectMeta() []workspace.ProjectMeta
 	GetCurrentWorkspace() string
-	GetWorkspaceMeta(name string) (common.WorkspaceMeta, error)
+	GetWorkspaceMeta(name string) (workspace.WorkspaceMeta, error)
 }
 
 type tui interface {
@@ -19,27 +19,27 @@ type tui interface {
 }
 
 type etcHostsManager interface {
-	SyncForWorkspace(ws *common.Workspace) error
+	SyncForWorkspace(ws *workspace.Workspace) error
 }
 
 type workspaceRepository interface {
-	Load(name string) (*common.Workspace, error)
+	Load(name string) (*workspace.Workspace, error)
 }
 
 type compose interface {
-	Up(*common.Workspace, *common.Project) error
-	Down(ws *common.Workspace, p *common.Project) error
-	ShowConfig(ws *common.Workspace, p *common.Project) error
-	ShowCommand(ws *common.Workspace, p *common.Project) error
-	Exec(ws *common.Workspace, p *common.Project, service string, cmdArgs []string) error
-	Logs(ws *common.Workspace, p *common.Project, service string) error
-	DoesSvcExist(ws *common.Workspace, p *common.Project, service string) (bool, error)
-	IsSvcRunning(ws *common.Workspace, p *common.Project, service string) (bool, error)
-	Run(ws *common.Workspace, p *common.Project, service string, cmdArgs []string) error
+	Up(*workspace.Workspace, *workspace.Project) error
+	Down(ws *workspace.Workspace, p *workspace.Project) error
+	ShowConfig(ws *workspace.Workspace, p *workspace.Project) error
+	ShowCommand(ws *workspace.Workspace, p *workspace.Project) error
+	Exec(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
+	Logs(ws *workspace.Workspace, p *workspace.Project, service string) error
+	DoesSvcExist(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
+	IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
+	Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
 }
 
 type provisionerRunner interface {
-	RunAll(ws *common.Workspace, p *common.Project) error
+	RunAll(ws *workspace.Workspace, p *workspace.Project) error
 }
 
 type Controller struct {

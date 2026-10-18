@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type composeOverlayGenerator interface {
-	CreateOrRetrieve(ws *common.Workspace, p *common.Project) (string, error)
+	CreateOrRetrieve(ws *workspace.Workspace, p *workspace.Project) (string, error)
 }
 
 type tui interface {
@@ -30,16 +30,16 @@ type Compose struct {
 	overlayGenerator composeOverlayGenerator
 }
 
-func (c *Compose) getOverlay(ws *common.Workspace, p *common.Project) (string, error) {
+func (c *Compose) getOverlay(ws *workspace.Workspace, p *workspace.Project) (string, error) {
 	return c.overlayGenerator.CreateOrRetrieve(ws, p)
 }
 
 // TODO: gaurd against nil values
-func (c *Compose) goToProject(p *common.Project) error {
+func (c *Compose) goToProject(p *workspace.Project) error {
 	return os.Chdir(p.ProjectDir)
 }
 
-func buildBaseComposeCommand(ws *common.Workspace, p *common.Project, overlayPath string) []string {
+func buildBaseComposeCommand(ws *workspace.Workspace, p *workspace.Project, overlayPath string) []string {
 	envArgs := []string{}
 
 	for _, e := range p.Config.EnvFiles {

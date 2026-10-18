@@ -1,4 +1,4 @@
-package common
+package workspace
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 // ExecutionTarget is the workspace and project a message runs against, as given
 // by the user. Either may be empty, in which case they're resolved as usual
-// (see ContextResolver.Resolve).
+// (see Resolver.Resolve).
 type ExecutionTarget struct {
 	Workspace string
 	Project   string

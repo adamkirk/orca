@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +36,7 @@ func handleErrors(f runEHandlerFunc) runEHandlerFunc {
 
 			// Config problems can surface from anywhere a workspace is loaded,
 			// so they're shown here rather than in each handler
-			var invalidCfg common.ErrInvalidWorkspaceConfig
+			var invalidCfg workspace.ErrInvalidWorkspaceConfig
 			if errors.As(err, &invalidCfg) {
 				showInvalidWorkspaceConfig(invalidCfg)
 			}
@@ -49,7 +49,7 @@ func handleErrors(f runEHandlerFunc) runEHandlerFunc {
 	}
 }
 
-func showInvalidWorkspaceConfig(err common.ErrInvalidWorkspaceConfig) {
+func showInvalidWorkspaceConfig(err workspace.ErrInvalidWorkspaceConfig) {
 	tui := svcContainer.GetTui()
 
 	tui.Error(fmt.Sprintf("Workspace config '%s' is invalid:", err.Path))

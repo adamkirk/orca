@@ -4,12 +4,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) IsSvcRunning(ws *common.Workspace, p *common.Project, service string) (bool, error) {
+func (c *Compose) IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error) {
 	if err := c.goToProject(p); err != nil {
 		return false, err
 	}

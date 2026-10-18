@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type ExecCommand struct {
@@ -22,7 +22,7 @@ func (ExecCommand) MessageName() string {
 }
 
 func (c *Controller) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (c *Controller) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
 
 	if !svcExists {
 		c.tui.Error(fmt.Sprintf("No such service: %s", cmd.Service))
-		return common.ErrUnknownService{
+		return ErrUnknownService{
 			Name: cmd.Service,
 		}
 	}

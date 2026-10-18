@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/config"
 	"github.com/adamkirk/orca/internal/controller"
 	"github.com/adamkirk/orca/internal/docker"
@@ -16,18 +15,17 @@ import (
 	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/adamkirk/orca/internal/process"
 	"github.com/adamkirk/orca/internal/provisioner"
-	"github.com/adamkirk/orca/internal/repository"
 	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
 	"github.com/adamkirk/orca/internal/tui"
-	"github.com/adamkirk/orca/internal/workspaces"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
 type services struct {
 	fs afero.Fs
 
-	contextResolver *common.ContextResolver
+	contextResolver *workspace.Resolver
 
 	config *config.Config
 
@@ -42,11 +40,11 @@ type services struct {
 
 	githubClient *github.GithubClient
 
-	workspaceManager *workspaces.Manager
+	workspaceManager *workspace.Manager
 
 	controller *controller.Controller
 
-	workspaceRepo *repository.WorkspaceRepository
+	workspaceRepo *workspace.Repository
 
 	certificateManager *tls.CertificateManager
 
@@ -60,7 +58,7 @@ type services struct {
 
 	bus *bus.Bus
 
-	executionContextMiddleware *common.ExecutionContextMiddleware
+	executionContextMiddleware *workspace.ExecutionContextMiddleware
 }
 
 func (s *services) GetFs() afero.Fs {
@@ -161,12 +159,12 @@ func (s *services) GetGithubClient() *github.GithubClient {
 	return s.githubClient
 }
 
-func (s *services) GetContextResolver() *common.ContextResolver {
+func (s *services) GetContextResolver() *workspace.Resolver {
 	if s.contextResolver != nil {
 		return s.contextResolver
 	}
 
-	s.contextResolver = common.NewContextResolver(
+	s.contextResolver = workspace.NewResolver(
 		s.GetConfig(),
 		s.GetWorkspaceRepository(),
 	)
@@ -174,12 +172,12 @@ func (s *services) GetContextResolver() *common.ContextResolver {
 	return s.contextResolver
 }
 
-func (s *services) GetWorkspaceManager() *workspaces.Manager {
+func (s *services) GetWorkspaceManager() *workspace.Manager {
 	if s.workspaceManager != nil {
 		return s.workspaceManager
 	}
 
-	s.workspaceManager = workspaces.NewManager(
+	s.workspaceManager = workspace.NewManager(
 		s.GetFs(),
 		s.GetTui(),
 		s.GetConfig(),
@@ -208,12 +206,12 @@ func (s *services) GetController() *controller.Controller {
 	return s.controller
 }
 
-func (s *services) GetWorkspaceRepository() *repository.WorkspaceRepository {
+func (s *services) GetWorkspaceRepository() *workspace.Repository {
 	if s.workspaceRepo != nil {
 		return s.workspaceRepo
 	}
 
-	s.workspaceRepo = repository.NewWorkspaceRepository(
+	s.workspaceRepo = workspace.NewRepository(
 		s.GetFs(),
 		s.GetConfig(),
 	)
@@ -331,12 +329,12 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetGit, (*git.Git).Status))
 	b.HandleVoid(lazy(s.GetGit, (*git.Git).Pull))
 
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Initialise))
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Switch))
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Ls))
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).ShowCurrent))
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).ClearCurrent))
-	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspaces.Manager).Clone))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Initialise))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Switch))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Ls))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ShowCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
 
 	b.HandleVoid(lazy(s.GetCertificateManager, (*tls.CertificateManager).Generate))
 
@@ -352,64 +350,64 @@ func (s *services) GetBus() *bus.Bus {
 // GetExecutionContextMiddleware returns the middleware that resolves the
 // ExecutionContext for each command, with the target registered for every
 // command that runs against a workspace or project.
-func (s *services) GetExecutionContextMiddleware() *common.ExecutionContextMiddleware {
+func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMiddleware {
 	if s.executionContextMiddleware != nil {
 		return s.executionContextMiddleware
 	}
 
-	ec := common.NewExecutionContextMiddleware(
+	ec := workspace.NewExecutionContextMiddleware(
 		s.GetContextResolver(),
 		s.GetTui(),
 	)
 
-	ec.Target(func(cmd controller.UpCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	ec.Target(func(cmd controller.UpCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.DownCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	ec.Target(func(cmd controller.DownCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.ExecCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	ec.Target(func(cmd controller.ExecCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.ExecuteExtensionCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	ec.Target(func(cmd controller.ExecuteExtensionCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(query controller.LogsQuery) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	ec.Target(func(query controller.LogsQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(cmd controller.ProvisionCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	ec.Target(func(cmd controller.ProvisionCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(query controller.ShowComposeConfigQuery) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	ec.Target(func(query controller.ShowComposeConfigQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(query controller.ShowComposeCommandQuery) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	ec.Target(func(query controller.ShowComposeCommandQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(cmd controller.HostsCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace}
+	ec.Target(func(cmd controller.HostsCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
 
 	// The git commands still work in any repository without a workspace, unless
 	// they're acting on all of its projects
-	ec.Target(func(cmd git.CheckoutCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	ec.Target(func(cmd git.CheckoutCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
 	})
-	ec.Target(func(cmd git.PullCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	ec.Target(func(cmd git.PullCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
 	})
-	ec.Target(func(cmd git.PushCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	ec.Target(func(cmd git.PushCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
 	})
-	ec.Target(func(query git.StatusQuery) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}
+	ec.Target(func(query git.StatusQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}
 	})
 
-	ec.Target(func(cmd workspaces.CloneCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.WorkspaceName}
+	ec.Target(func(cmd workspace.CloneCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.WorkspaceName}
 	})
-	ec.Target(func(cmd tls.GenerateCommand) common.ExecutionTarget {
-		return common.ExecutionTarget{Workspace: cmd.Workspace}
+	ec.Target(func(cmd tls.GenerateCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
 
 	s.executionContextMiddleware = ec

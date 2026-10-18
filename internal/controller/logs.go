@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type LogsQuery struct {
@@ -20,7 +20,7 @@ func (LogsQuery) MessageName() string {
 }
 
 func (c *Controller) Logs(ctx context.Context, query LogsQuery) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

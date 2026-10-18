@@ -3,7 +3,7 @@ package config
 import (
 	"path/filepath"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -55,7 +55,7 @@ func (c *Config) save() error {
 // update the inUse configuration.
 func (c *Config) SwitchWorkspace(workspaceName string) error {
 	if !c.persisted.workspaceExists(workspaceName) {
-		return common.ErrUnknownWorkspace{
+		return workspace.ErrUnknownWorkspace{
 			Name: workspaceName,
 		}
 	}
@@ -77,7 +77,7 @@ func (c *Config) ClearCurrentWorkspace() error {
 // config as it cannot be overridden by any CLI arguments or environment variables.
 func (c *Config) AddWorkspace(path string, name string) error {
 	if c.persisted.workspaceExists(name) {
-		return common.ErrWorkspaceAlreadyExists{
+		return workspace.ErrWorkspaceAlreadyExists{
 			Name: name,
 		}
 	}
@@ -92,12 +92,12 @@ func (c *Config) AddWorkspace(path string, name string) error {
 	return c.save()
 }
 
-func (c *Config) GetAllProjectMeta() []common.ProjectMeta {
-	projects := []common.ProjectMeta{}
+func (c *Config) GetAllProjectMeta() []workspace.ProjectMeta {
+	projects := []workspace.ProjectMeta{}
 
 	for _, ws := range c.runtimeConfig.Workspaces {
 		for _, p := range ws.Projects {
-			projects = append(projects, common.ProjectMeta{
+			projects = append(projects, workspace.ProjectMeta{
 				Name:          p.Name,
 				WorkspaceName: ws.Name,
 				Path:          p.Path,
@@ -108,22 +108,22 @@ func (c *Config) GetAllProjectMeta() []common.ProjectMeta {
 	return projects
 }
 
-func (c *Config) GetProjectMeta(wsName string, projectName string) (common.ProjectMeta, error) {
+func (c *Config) GetProjectMeta(wsName string, projectName string) (workspace.ProjectMeta, error) {
 	ws, err := c.runtimeConfig.getWorkspace(wsName)
 
 	if err != nil {
-		return common.ProjectMeta{}, err
+		return workspace.ProjectMeta{}, err
 	}
 
 	i := ws.projectIndex(projectName)
 
 	if i == -1 {
-		return common.ProjectMeta{}, common.ErrUnknownProject{
+		return workspace.ProjectMeta{}, workspace.ErrUnknownProject{
 			Name: projectName,
 		}
 	}
 
-	return common.ProjectMeta{
+	return workspace.ProjectMeta{
 		WorkspaceName: ws.Name,
 		Name:          ws.Projects[i].Name,
 		Path:          ws.Projects[i].Path,
@@ -132,27 +132,27 @@ func (c *Config) GetProjectMeta(wsName string, projectName string) (common.Proje
 
 // GetWorkspaceLocation returns a tuple with name and path for the given namespace
 // if it does in fact exist. If it doesn't exist an error is returned.
-func (c *Config) GetWorkspaceMeta(name string) (common.WorkspaceMeta, error) {
+func (c *Config) GetWorkspaceMeta(name string) (workspace.WorkspaceMeta, error) {
 	i := c.persisted.workspaceIndex(name)
 
 	if i == -1 {
-		return common.WorkspaceMeta{}, common.ErrUnknownWorkspace{
+		return workspace.WorkspaceMeta{}, workspace.ErrUnknownWorkspace{
 			Name: name,
 		}
 	}
 
-	return common.WorkspaceMeta{
+	return workspace.WorkspaceMeta{
 		Name: c.persisted.Workspaces[i].Name,
 		Path: c.persisted.Workspaces[i].Path,
 	}, nil
 }
 
 // GetWorkspaceLocations returns a tuple with the name and path for each workspace.
-func (c *Config) GetAllWorkspaceMeta() []common.WorkspaceMeta {
-	locs := make([]common.WorkspaceMeta, len(c.runtimeConfig.Workspaces))
+func (c *Config) GetAllWorkspaceMeta() []workspace.WorkspaceMeta {
+	locs := make([]workspace.WorkspaceMeta, len(c.runtimeConfig.Workspaces))
 
 	for i, ws := range c.runtimeConfig.Workspaces {
-		locs[i] = common.WorkspaceMeta{
+		locs[i] = workspace.WorkspaceMeta{
 			Name: ws.Name,
 			Path: ws.Path,
 		}
@@ -174,7 +174,7 @@ func (c *Config) SetProjectPath(wsName string, name string, path string) error {
 	project, err := c.persisted.getProject(wsName, name)
 
 	if err != nil {
-		if _, ok := err.(common.ErrUnknownProject); !ok {
+		if _, ok := err.(workspace.ErrUnknownProject); !ok {
 			return err
 		}
 

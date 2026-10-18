@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/dag"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type UpCommand struct {
@@ -19,7 +19,7 @@ func (UpCommand) MessageName() string {
 	return "up"
 }
 
-func determineStartupOrder(execCtx common.ExecutionContext) ([]string, error) {
+func determineStartupOrder(execCtx workspace.ExecutionContext) ([]string, error) {
 	if execCtx.Project != nil {
 		return []string{
 			execCtx.Project.Name,
@@ -35,7 +35,7 @@ func determineStartupOrder(execCtx common.ExecutionContext) ([]string, error) {
 	return g.TopologicalKeysFromRoots()
 }
 
-func (c *Controller) startServices(execCtx common.ExecutionContext) error {
+func (c *Controller) startServices(execCtx workspace.ExecutionContext) error {
 	ordered, err := determineStartupOrder(execCtx)
 
 	if err != nil {
@@ -60,7 +60,7 @@ func (c *Controller) startServices(execCtx common.ExecutionContext) error {
 }
 
 func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

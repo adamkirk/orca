@@ -1,13 +1,13 @@
 package git
 
 import (
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 func (g *Git) Clone(repoURL string, target string, dir string) error {
 	if repoURL == "" || target == "" {
-		return common.ErrInvalidInput{
+		return workspace.ErrInvalidInput{
 			To:  "git.clone",
 			Msg: "'repoURL' and 'target' cannot be empty",
 		}

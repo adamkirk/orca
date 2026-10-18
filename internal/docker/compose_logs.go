@@ -1,12 +1,12 @@
 package docker
 
 import (
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) Logs(ws *common.Workspace, p *common.Project, service string) error {
+func (c *Compose) Logs(ws *workspace.Workspace, p *workspace.Project, service string) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}

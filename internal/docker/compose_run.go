@@ -3,12 +3,12 @@ package docker
 import (
 	"os/exec"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil inputs
-func (c *Compose) Run(ws *common.Workspace, p *common.Project, service string, cmdArgs []string) error {
+func (c *Compose) Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}

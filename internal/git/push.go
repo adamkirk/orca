@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type PushBranchOpts struct {
@@ -53,7 +53,7 @@ func (PushCommand) MessageName() string {
 
 // pushInContext pushes the current branch for the resolved project (or working
 // directory), or for every project in the workspace when allProjects is set
-func (g *Git) pushInContext(execCtx common.ExecutionContext, allProjects bool, force bool) error {
+func (g *Git) pushInContext(execCtx workspace.ExecutionContext, allProjects bool, force bool) error {
 	if !allProjects {
 		return g.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
 	}
@@ -68,7 +68,7 @@ func (g *Git) pushInContext(execCtx common.ExecutionContext, allProjects bool, f
 }
 
 func (g *Git) Push(ctx context.Context, cmd PushCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

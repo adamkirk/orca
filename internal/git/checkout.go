@@ -5,8 +5,9 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	orcatui "github.com/adamkirk/orca/internal/tui"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 const previousBranchAlias = "-"
@@ -103,7 +104,7 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 
 	if branchesLength == 0 {
 		g.tui.Error("No branches were found!")
-		return common.ErrNoBranchesFound{}
+		return ErrNoBranchesFound{}
 	}
 
 	if branchesLength == 1 {
@@ -115,7 +116,7 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 	chosen, err := g.tui.PresentChoices(branches.Names(), "Which branch?")
 
 	if err != nil {
-		if _, ok := err.(common.ErrUserAbortedExecution); ok {
+		if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
 			return err
 		}
 
@@ -127,11 +128,11 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 	return g.tui.RecordIfError("Failed to checkout branch", err)
 }
 
-func (g *Git) checkoutSingle(search string, execCtx common.ExecutionContext) error {
+func (g *Git) checkoutSingle(search string, execCtx workspace.ExecutionContext) error {
 	return g.checkoutFromDirectory(search, execCtx.Dir())
 }
 
-func (g *Git) chooseBranchesForAllProjects(search string, execCtx common.ExecutionContext) (map[string]Branch, error) {
+func (g *Git) chooseBranchesForAllProjects(search string, execCtx workspace.ExecutionContext) (map[string]Branch, error) {
 	chosenBranches := map[string]Branch{}
 
 	for _, p := range execCtx.Workspace.Projects {
@@ -152,7 +153,7 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx common.Executi
 		chosen, err := g.tui.PresentChoices(branches.Names(), fmt.Sprintf("Which branch? (%s:%s)", p.Name, p.ProjectDir))
 
 		if err != nil {
-			if _, ok := err.(common.ErrUserAbortedExecution); ok {
+			if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
 				return nil, err
 			}
 
@@ -168,9 +169,9 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx common.Executi
 	return chosenBranches, nil
 }
 
-func (g *Git) handleCreate(execCtx common.ExecutionContext, cmd CheckoutCommand) error {
+func (g *Git) handleCreate(execCtx workspace.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Name == "" || cmd.Name == previousBranchAlias {
-		return g.tui.RecordIfError("A branch name must be supplied when creating a branch!", common.ErrInvalidInput{
+		return g.tui.RecordIfError("A branch name must be supplied when creating a branch!", workspace.ErrInvalidInput{
 			To:  "co",
 			Msg: "an exact branch name must be supplied when creating a branch",
 		})
@@ -189,7 +190,7 @@ func (g *Git) handleCreate(execCtx common.ExecutionContext, cmd CheckoutCommand)
 	return nil
 }
 
-func (g *Git) handleCheckout(execCtx common.ExecutionContext, cmd CheckoutCommand) error {
+func (g *Git) handleCheckout(execCtx workspace.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Create {
 		return g.handleCreate(execCtx, cmd)
 	}
@@ -199,7 +200,7 @@ func (g *Git) handleCheckout(execCtx common.ExecutionContext, cmd CheckoutComman
 	}
 
 	if cmd.Name == previousBranchAlias {
-		return g.tui.RecordIfError(fmt.Sprintf("Cannot use '%s' when checking out multiple projects!", previousBranchAlias), common.ErrInvalidInput{
+		return g.tui.RecordIfError(fmt.Sprintf("Cannot use '%s' when checking out multiple projects!", previousBranchAlias), workspace.ErrInvalidInput{
 			To:  "co",
 			Msg: fmt.Sprintf("cannot use '%s' when checking out multiple projects", previousBranchAlias),
 		})
@@ -228,7 +229,7 @@ func (g *Git) handleCheckout(execCtx common.ExecutionContext, cmd CheckoutComman
 }
 
 func (g *Git) Checkout(ctx context.Context, cmd CheckoutCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

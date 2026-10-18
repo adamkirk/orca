@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type Branch struct {
@@ -120,7 +120,7 @@ func (g *Git) searchBranches(dto searchBranchesOpts) (Branches, error) {
 	}, withDir(dto.Dir, opt)...)
 
 	if err != nil {
-		return nil, common.ErrInvalidExecutionContext{
+		return nil, workspace.ErrInvalidExecutionContext{
 			Msg: "failed to execute 'git branch'",
 		}
 	}
@@ -182,7 +182,7 @@ func (g *Git) GetCurrentBranch(dir string) (string, error) {
 	}
 
 	if branches.GetCurrent() == nil {
-		return "", common.ErrCouldNotDetermineCurrentBranch{}
+		return "", ErrCouldNotDetermineCurrentBranch{}
 	}
 
 	return branches.GetCurrent().Name, nil

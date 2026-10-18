@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/sys"
 	"github.com/spf13/cobra"
 )
@@ -57,12 +56,12 @@ func handleCheck(cmd *cobra.Command, _ []string) error {
 func handleSysInstall(cmd *cobra.Command, args []string) error {
 	tui := svcContainer.GetTui()
 	if len(args) < 1 {
-		return tui.RecordIfError("Must provide the name of the tool as the first argument", common.ErrArgumentRequired{
+		return tui.RecordIfError("Must provide the name of the tool as the first argument", ErrArgumentRequired{
 			Name:  "tool",
 			Index: 1,
 		})
 	} else if len(args) > 1 {
-		return tui.RecordIfError("Too many arguments provided!", common.ErrTooManyArguments{
+		return tui.RecordIfError("Too many arguments provided!", ErrTooManyArguments{
 			Expected: 1,
 		})
 	}

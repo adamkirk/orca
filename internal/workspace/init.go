@@ -1,4 +1,4 @@
-package workspaces
+package workspace
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
 
@@ -48,7 +47,7 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 	if !exists {
 		return m.tui.RecordIfError(
 			fmt.Sprintf("Could not find workspace config: %s", workspaceConfigPath),
-			common.ErrFileNotFound{
+			ErrFileNotFound{
 				Path: workspaceConfigPath,
 			},
 		)
@@ -63,7 +62,7 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 	err = m.configManager.AddWorkspace(workspaceConfigPath, cfg.Name)
 
 	if err != nil {
-		if _, ok := err.(common.ErrWorkspaceAlreadyExists); ok {
+		if _, ok := err.(ErrWorkspaceAlreadyExists); ok {
 			m.tui.Error("Workspace already exists!")
 			return err
 		}
@@ -91,7 +90,7 @@ var githubRepoPattern = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
 // ssh.
 func parseGithubRepo(input string) (githubRepo, error) {
 	if !githubRepoPattern.MatchString(input) {
-		return githubRepo{}, common.ErrInvalidInput{
+		return githubRepo{}, ErrInvalidInput{
 			To:  "repo",
 			Msg: fmt.Sprintf("'%s' is not in the format 'owner/repo'", input),
 		}
@@ -131,7 +130,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 				repo.Owner,
 				repo.Name,
 			),
-			common.ErrFileNotFound{
+			ErrFileNotFound{
 				Path: workspaceFilePath,
 			},
 		)
@@ -159,7 +158,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 	if dirExists {
 		return m.tui.RecordIfError(
 			fmt.Sprintf("Cannot clone into '%s', it already exists!", cloneDir),
-			common.ErrDirectoryAlreadyExists{
+			ErrDirectoryAlreadyExists{
 				Path: cloneDir,
 			},
 		)

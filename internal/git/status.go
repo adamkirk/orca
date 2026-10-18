@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type StatusQuery struct {
@@ -125,7 +125,7 @@ func (g *Git) statusRow(name string, dir string) []string {
 }
 
 func (g *Git) Status(ctx context.Context, query StatusQuery) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

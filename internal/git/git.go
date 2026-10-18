@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 const ConfirmYes = "Yes"
@@ -47,7 +47,7 @@ func (g *Git) mustBeInAGitRepository(dir string) error {
 
 	return g.tui.RecordIfError(
 		"You don't appear to be in a git repository!",
-		common.ErrInvalidExecutionContext{
+		workspace.ErrInvalidExecutionContext{
 			Msg: "this command must be executed from within a git repository",
 		},
 	)
@@ -75,7 +75,7 @@ func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
 		errOutput := stderr.String()
 		slog.Error("failed to execute 'git rev-parse --show-top-level'", "in", dir, "err", err, "stderr", errOutput)
 
-		return "", common.ErrCommandExecutionFailed{
+		return "", ErrCommandExecutionFailed{
 			Msg: errOutput,
 		}
 	}

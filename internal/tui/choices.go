@@ -5,7 +5,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -114,7 +113,7 @@ func (t *Tui) PresentChoices(opts []string, title string) (string, error) {
 	}
 
 	if m.quitting {
-		return "", common.ErrUserAbortedExecution{}
+		return "", ErrUserAbortedExecution{}
 	}
 
 	return m.choice, nil

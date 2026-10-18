@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type ShowComposeConfigQuery struct {
@@ -19,14 +19,14 @@ func (ShowComposeConfigQuery) MessageName() string {
 }
 
 func (c *Controller) ShowComposeConfig(ctx context.Context, query ShowComposeConfigQuery) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
 	if execCtx.Project == nil {
-		return common.ErrInvalidExecutionContext{
+		return workspace.ErrInvalidExecutionContext{
 			Msg: "this command must be run in a singular project context",
 		}
 	}

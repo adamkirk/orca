@@ -1,4 +1,4 @@
-package common
+package workspace
 
 type ProjectRepositoryMeta struct {
 	SSH  string

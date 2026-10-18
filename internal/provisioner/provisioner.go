@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
@@ -22,7 +22,7 @@ type Runner struct {
 	tui tui
 }
 
-func (p *Runner) RunAll(ws *common.Workspace, project *common.Project) error {
+func (p *Runner) RunAll(ws *workspace.Workspace, project *workspace.Project) error {
 	for _, provisioner := range project.Config.Provisioners {
 		if err := p.Run(ws, project, provisioner); err != nil {
 			return err
@@ -32,9 +32,9 @@ func (p *Runner) RunAll(ws *common.Workspace, project *common.Project) error {
 	return nil
 }
 
-func (p *Runner) Run(ws *common.Workspace, project *common.Project, provisioner common.Provisioner) error {
+func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provisioner workspace.Provisioner) error {
 	if provisioner.ExampleFile == nil {
-		return common.ErrUnsupportedProvisioner{
+		return ErrUnsupportedProvisioner{
 			Message: "the example file provisioner must be defined",
 		}
 	}
@@ -59,7 +59,7 @@ func (p *Runner) Run(ws *common.Workspace, project *common.Project, provisioner 
 	}
 
 	if !srcExists {
-		p.tui.RecordIfError("Failed to run provisioner, source file not found", common.ErrFileNotFound{
+		p.tui.RecordIfError("Failed to run provisioner, source file not found", workspace.ErrFileNotFound{
 			Path: srcPath,
 		})
 	}

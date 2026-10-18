@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type ProvisionCommand struct {
@@ -19,7 +19,7 @@ func (ProvisionCommand) MessageName() string {
 }
 
 func (c *Controller) Provision(ctx context.Context, cmd ProvisionCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

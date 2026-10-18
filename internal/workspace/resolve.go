@@ -1,4 +1,4 @@
-package common
+package workspace
 
 import (
 	"os"
@@ -32,12 +32,12 @@ type workspaceRepository interface {
 	Load(name string) (*Workspace, error)
 }
 
-type ContextResolver struct {
+type Resolver struct {
 	cfg           configManager
 	workspaceRepo workspaceRepository
 }
 
-func (c *ContextResolver) getProjectFromWorkdir() (*ProjectMeta, error) {
+func (c *Resolver) getProjectFromWorkdir() (*ProjectMeta, error) {
 	dir, err := os.Getwd()
 
 	if err != nil {
@@ -85,7 +85,7 @@ func isWithinDir(dir string, parent string) bool {
 	return strings.HasPrefix(dir, prefix)
 }
 
-func (c *ContextResolver) buildExecutionContext(wsName string, projectName string) (ExecutionContext, error) {
+func (c *Resolver) buildExecutionContext(wsName string, projectName string) (ExecutionContext, error) {
 	workDir, err := os.Getwd()
 
 	if err != nil {
@@ -124,7 +124,7 @@ func (c *ContextResolver) buildExecutionContext(wsName string, projectName strin
 	}, nil
 }
 
-func (c *ContextResolver) Resolve(ws string, project string) (ExecutionContext, error) {
+func (c *Resolver) Resolve(ws string, project string) (ExecutionContext, error) {
 	// We've got a specific workspace and project
 	if ws != "" && project != "" {
 		return c.buildExecutionContext(ws, project)
@@ -186,8 +186,8 @@ func (c *ContextResolver) Resolve(ws string, project string) (ExecutionContext, 
 	return c.buildExecutionContext(current, "")
 }
 
-func NewContextResolver(cfg configManager, workspaceRepo workspaceRepository) *ContextResolver {
-	return &ContextResolver{
+func NewResolver(cfg configManager, workspaceRepo workspaceRepository) *Resolver {
+	return &Resolver{
 		cfg:           cfg,
 		workspaceRepo: workspaceRepo,
 	}

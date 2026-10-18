@@ -1,11 +1,8 @@
-package workspaces
+package workspace
 
 import (
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
-
-const DefaultWorkspaceFileName = "orca.workspace.yaml"
 
 type tui interface {
 	Info(msg ...string)
@@ -17,9 +14,9 @@ type tui interface {
 
 type config interface {
 	AddWorkspace(configFilePath string, name string) error
-	GetAllWorkspaceMeta() []common.WorkspaceMeta
+	GetAllWorkspaceMeta() []WorkspaceMeta
 	GetCurrentWorkspace() string
-	GetWorkspaceMeta(name string) (common.WorkspaceMeta, error)
+	GetWorkspaceMeta(name string) (WorkspaceMeta, error)
 	SetProjectPath(wsName string, name string, into string) error
 	ProjectExists(wsName string, name string) (bool, error)
 	ClearCurrentWorkspace() error
@@ -37,9 +34,9 @@ type githubClient interface {
 }
 
 type workspaceRepo interface {
-	Load(name string) (*common.Workspace, error)
-	LoadUnconfiguredWorkspace(path string) (*common.UnconfiguredWorkspace, error)
-	ParseUnconfiguredWorkspace(contents []byte, path string) (*common.UnconfiguredWorkspace, error)
+	Load(name string) (*Workspace, error)
+	LoadUnconfiguredWorkspace(path string) (*UnconfiguredWorkspace, error)
+	ParseUnconfiguredWorkspace(contents []byte, path string) (*UnconfiguredWorkspace, error)
 }
 
 type Manager struct {

@@ -3,11 +3,11 @@ package docker
 import (
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil inputs
-func (c *Compose) ShowCommand(ws *common.Workspace, p *common.Project) error {
+func (c *Compose) ShowCommand(ws *workspace.Workspace, p *workspace.Project) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}

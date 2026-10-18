@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/adamkirk/orca/internal/common"
 )
 
 type Tool struct {
@@ -43,8 +41,8 @@ func (hs *HostSystem) checkByPathLookup(tool Tool) error {
 	if _, err := exec.LookPath(tool.Cmd); err != nil {
 		hs.tui.Error(fmt.Sprintf("'%s' was not found in the PATH", tool.Cmd))
 
-		return common.ErrToolsNotFoundOnSystem{
-			Errs: []common.ErrToolNotFoundOnSystem{
+		return ErrToolsNotFoundOnSystem{
+			Errs: []ErrToolNotFoundOnSystem{
 				{
 					Tool: tool.Cmd,
 				},
@@ -71,8 +69,8 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 			if exiterr.ExitCode() != 0 {
 				hs.tui.Error(fmt.Sprintf("'%s' returned a non-zero exit code!", fullCmdString))
 
-				return common.ErrToolsNotFoundOnSystem{
-					Errs: []common.ErrToolNotFoundOnSystem{
+				return ErrToolsNotFoundOnSystem{
+					Errs: []ErrToolNotFoundOnSystem{
 						{
 							Tool: tool.Cmd,
 						},
@@ -107,11 +105,11 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 
 	parents = append(parents, tool)
 
-	subErrs := []common.ErrToolNotFoundOnSystem{}
+	subErrs := []ErrToolNotFoundOnSystem{}
 
 	for _, sub := range tool.SubCmds {
 		if err := hs.ensureToolExists(sub, parents); err != nil {
-			if notFoundErr, ok := err.(common.ErrToolsNotFoundOnSystem); ok {
+			if notFoundErr, ok := err.(ErrToolsNotFoundOnSystem); ok {
 				subErrs = append(subErrs, notFoundErr.Errs...)
 			}
 
@@ -120,7 +118,7 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 	}
 
 	if len(subErrs) > 0 {
-		return common.ErrToolsNotFoundOnSystem{
+		return ErrToolsNotFoundOnSystem{
 			Errs: subErrs,
 		}
 	}
@@ -129,13 +127,13 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 }
 
 func (hs *HostSystem) VerifySetup() error {
-	errs := []common.ErrToolNotFoundOnSystem{}
+	errs := []ErrToolNotFoundOnSystem{}
 
 	for _, t := range defaultRequirements() {
 		err := hs.ensureToolExists(t, []Tool{})
 
 		if err != nil {
-			if toolNotFoundErr, ok := err.(common.ErrToolsNotFoundOnSystem); ok {
+			if toolNotFoundErr, ok := err.(ErrToolsNotFoundOnSystem); ok {
 				errs = append(errs, toolNotFoundErr.Errs...)
 				continue
 			}
@@ -145,7 +143,7 @@ func (hs *HostSystem) VerifySetup() error {
 	}
 
 	if len(errs) > 0 {
-		return common.ErrToolsNotFoundOnSystem{
+		return ErrToolsNotFoundOnSystem{
 			Errs: errs,
 		}
 	}

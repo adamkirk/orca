@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/dag"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type DownCommand struct {
@@ -19,7 +19,7 @@ func (DownCommand) MessageName() string {
 	return "down"
 }
 
-func determineShutdownOrder(execCtx common.ExecutionContext) ([]string, error) {
+func determineShutdownOrder(execCtx workspace.ExecutionContext) ([]string, error) {
 	if execCtx.Project != nil {
 		return []string{
 			execCtx.Project.Name,
@@ -35,7 +35,7 @@ func determineShutdownOrder(execCtx common.ExecutionContext) ([]string, error) {
 	return g.TopologicalKeysFromLeaves()
 }
 
-func (c *Controller) stopServices(execCtx common.ExecutionContext) error {
+func (c *Controller) stopServices(execCtx workspace.ExecutionContext) error {
 	ordered, err := determineShutdownOrder(execCtx)
 
 	if err != nil {
@@ -60,7 +60,7 @@ func (c *Controller) stopServices(execCtx common.ExecutionContext) error {
 }
 
 func (c *Controller) Down(ctx context.Context, cmd DownCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

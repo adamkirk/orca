@@ -60,11 +60,11 @@ Hooks run before and after a message is handled:
 
 ## Execution context
 
-Most commands run against a workspace and/or project, which is worked out from the flags, the current directory, or the current workspace. Rather than each handler doing this itself, `common.ExecutionContextMiddleware` resolves the `ExecutionContext` before the command is handled, and passes it along in the `context.Context`:
+Most commands run against a workspace and/or project, which is worked out from the flags, the current directory, or the current workspace. Rather than each handler doing this itself, `workspace.ExecutionContextMiddleware` resolves the `ExecutionContext` before the command is handled, and passes it along in the `context.Context`:
 
 ```go
 func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
@@ -77,8 +77,8 @@ func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
 It's only resolved for commands with a target registered in `GetExecutionContextMiddleware()`, in `cmd/orca/services.go`, which says where the workspace and project come from:
 
 ```go
-ec.Target(func(cmd controller.UpCommand) common.ExecutionTarget {
-	return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+ec.Target(func(cmd controller.UpCommand) workspace.ExecutionTarget {
+	return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 })
 ```
 
@@ -86,6 +86,6 @@ Set `WorkspaceOptional` for commands that still work without a workspace, such a
 
 If it can't be resolved, the middleware shows the error and the command isn't run. Hooks run after the middleware, so they can read the `ExecutionContext` too.
 
-`Test_ExecutionContextHandlersHaveTargets` checks that every handler calling `common.ExecutionContextFrom` has a target registered for its message, so it should only be called from the handler itself, and helpers should take the `ExecutionContext` as an argument.
+`Test_ExecutionContextHandlersHaveTargets` checks that every handler calling `workspace.ExecutionContextFrom` has a target registered for its message, so it should only be called from the handler itself, and helpers should take the `ExecutionContext` as an argument.
 
 The `context.Context` only carries the `ExecutionContext` from the middleware to the handler. After that it's passed explicitly, by convention as `execCtx`, so helpers say what they depend on and the compiler can check it. Don't add other context values for workspace or project data.

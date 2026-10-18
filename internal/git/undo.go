@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	orcatui "github.com/adamkirk/orca/internal/tui"
 )
 
 type UndoLastXCommitsCommand struct {
@@ -35,7 +35,7 @@ func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) e
 		}, "You might lose some precious changes, are you sure?")
 
 		if err != nil {
-			if _, ok := err.(common.ErrUserAbortedExecution); ok {
+			if _, ok := err.(orcatui.ErrUserAbortedExecution); ok {
 				return err
 			}
 

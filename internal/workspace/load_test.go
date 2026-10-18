@@ -1,15 +1,14 @@
-package repository
+package workspace
 
 import (
 	"testing"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParseUnconfiguredWorkspace(t *testing.T) {
-	repo := NewWorkspaceRepository(afero.NewMemMapFs(), nil)
+	repo := NewRepository(afero.NewMemMapFs(), nil)
 
 	t.Run("valid config", func(t *testing.T) {
 		contents := []byte(`
@@ -26,12 +25,12 @@ projects:
 		ws, err := repo.ParseUnconfiguredWorkspace(contents, "orca.workspace.yaml")
 
 		assert.NoError(t, err)
-		assert.Equal(t, &common.UnconfiguredWorkspace{
+		assert.Equal(t, &UnconfiguredWorkspace{
 			Name:       "acme",
 			ConfigPath: "orca.workspace.yaml",
-			Projects: []common.UnconfiguredProject{
-				{Name: "root", RepositoryConfig: common.ProjectRepositoryConfig{Self: true}},
-				{Name: "svc-a", RepositoryConfig: common.ProjectRepositoryConfig{SSH: "git@github.com:acme/svc-a.git"}},
+			Projects: []UnconfiguredProject{
+				{Name: "root", RepositoryConfig: ProjectRepositoryConfig{Self: true}},
+				{Name: "svc-a", RepositoryConfig: ProjectRepositoryConfig{SSH: "git@github.com:acme/svc-a.git"}},
 			},
 		}, ws)
 	})
@@ -39,13 +38,13 @@ projects:
 	t.Run("invalid yaml", func(t *testing.T) {
 		_, err := repo.ParseUnconfiguredWorkspace([]byte("name: [acme"), "orca.workspace.yaml")
 
-		assert.IsType(t, common.ErrConfigIsNotValidYAML{}, err)
+		assert.IsType(t, ErrConfigIsNotValidYAML{}, err)
 	})
 
 	t.Run("wrong shape", func(t *testing.T) {
 		_, err := repo.ParseUnconfiguredWorkspace([]byte("projects: acme"), "orca.workspace.yaml")
 
-		assert.IsType(t, common.ErrConfigIsNotValidYAML{}, err)
+		assert.IsType(t, ErrConfigIsNotValidYAML{}, err)
 	})
 
 	t.Run("missing required fields", func(t *testing.T) {
@@ -62,7 +61,7 @@ projects:
 
 		_, err := repo.ParseUnconfiguredWorkspace(contents, "orca.workspace.yaml")
 
-		assert.Equal(t, common.ErrInvalidWorkspaceConfig{
+		assert.Equal(t, ErrInvalidWorkspaceConfig{
 			Path: "orca.workspace.yaml",
 			Problems: []string{
 				"'name' is required",
@@ -75,21 +74,21 @@ projects:
 }
 
 type stubUserConfig struct {
-	workspaces map[string]common.WorkspaceMeta
+	workspaces map[string]WorkspaceMeta
 }
 
-func (s stubUserConfig) GetWorkspaceMeta(name string) (common.WorkspaceMeta, error) {
+func (s stubUserConfig) GetWorkspaceMeta(name string) (WorkspaceMeta, error) {
 	meta, ok := s.workspaces[name]
 
 	if !ok {
-		return common.WorkspaceMeta{}, common.ErrUnknownWorkspace{Name: name}
+		return WorkspaceMeta{}, ErrUnknownWorkspace{Name: name}
 	}
 
 	return meta, nil
 }
 
-func (s stubUserConfig) GetProjectMeta(wsName string, projectName string) (common.ProjectMeta, error) {
-	return common.ProjectMeta{}, common.ErrUnknownProject{Name: projectName}
+func (s stubUserConfig) GetProjectMeta(wsName string, projectName string) (ProjectMeta, error) {
+	return ProjectMeta{}, ErrUnknownProject{Name: projectName}
 }
 
 func TestLoadValidatesConfig(t *testing.T) {
@@ -98,15 +97,15 @@ func TestLoadValidatesConfig(t *testing.T) {
 
 	assert.NoError(t, afero.WriteFile(fs, path, []byte("projects:\n  - name: api\n"), 0644))
 
-	repo := NewWorkspaceRepository(fs, stubUserConfig{
-		workspaces: map[string]common.WorkspaceMeta{
+	repo := NewRepository(fs, stubUserConfig{
+		workspaces: map[string]WorkspaceMeta{
 			"acme": {Name: "acme", Path: path},
 		},
 	})
 
 	_, err := repo.Load("acme")
 
-	assert.Equal(t, common.ErrInvalidWorkspaceConfig{
+	assert.Equal(t, ErrInvalidWorkspaceConfig{
 		Path: path,
 		Problems: []string{
 			"'name' is required",

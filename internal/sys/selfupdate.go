@@ -7,7 +7,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/minio/selfupdate"
 )
 
@@ -57,7 +56,7 @@ func (hs *HostSystem) ensureSelfVersionExists(v *semver.Version) error {
 	}
 
 	if !exists {
-		return common.ErrVersionNotFound{
+		return ErrVersionNotFound{
 			Version: v.String(),
 		}
 	}

@@ -3,7 +3,7 @@ package hosts
 import (
 	"fmt"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/txn2/txeh"
 )
 
@@ -11,7 +11,7 @@ type EtcHostsManager struct {
 	hostsFile *txeh.Hosts
 }
 
-func (ehm *EtcHostsManager) SyncForWorkspace(ws *common.Workspace) error {
+func (ehm *EtcHostsManager) SyncForWorkspace(ws *workspace.Workspace) error {
 	hosts := ws.GetUniqueHosts()
 
 	marker := fmt.Sprintf("adamkirk/orca:%s", ws.Name)

@@ -3,12 +3,12 @@ package docker
 import (
 	"fmt"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) Down(ws *common.Workspace, p *common.Project) error {
+func (c *Compose) Down(ws *workspace.Workspace, p *workspace.Project) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}

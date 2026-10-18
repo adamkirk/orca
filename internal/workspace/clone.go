@@ -1,4 +1,4 @@
-package workspaces
+package workspace
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
 
@@ -22,7 +21,7 @@ func (CloneCommand) MessageName() string {
 	return "ws.clone"
 }
 
-func (m *Manager) setupAllProjects(ws *common.Workspace, into string) error {
+func (m *Manager) setupAllProjects(ws *Workspace, into string) error {
 	for _, project := range ws.Projects {
 		dir := fmt.Sprintf("%s/%s", into, project.Name)
 
@@ -34,7 +33,7 @@ func (m *Manager) setupAllProjects(ws *common.Workspace, into string) error {
 	return nil
 }
 
-func (m *Manager) registerWorkspaceProject(ws *common.Workspace, project common.Project) error {
+func (m *Manager) registerWorkspaceProject(ws *Workspace, project Project) error {
 	wsLocation, err := m.configManager.GetWorkspaceMeta(ws.Name)
 
 	if err != nil {
@@ -50,7 +49,7 @@ func (m *Manager) registerWorkspaceProject(ws *common.Workspace, project common.
 	return m.configManager.SetProjectPath(ws.Name, project.Name, root)
 }
 
-func (m *Manager) cloneSingleProject(ws *common.Workspace, project common.Project, into string) error {
+func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string) error {
 	projectExists, err := m.configManager.ProjectExists(ws.Name, project.Name)
 
 	if err != nil {
@@ -96,7 +95,7 @@ func (m *Manager) cloneSingleProject(ws *common.Workspace, project common.Projec
 			)
 		}
 
-		return common.ErrDirectoryDoesNotMatchOrigin{
+		return ErrDirectoryDoesNotMatchOrigin{
 			Path:   into,
 			Origin: project.RepositoryConfig.SSH,
 		}
@@ -122,7 +121,7 @@ func (m *Manager) cloneSingleProject(ws *common.Workspace, project common.Projec
 	)
 }
 
-func (m *Manager) projectIsAlreadyClonedAtLocation(proj common.Project, into string) (bool, error) {
+func (m *Manager) projectIsAlreadyClonedAtLocation(proj Project, into string) (bool, error) {
 	exists, err := afero.DirExists(m.fs, into)
 
 	if err != nil {
@@ -151,7 +150,7 @@ func (m *Manager) getCloneTargetDir(wsConfigPath string, target string) (string,
 }
 
 func (m *Manager) Clone(ctx context.Context, cmd CloneCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
@@ -166,7 +165,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
-		if _, ok := err.(common.ErrUnknownWorkspace); ok {
+		if _, ok := err.(ErrUnknownWorkspace); ok {
 			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", wsName), err)
 		}
 
@@ -206,7 +205,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 	}
 
 	if cloneErr != nil {
-		if _, ok := cloneErr.(common.ErrDirectoryAlreadyExists); ok {
+		if _, ok := cloneErr.(ErrDirectoryAlreadyExists); ok {
 			return m.tui.RecordIfError("Cannot clone into the given directory, it already exists!", cloneErr)
 		}
 

@@ -1,33 +1,32 @@
-package repository
+package workspace
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/repository/internal/model"
+	"github.com/adamkirk/orca/internal/workspace/internal/model"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
 type userConfig interface {
-	GetWorkspaceMeta(name string) (common.WorkspaceMeta, error)
-	GetProjectMeta(wsName string, projectName string) (common.ProjectMeta, error)
+	GetWorkspaceMeta(name string) (WorkspaceMeta, error)
+	GetProjectMeta(wsName string, projectName string) (ProjectMeta, error)
 }
 
-func convertLoaderCondition(e model.LoaderCondition) common.LoaderCondition {
-	return common.LoaderCondition{
+func convertLoaderCondition(e model.LoaderCondition) LoaderCondition {
+	return LoaderCondition{
 		OS:   e.OS,
 		Arch: e.Arch,
-		Property: common.LoaderPropertyCondition{
+		Property: LoaderPropertyCondition{
 			Name:  e.Property.Name,
 			Value: e.Property.Value,
 		},
 	}
 }
 
-func convertLoaderConditions(cfgConds []model.LoaderCondition) []common.LoaderCondition {
-	conds := make([]common.LoaderCondition, len(cfgConds))
+func convertLoaderConditions(cfgConds []model.LoaderCondition) []LoaderCondition {
+	conds := make([]LoaderCondition, len(cfgConds))
 	for i, c := range cfgConds {
 		conds[i] = convertLoaderCondition(c)
 	}
@@ -35,15 +34,15 @@ func convertLoaderConditions(cfgConds []model.LoaderCondition) []common.LoaderCo
 	return conds
 }
 
-func convertExtraComposeFile(e model.ExtraComposeFile) common.ExtraComposeFile {
-	return common.ExtraComposeFile{
+func convertExtraComposeFile(e model.ExtraComposeFile) ExtraComposeFile {
+	return ExtraComposeFile{
 		Path: e.Path,
 		When: convertLoaderConditions(e.When),
 	}
 }
 
-func convertExtraComposeFiles(files []model.ExtraComposeFile) []common.ExtraComposeFile {
-	extras := make([]common.ExtraComposeFile, len(files))
+func convertExtraComposeFiles(files []model.ExtraComposeFile) []ExtraComposeFile {
+	extras := make([]ExtraComposeFile, len(files))
 
 	for i, e := range files {
 		extras[i] = convertExtraComposeFile(e)
@@ -52,23 +51,23 @@ func convertExtraComposeFiles(files []model.ExtraComposeFile) []common.ExtraComp
 	return extras
 }
 
-func convertComposeFiles(cfg model.ComposeFiles) common.ComposeFiles {
-	return common.ComposeFiles{
+func convertComposeFiles(cfg model.ComposeFiles) ComposeFiles {
+	return ComposeFiles{
 		Primary: cfg.Primary,
 		Extras:  convertExtraComposeFiles(cfg.Extras),
 	}
 }
 
-func convertProperty(p model.Property) common.Property {
-	return common.Property{
+func convertProperty(p model.Property) Property {
+	return Property{
 		Name:    p.Name,
 		Type:    p.Type,
 		Default: p.Default,
 	}
 }
 
-func convertProperties(cfgProps []model.Property) []common.Property {
-	props := make([]common.Property, len(cfgProps))
+func convertProperties(cfgProps []model.Property) []Property {
+	props := make([]Property, len(cfgProps))
 
 	for i, p := range cfgProps {
 		props[i] = convertProperty(p)
@@ -77,8 +76,8 @@ func convertProperties(cfgProps []model.Property) []common.Property {
 	return props
 }
 
-func convertExtension(e model.Extension) common.Extension {
-	return common.Extension{
+func convertExtension(e model.Extension) Extension {
+	return Extension{
 		Name:        e.Name,
 		Chdir:       e.Chdir,
 		Command:     e.Command,
@@ -87,8 +86,8 @@ func convertExtension(e model.Extension) common.Extension {
 	}
 }
 
-func convertExtensions(cfgExts []model.Extension) []common.Extension {
-	exts := make([]common.Extension, len(cfgExts))
+func convertExtensions(cfgExts []model.Extension) []Extension {
+	exts := make([]Extension, len(cfgExts))
 
 	for i, e := range cfgExts {
 		exts[i] = convertExtension(e)
@@ -97,14 +96,14 @@ func convertExtensions(cfgExts []model.Extension) []common.Extension {
 	return exts
 }
 
-func convertEnvFile(e model.EnvFile) common.EnvFile {
-	return common.EnvFile{
+func convertEnvFile(e model.EnvFile) EnvFile {
+	return EnvFile{
 		Path: e.Path,
 	}
 }
 
-func convertEnvFiles(cfgEnvFiles []model.EnvFile) []common.EnvFile {
-	envFiles := make([]common.EnvFile, len(cfgEnvFiles))
+func convertEnvFiles(cfgEnvFiles []model.EnvFile) []EnvFile {
+	envFiles := make([]EnvFile, len(cfgEnvFiles))
 
 	for i, e := range cfgEnvFiles {
 		envFiles[i] = convertEnvFile(e)
@@ -113,18 +112,18 @@ func convertEnvFiles(cfgEnvFiles []model.EnvFile) []common.EnvFile {
 	return envFiles
 }
 
-func convertProvisioner(e model.Provisioner) common.Provisioner {
-	return common.Provisioner{
-		ExampleFile: &common.ExampleFileProvisioner{
+func convertProvisioner(e model.Provisioner) Provisioner {
+	return Provisioner{
+		ExampleFile: &ExampleFileProvisioner{
 			Src:    e.ExampleFile.Src,
 			Target: e.ExampleFile.Target,
-			Type:   common.ExampleFileProvisionerType(e.ExampleFile.Type),
+			Type:   ExampleFileProvisionerType(e.ExampleFile.Type),
 		},
 	}
 }
 
-func convertProvisioners(cfgProvisioners []model.Provisioner) []common.Provisioner {
-	provisioners := make([]common.Provisioner, len(cfgProvisioners))
+func convertProvisioners(cfgProvisioners []model.Provisioner) []Provisioner {
+	provisioners := make([]Provisioner, len(cfgProvisioners))
 	for i, p := range cfgProvisioners {
 		provisioners[i] = convertProvisioner(p)
 	}
@@ -132,17 +131,17 @@ func convertProvisioners(cfgProvisioners []model.Provisioner) []common.Provision
 	return provisioners
 }
 
-func buildProject(wsPCfg model.WorkspaceProjectConfig, meta common.ProjectMeta, pCfg model.ProjectConfig) common.Project {
-	return common.Project{
+func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig) Project {
+	return Project{
 		Name: wsPCfg.Name,
-		RepositoryConfig: common.ProjectRepositoryConfig{
+		RepositoryConfig: ProjectRepositoryConfig{
 			SSH:  meta.Repository.SSH,
 			Self: meta.Repository.Self,
 		},
 		IsRegistered: true,
 		ProjectDir:   meta.Path,
 		Requires:     wsPCfg.Requires,
-		Config: common.ProjectConfig{
+		Config: ProjectConfig{
 			ComposeFiles:    convertComposeFiles(pCfg.ComposeFiles),
 			Properties:      convertProperties(pCfg.Properties),
 			Hosts:           pCfg.Hosts,
@@ -154,13 +153,13 @@ func buildProject(wsPCfg model.WorkspaceProjectConfig, meta common.ProjectMeta, 
 	}
 }
 
-type WorkspaceRepository struct {
+type Repository struct {
 	fs         afero.Fs
 	userConfig userConfig
 }
 
-func (wcr *WorkspaceRepository) loadProject(projectMeta common.ProjectMeta) (*model.ProjectConfig, error) {
-	path := fmt.Sprintf("%s/%s", strings.TrimSuffix(projectMeta.Path, "/"), common.DefaultProjectFileName)
+func (wcr *Repository) loadProject(projectMeta ProjectMeta) (*model.ProjectConfig, error) {
+	path := fmt.Sprintf("%s/%s", strings.TrimSuffix(projectMeta.Path, "/"), DefaultProjectFileName)
 
 	found, err := afero.Exists(wcr.fs, path)
 
@@ -169,7 +168,7 @@ func (wcr *WorkspaceRepository) loadProject(projectMeta common.ProjectMeta) (*mo
 	}
 
 	if !found {
-		return nil, common.ErrProjectConfigNotFound{
+		return nil, ErrProjectConfigNotFound{
 			Path: path,
 		}
 	}
@@ -183,7 +182,7 @@ func (wcr *WorkspaceRepository) loadProject(projectMeta common.ProjectMeta) (*mo
 	cfg := &model.ProjectConfig{}
 
 	if err := yaml.Unmarshal(contents, cfg); err != nil {
-		return nil, common.ErrConfigIsNotValidYAML{
+		return nil, ErrConfigIsNotValidYAML{
 			Path:       path,
 			ParseError: err.Error(),
 		}
@@ -192,7 +191,7 @@ func (wcr *WorkspaceRepository) loadProject(projectMeta common.ProjectMeta) (*mo
 	return cfg, nil
 }
 
-func (wcr *WorkspaceRepository) loadConfigFromPath(path string) (*model.WorkspaceConfig, error) {
+func (wcr *Repository) loadConfigFromPath(path string) (*model.WorkspaceConfig, error) {
 	found, err := afero.Exists(wcr.fs, path)
 
 	if err != nil {
@@ -200,7 +199,7 @@ func (wcr *WorkspaceRepository) loadConfigFromPath(path string) (*model.Workspac
 	}
 
 	if !found {
-		return nil, common.ErrWorkspaceConfigNotFound{
+		return nil, ErrWorkspaceConfigNotFound{
 			Path: path,
 		}
 	}
@@ -218,7 +217,7 @@ func parseWorkspaceConfig(contents []byte, path string) (*model.WorkspaceConfig,
 	cfg := &model.WorkspaceConfig{}
 
 	if err := yaml.Unmarshal(contents, cfg); err != nil {
-		return nil, common.ErrConfigIsNotValidYAML{
+		return nil, ErrConfigIsNotValidYAML{
 			Path:       path,
 			ParseError: err.Error(),
 		}
@@ -256,7 +255,7 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	}
 
 	if len(problems) > 0 {
-		return common.ErrInvalidWorkspaceConfig{
+		return ErrInvalidWorkspaceConfig{
 			Path:     path,
 			Problems: problems,
 		}
@@ -265,27 +264,27 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	return nil
 }
 
-func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *common.UnconfiguredWorkspace {
-	projects := make([]common.UnconfiguredProject, len(ws.Projects))
+func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *UnconfiguredWorkspace {
+	projects := make([]UnconfiguredProject, len(ws.Projects))
 
 	for i, p := range ws.Projects {
-		projects[i] = common.UnconfiguredProject{
+		projects[i] = UnconfiguredProject{
 			Name: p.Name,
-			RepositoryConfig: common.ProjectRepositoryConfig{
+			RepositoryConfig: ProjectRepositoryConfig{
 				SSH:  p.Repository.SSH,
 				Self: p.Repository.Self,
 			},
 		}
 	}
 
-	return &common.UnconfiguredWorkspace{
+	return &UnconfiguredWorkspace{
 		Name:       ws.Name,
 		ConfigPath: path,
 		Projects:   projects,
 	}
 }
 
-func (wcr *WorkspaceRepository) LoadUnconfiguredWorkspace(path string) (*common.UnconfiguredWorkspace, error) {
+func (wcr *Repository) LoadUnconfiguredWorkspace(path string) (*UnconfiguredWorkspace, error) {
 	ws, err := wcr.loadConfigFromPath(path)
 
 	if err != nil {
@@ -297,7 +296,7 @@ func (wcr *WorkspaceRepository) LoadUnconfiguredWorkspace(path string) (*common.
 
 // ParseUnconfiguredWorkspace loads a workspace from raw config contents, e.g.
 // when fetched from a remote. The path is only used for reporting.
-func (wcr *WorkspaceRepository) ParseUnconfiguredWorkspace(contents []byte, path string) (*common.UnconfiguredWorkspace, error) {
+func (wcr *Repository) ParseUnconfiguredWorkspace(contents []byte, path string) (*UnconfiguredWorkspace, error) {
 	ws, err := parseWorkspaceConfig(contents, path)
 
 	if err != nil {
@@ -307,7 +306,7 @@ func (wcr *WorkspaceRepository) ParseUnconfiguredWorkspace(contents []byte, path
 	return buildUnconfiguredWorkspace(ws, path), nil
 }
 
-func (wcr *WorkspaceRepository) Load(name string) (*common.Workspace, error) {
+func (wcr *Repository) Load(name string) (*Workspace, error) {
 	wsMeta, err := wcr.userConfig.GetWorkspaceMeta(name)
 	if err != nil {
 		return nil, err
@@ -319,12 +318,12 @@ func (wcr *WorkspaceRepository) Load(name string) (*common.Workspace, error) {
 		return nil, err
 	}
 
-	ws := &common.Workspace{
+	ws := &Workspace{
 		Name:       cfg.Name,
 		ConfigPath: wsMeta.Path,
-		Projects:   make([]common.Project, len(cfg.Projects)),
-		OverlayConfig: common.OverlayConfig{
-			Network: common.NetworkOverlayConfig{
+		Projects:   make([]Project, len(cfg.Projects)),
+		OverlayConfig: OverlayConfig{
+			Network: NetworkOverlayConfig{
 				Enabled:        cfg.Overlays.Network.Enabled,
 				CreateIn:       cfg.Overlays.Network.CreateIn,
 				DisableAliases: cfg.Overlays.Network.DisableAliases,
@@ -337,17 +336,17 @@ func (wcr *WorkspaceRepository) Load(name string) (*common.Workspace, error) {
 		projectMeta, err := wcr.userConfig.GetProjectMeta(wsMeta.Name, pCfg.Name)
 
 		if err != nil {
-			if _, ok := err.(common.ErrUnknownProject); ok {
-				ws.Projects[i] = common.Project{
+			if _, ok := err.(ErrUnknownProject); ok {
+				ws.Projects[i] = Project{
 					Name: pCfg.Name,
-					RepositoryConfig: common.ProjectRepositoryConfig{
+					RepositoryConfig: ProjectRepositoryConfig{
 						SSH:  pCfg.Repository.SSH,
 						Self: pCfg.Repository.Self,
 					},
 					IsRegistered: false,
 					ProjectDir:   "",
 					Requires:     pCfg.Requires,
-					Config:       common.ProjectConfig{},
+					Config:       ProjectConfig{},
 				}
 				continue
 			}
@@ -367,8 +366,8 @@ func (wcr *WorkspaceRepository) Load(name string) (*common.Workspace, error) {
 	return ws, nil
 }
 
-func NewWorkspaceRepository(fs afero.Fs, userConfig userConfig) *WorkspaceRepository {
-	return &WorkspaceRepository{
+func NewRepository(fs afero.Fs, userConfig userConfig) *Repository {
+	return &Repository{
 		fs:         fs,
 		userConfig: userConfig,
 	}

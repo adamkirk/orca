@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/spf13/afero"
 )
@@ -24,7 +24,7 @@ const defaultAliasTemplate = "{{ .Service }}.{{ .Project }}.{{ .Workspace }}.loc
 // so each workspace gets its own network and they can run at the same time.
 const networkNamePrefix = "orca-ws-"
 
-func networkName(ws *common.Workspace) string {
+func networkName(ws *workspace.Workspace) string {
 	return networkNamePrefix + ws.Name
 }
 
@@ -35,8 +35,8 @@ type aliasTemplateVariables struct {
 }
 
 type overlayGenerationContext struct {
-	ws       *common.Workspace
-	p        *common.Project
+	ws       *workspace.Workspace
+	p        *workspace.Project
 	original *types.Project
 	new      *types.Project
 }
@@ -153,7 +153,7 @@ type ComposeOverlayGenerator struct {
 func emptyOverlay() *types.Project {
 	return &types.Project{}
 }
-func (cog *ComposeOverlayGenerator) getOverlayPath(ws *common.Workspace, p *common.Project) string {
+func (cog *ComposeOverlayGenerator) getOverlayPath(ws *workspace.Workspace, p *workspace.Project) string {
 	return fmt.Sprintf("%s/%s/%s.yaml", cog.overlayDir, ws.Name, p.Name)
 }
 
@@ -186,7 +186,7 @@ func (cog *ComposeOverlayGenerator) addTLSInjectionOverlay(ctx *overlayGeneratio
 	path = fmt.Sprintf("%s/", strings.TrimSuffix(path, "/"))
 
 	if err := validateBindMountTarget(path); err != nil {
-		return common.ErrInvalidValueForOverlayModifier{
+		return ErrInvalidValueForOverlayModifier{
 			Service: s,
 			Message: err.Error(),
 			Label:   tlsInjectCertsLabel,
@@ -230,7 +230,7 @@ func (cog *ComposeOverlayGenerator) buildOverlay(ctx *overlayGenerationContext) 
 	return nil
 }
 
-func (cog *ComposeOverlayGenerator) CreateOrRetrieve(ws *common.Workspace, p *common.Project) (string, error) {
+func (cog *ComposeOverlayGenerator) CreateOrRetrieve(ws *workspace.Workspace, p *workspace.Project) (string, error) {
 	composeProject, err := cog.parser.Parse(
 		[]string{
 			fmt.Sprintf("%s/%s", p.ProjectDir, p.Config.ComposeFiles.Primary),

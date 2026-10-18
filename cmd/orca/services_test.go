@@ -68,7 +68,7 @@ func Test_ExecutionContextHandlersHaveTargets(t *testing.T) {
 }
 
 // findExecutionContextMessages returns the message type, e.g.
-// "controller.UpCommand", of each handler that calls common.ExecutionContextFrom.
+// "controller.UpCommand", of each handler that calls workspace.ExecutionContextFrom.
 func findExecutionContextMessages(t *testing.T, path string) []string {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, 0)
@@ -115,7 +115,7 @@ func callsExecutionContextFrom(fn *ast.FuncDecl) bool {
 			return true
 		}
 
-		if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "common" && sel.Sel.Name == "ExecutionContextFrom" {
+		if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "workspace" && sel.Sel.Name == "ExecutionContextFrom" {
 			found = true
 		}
 

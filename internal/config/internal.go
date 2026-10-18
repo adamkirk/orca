@@ -3,7 +3,7 @@ package config
 import (
 	"slices"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type configLogging struct {
@@ -70,7 +70,7 @@ func (c *config) getWorkspace(name string) (configWorkspace, error) {
 	i := c.workspaceIndex(name)
 
 	if i == -1 {
-		return configWorkspace{}, common.ErrUnknownWorkspace{
+		return configWorkspace{}, workspace.ErrUnknownWorkspace{
 			Name: name,
 		}
 	}
@@ -98,7 +98,7 @@ func (c *config) getProject(wsName string, name string) (configProject, error) {
 	i := ws.projectIndex(name)
 
 	if i == -1 {
-		return configProject{}, common.ErrUnknownProject{
+		return configProject{}, workspace.ErrUnknownProject{
 			Name: name,
 		}
 	}

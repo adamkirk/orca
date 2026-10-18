@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/spf13/afero"
 )
 
@@ -66,7 +65,7 @@ func (hs *HostSystem) extractExecutableFromArchive(archive []byte, path string) 
 
 		// if no more files are found return
 		case err == io.EOF:
-			return nil, common.ErrInvalidArchive{}
+			return nil, ErrInvalidArchive{}
 
 		// return any other error
 		case err != nil:
@@ -125,7 +124,7 @@ func (hs *HostSystem) getHostctlOSForDownload() (string, error) {
 	case "windows":
 		return "windows", nil
 	default:
-		return "", common.ErrUnsupportedOS{
+		return "", ErrUnsupportedOS{
 			OS: os,
 		}
 	}
@@ -138,7 +137,7 @@ func (hs *HostSystem) getHostctlArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", common.ErrUnsupportedArchitecture{
+		return "", ErrUnsupportedArchitecture{
 			Arch: arch,
 		}
 	}
@@ -199,7 +198,7 @@ func (hs *HostSystem) getSopsOSForDownload() (string, error) {
 	case "linux":
 		return "linux", nil
 	default:
-		return "", common.ErrUnsupportedOS{
+		return "", ErrUnsupportedOS{
 			OS: os,
 		}
 	}
@@ -212,7 +211,7 @@ func (hs *HostSystem) getSopsArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", common.ErrUnsupportedArchitecture{
+		return "", ErrUnsupportedArchitecture{
 			Arch: arch,
 		}
 	}
@@ -278,7 +277,7 @@ func (InstallCommand) MessageName() string {
 
 func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	if !cmd.Tool.IsKnown() {
-		return hs.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), common.ErrUnknownTool{
+		return hs.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), ErrUnknownTool{
 			Tool: string(cmd.Tool),
 		})
 	}
@@ -290,7 +289,7 @@ func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	case ToolSops:
 		err = hs.installSops()
 	default:
-		return hs.tui.RecordIfError("This tool is not supported!", common.ErrNotImplemented{
+		return hs.tui.RecordIfError("This tool is not supported!", ErrNotImplemented{
 			Msg: "installation has not been implemented for this tool",
 		})
 	}
@@ -314,7 +313,7 @@ func (hs *HostSystem) getOrcaOSForDownload() (string, error) {
 	case "windows":
 		return "Windows", nil
 	default:
-		return "", common.ErrUnsupportedOS{
+		return "", ErrUnsupportedOS{
 			OS: os,
 		}
 	}
@@ -327,7 +326,7 @@ func (hs *HostSystem) getOrcaArchForDownload() (string, error) {
 	case "arm64":
 		return "arm64", nil
 	default:
-		return "", common.ErrUnsupportedArchitecture{
+		return "", ErrUnsupportedArchitecture{
 			Arch: arch,
 		}
 	}

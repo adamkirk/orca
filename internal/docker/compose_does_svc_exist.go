@@ -1,11 +1,11 @@
 package docker
 
 import (
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) DoesSvcExist(ws *common.Workspace, p *common.Project, service string) (bool, error) {
+func (c *Compose) DoesSvcExist(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error) {
 	spec, err := c.LoadSpec(ws, p)
 
 	if err != nil {

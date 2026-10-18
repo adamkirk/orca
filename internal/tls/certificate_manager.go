@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/adamkirk/orca/internal/bus"
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
@@ -367,7 +367,7 @@ func (GenerateCommand) MessageName() string {
 }
 
 func (cm *CertificateManager) Generate(ctx context.Context, cmd GenerateCommand) error {
-	execCtx, err := common.ExecutionContextFrom(ctx)
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err

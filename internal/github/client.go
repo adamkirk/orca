@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/google/go-github/v74/github"
 )
 
@@ -19,7 +18,7 @@ func (c *GithubClient) LatestVersion(owner string, repo string) (*semver.Version
 	rel, resp, err := c.client.Repositories.GetLatestRelease(context.TODO(), owner, repo)
 
 	if err != nil {
-		return nil, common.ErrUnexpectedApiError{
+		return nil, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("error from client: %s", err.Error()),
 		}
 	}
@@ -28,11 +27,11 @@ func (c *GithubClient) LatestVersion(owner string, repo string) (*semver.Version
 	case http.StatusOK:
 		return semver.NewVersion(*rel.Name)
 	case http.StatusTooManyRequests:
-		return nil, common.ErrRateLimitedByApi{
+		return nil, ErrRateLimitedByApi{
 			Api: "github",
 		}
 	default:
-		return nil, common.ErrUnexpectedApiError{
+		return nil, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("got %d response when getting release", resp.StatusCode),
 		}
 	}
@@ -42,7 +41,7 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 	_, resp, err := c.client.Repositories.GetReleaseByTag(context.TODO(), owner, repo, v)
 
 	if err != nil {
-		return false, common.ErrUnexpectedApiError{
+		return false, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("error from client: %s", err.Error()),
 		}
 	}
@@ -53,11 +52,11 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 	case http.StatusNotFound:
 		return false, nil
 	case http.StatusTooManyRequests:
-		return false, common.ErrRateLimitedByApi{
+		return false, ErrRateLimitedByApi{
 			Api: "github",
 		}
 	default:
-		return false, common.ErrUnexpectedApiError{
+		return false, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("got %d response when getting release", resp.StatusCode),
 		}
 	}
@@ -72,13 +71,13 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 	var abuseRateLimitErr *github.AbuseRateLimitError
 
 	if errors.As(err, &rateLimitErr) || errors.As(err, &abuseRateLimitErr) {
-		return nil, false, common.ErrRateLimitedByApi{
+		return nil, false, ErrRateLimitedByApi{
 			Api: "github",
 		}
 	}
 
 	if resp == nil {
-		return nil, false, common.ErrUnexpectedApiError{
+		return nil, false, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("error from client: %s", err.Error()),
 		}
 	}
@@ -93,7 +92,7 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 		contents, err := file.GetContent()
 
 		if err != nil {
-			return nil, false, common.ErrUnexpectedApiError{
+			return nil, false, ErrUnexpectedApiError{
 				Msg: fmt.Sprintf("failed to decode file contents: %s", err.Error()),
 			}
 		}
@@ -102,11 +101,11 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 	case http.StatusNotFound:
 		return nil, false, nil
 	case http.StatusTooManyRequests:
-		return nil, false, common.ErrRateLimitedByApi{
+		return nil, false, ErrRateLimitedByApi{
 			Api: "github",
 		}
 	default:
-		return nil, false, common.ErrUnexpectedApiError{
+		return nil, false, ErrUnexpectedApiError{
 			Msg: fmt.Sprintf("got %d response when getting file contents", resp.StatusCode),
 		}
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/tls"
+	"github.com/adamkirk/orca/internal/workspace"
 	tls_mocks "github.com/adamkirk/orca/tests/mocks/tls"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ func Test_CertificateManager_Generate(t *testing.T) {
 		in           tls.GenerateCommand
 		expect       error
 		configureTui func(*testing.T, *tls_mocks.MockTui)
-		workspace    *common.Workspace
+		workspace    *workspace.Workspace
 		reRun        bool
 	}{
 		{
@@ -33,8 +33,8 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Creating certificate: /some/path/cert.pem"})
 				tui.EXPECT().Success([]string{"Certificate /some/path/cert.pem created successfully!"})
 			},
-			workspace: &common.Workspace{
-				Projects: []common.Project{},
+			workspace: &workspace.Workspace{
+				Projects: []workspace.Project{},
 			},
 		},
 		{
@@ -57,10 +57,10 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Creating certificate: /some/path/certs/_.example.com.cert"})
 				tui.EXPECT().Success([]string{"Certificate /some/path/certs/_.example.com.cert created successfully!"})
 			},
-			workspace: &common.Workspace{
-				Projects: []common.Project{
+			workspace: &workspace.Workspace{
+				Projects: []workspace.Project{
 					{
-						Config: common.ProjectConfig{
+						Config: workspace.ProjectConfig{
 							TLSCertificates: []string{
 								"*.example.com",
 							},
@@ -99,10 +99,10 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/_.example.com.cert already exists, skipping creation."})
 				// tui.EXPECT().Info([]string{"Key /some/path/key.pem already exists, skipping creation."})
 			},
-			workspace: &common.Workspace{
-				Projects: []common.Project{
+			workspace: &workspace.Workspace{
+				Projects: []workspace.Project{
 					{
-						Config: common.ProjectConfig{
+						Config: workspace.ProjectConfig{
 							TLSCertificates: []string{
 								"*.example.com",
 							},
@@ -150,10 +150,10 @@ func Test_CertificateManager_Generate(t *testing.T) {
 				tui.EXPECT().RecordIfError("Failed to load key /some/path/certs/blah.test.key", nil).Return(nil)
 				tui.EXPECT().Info([]string{"Certificate /some/path/certs/blah.test.cert already exists, skipping creation."})
 			},
-			workspace: &common.Workspace{
-				Projects: []common.Project{
+			workspace: &workspace.Workspace{
+				Projects: []workspace.Project{
 					{
-						Config: common.ProjectConfig{
+						Config: workspace.ProjectConfig{
 							TLSCertificates: []string{
 								"*.example.com",
 								"blah.test",
@@ -177,7 +177,7 @@ func Test_CertificateManager_Generate(t *testing.T) {
 			cm := tls.NewCertificateManager(fs, tui, "/some/path")
 
 			// As resolved by the ExecutionContextMiddleware
-			ctx := common.WithExecutionContext(context.Background(), common.ExecutionContext{Workspace: test.workspace})
+			ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: test.workspace})
 
 			assert.Equal(tt, test.expect, cm.Generate(ctx, test.in))
 

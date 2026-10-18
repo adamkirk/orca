@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,7 +146,7 @@ currentWorkspace: blah
 
 	err = cfg.AddWorkspace("/other/path/meh", "meh")
 
-	assert.Equal(t, common.ErrWorkspaceAlreadyExists{
+	assert.Equal(t, workspace.ErrWorkspaceAlreadyExists{
 		Name: "meh",
 	}, err)
 }
@@ -177,7 +177,7 @@ currentWorkspace: meh
 	assert.Equal(t, expectedContents, string(contents))
 
 	err = cfg.SwitchWorkspace("missing")
-	require.Equal(t, common.ErrUnknownWorkspace{
+	require.Equal(t, workspace.ErrUnknownWorkspace{
 		Name: "missing",
 	}, err)
 	assertInternalConfigsAreDifferent(t, cfg)
@@ -197,7 +197,7 @@ func Test_GetAllWorkspaceMeta(t *testing.T) {
 
 	locations := cfg.GetAllWorkspaceMeta()
 
-	assert.Equal(t, []common.WorkspaceMeta{
+	assert.Equal(t, []workspace.WorkspaceMeta{
 		{
 			Name: "meh",
 			Path: "/path/meh",
@@ -224,13 +224,13 @@ func Test_GetWorkspaceMeta(t *testing.T) {
 	location, err := cfg.GetWorkspaceMeta("blah")
 
 	require.Nil(t, err)
-	assert.Equal(t, common.WorkspaceMeta{
+	assert.Equal(t, workspace.WorkspaceMeta{
 		Name: "blah",
 		Path: "/path/blah",
 	}, location)
 
 	_, err = cfg.GetWorkspaceMeta("missing")
-	require.Equal(t, common.ErrUnknownWorkspace{
+	require.Equal(t, workspace.ErrUnknownWorkspace{
 		Name: "missing",
 	}, err)
 }
@@ -331,7 +331,7 @@ func Test_ProjectExists(t *testing.T) {
 
 	exists, err = cfg.ProjectExists("missing", "blah")
 
-	require.Equal(t, common.ErrUnknownWorkspace{
+	require.Equal(t, workspace.ErrUnknownWorkspace{
 		Name: "missing",
 	}, err)
 	assert.False(t, exists)
@@ -351,7 +351,7 @@ func Test_GetAllProjectMeta(t *testing.T) {
 
 	res := cfg.GetAllProjectMeta()
 
-	assert.Equal(t, []common.ProjectMeta{
+	assert.Equal(t, []workspace.ProjectMeta{
 		{
 			Name:          "meh1",
 			WorkspaceName: "meh",
@@ -551,7 +551,7 @@ currentWorkspace: blah
 			projectName: "blah2",
 			projectPath: "/other/path/blah/2",
 			expect:      nil,
-			expectErr: common.ErrUnknownWorkspace{
+			expectErr: workspace.ErrUnknownWorkspace{
 				Name: "missing",
 			},
 			expectFileOnDisk: existingWithMultipleWorkspacesAndProjects,
