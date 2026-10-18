@@ -71,13 +71,7 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return m.tui.RecordIfError("Failed to register workspace, this is likely a bug!", err)
 	}
 
-	err = m.Clone(ctx, CloneCommand{
-		WorkspaceName: cfg.Name,
-		Project:       "",
-		To:            into,
-	})
-
-	if err != nil {
+	if err := m.clone(cfg.Name, "", into); err != nil {
 		return err
 	}
 

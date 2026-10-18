@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
 )
 
 type ProvisionCommand struct {
@@ -17,12 +18,12 @@ func (ProvisionCommand) MessageName() string {
 	return "provision"
 }
 
-func (c *Controller) Provision(_ context.Context, cmd ProvisionCommand) error {
-	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
+func (c *Controller) Provision(ctx context.Context, cmd ProvisionCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.provisionerRunner.RunAll(ctx.Workspace, ctx.Project)
+	return c.provisionerRunner.RunAll(execCtx.Workspace, execCtx.Project)
 }

@@ -18,18 +18,18 @@ func (ShowComposeCommandQuery) MessageName() string {
 	return "debug.show-compose-command"
 }
 
-func (c *Controller) ShowComposeCommand(_ context.Context, query ShowComposeCommandQuery) error {
-	ctx, err := c.contextResolver.Resolve(query.Workspace, query.Project)
+func (c *Controller) ShowComposeCommand(ctx context.Context, query ShowComposeCommandQuery) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	if ctx.Project == nil {
+	if execCtx.Project == nil {
 		return common.ErrInvalidExecutionContext{
 			Msg: "this command must be run in a singular project context",
 		}
 	}
 
-	return c.compose.ShowCommand(ctx.Workspace, ctx.Project)
+	return c.compose.ShowCommand(execCtx.Workspace, execCtx.Project)
 }

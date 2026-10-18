@@ -85,3 +85,34 @@ func Test_FindProjectForDir(t *testing.T) {
 		})
 	}
 }
+
+func Test_ExecutionContext_Dir(t *testing.T) {
+	tests := []struct {
+		name    string
+		execCtx ExecutionContext
+		expect  string
+	}{
+		{
+			name: "uses the project's directory",
+			execCtx: ExecutionContext{
+				Project:          &Project{ProjectDir: "/code/acme/api"},
+				WorkingDirectory: "/code/acme/api/src",
+			},
+			expect: "/code/acme/api",
+		},
+		{
+			name: "falls back to the working directory without a project",
+			execCtx: ExecutionContext{
+				Workspace:        &Workspace{Name: "acme"},
+				WorkingDirectory: "/somewhere",
+			},
+			expect: "/somewhere",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expect, tt.execCtx.Dir())
+		})
+	}
+}

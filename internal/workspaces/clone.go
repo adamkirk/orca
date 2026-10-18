@@ -150,18 +150,24 @@ func (m *Manager) getCloneTargetDir(wsConfigPath string, target string) (string,
 	return filepath.Abs(fmt.Sprintf("%s/..", wsRoot))
 }
 
-func (m *Manager) Clone(_ context.Context, cmd CloneCommand) error {
-	ctx, err := m.contextResolver.Resolve(cmd.WorkspaceName, "")
+func (m *Manager) Clone(ctx context.Context, cmd CloneCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
-		return m.tui.RecordIfError("could not resolve execution context", err)
+		return err
 	}
 
-	wsMeta, err := m.configManager.GetWorkspaceMeta(ctx.Workspace.Name)
+	return m.clone(execCtx.Workspace.Name, cmd.Project, cmd.To)
+}
+
+// clone clones the given project, or all projects when it's empty, for the
+// workspace into the given directory.
+func (m *Manager) clone(wsName string, project string, to string) error {
+	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
 		if _, ok := err.(common.ErrUnknownWorkspace); ok {
-			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", cmd.WorkspaceName), err)
+			return m.tui.RecordIfError(fmt.Sprintf("Unknown workspace: %s", wsName), err)
 		}
 
 		return err
@@ -173,7 +179,7 @@ func (m *Manager) Clone(_ context.Context, cmd CloneCommand) error {
 		return err
 	}
 
-	targetDir, err := m.getCloneTargetDir(wsMeta.Path, cmd.To)
+	targetDir, err := m.getCloneTargetDir(wsMeta.Path, to)
 
 	if err != nil {
 		return m.tui.RecordIfError("Failed to determine target directory!", err)
@@ -181,8 +187,8 @@ func (m *Manager) Clone(_ context.Context, cmd CloneCommand) error {
 
 	var cloneErr error = nil
 
-	if cmd.Project != "" {
-		project, err := cfg.GetProject(cmd.Project)
+	if project != "" {
+		project, err := cfg.GetProject(project)
 
 		if err != nil {
 			return m.tui.RecordIfError("Failed to clone specified project!", err)
@@ -190,7 +196,7 @@ func (m *Manager) Clone(_ context.Context, cmd CloneCommand) error {
 
 		targetDir := targetDir
 
-		if cmd.To == "" {
+		if to == "" {
 			targetDir = fmt.Sprintf("%s/%s", targetDir, project.Name)
 		}
 

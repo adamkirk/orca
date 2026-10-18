@@ -127,18 +127,14 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 	return g.tui.RecordIfError("Failed to checkout branch", err)
 }
 
-func (g *Git) checkoutSingle(search string, ctx common.ExecutionContext) error {
-	if ctx.Project == nil {
-		return g.checkoutFromDirectory(search, ctx.WorkingDirectory)
-	}
-
-	return g.checkoutFromDirectory(search, ctx.Project.ProjectDir)
+func (g *Git) checkoutSingle(search string, execCtx common.ExecutionContext) error {
+	return g.checkoutFromDirectory(search, execCtx.Dir())
 }
 
-func (g *Git) chooseBranchesForAllProjects(search string, ctx common.ExecutionContext) (map[string]Branch, error) {
+func (g *Git) chooseBranchesForAllProjects(search string, execCtx common.ExecutionContext) (map[string]Branch, error) {
 	chosenBranches := map[string]Branch{}
 
-	for _, p := range ctx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.Projects {
 		branches, err := g.searchBranches(SearchBranchesDTO{
 			Search: search,
 			Dir:    p.ProjectDir,
@@ -172,7 +168,7 @@ func (g *Git) chooseBranchesForAllProjects(search string, ctx common.ExecutionCo
 	return chosenBranches, nil
 }
 
-func (g *Git) handleCreate(ctx common.ExecutionContext, cmd CheckoutCommand) error {
+func (g *Git) handleCreate(execCtx common.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Name == "" || cmd.Name == previousBranchAlias {
 		return g.tui.RecordIfError("A branch name must be supplied when creating a branch!", common.ErrInvalidInput{
 			To:  "co",
@@ -181,16 +177,10 @@ func (g *Git) handleCreate(ctx common.ExecutionContext, cmd CheckoutCommand) err
 	}
 
 	if !cmd.AllProjects {
-		dir := ctx.WorkingDirectory
-
-		if ctx.Project != nil {
-			dir = ctx.Project.ProjectDir
-		}
-
-		return g.tui.RecordIfError("Failed to checkout branch", g.checkoutOrCreate(dir, cmd.Name))
+		return g.tui.RecordIfError("Failed to checkout branch", g.checkoutOrCreate(execCtx.Dir(), cmd.Name))
 	}
 
-	for _, p := range ctx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.Projects {
 		if err := g.checkoutOrCreate(p.ProjectDir, cmd.Name); err != nil {
 			return g.tui.RecordIfError("Checkout failed, you should check the branches for all projects as this failed mid-flow", err)
 		}
@@ -199,13 +189,13 @@ func (g *Git) handleCreate(ctx common.ExecutionContext, cmd CheckoutCommand) err
 	return nil
 }
 
-func (g *Git) handleCheckout(ctx common.ExecutionContext, cmd CheckoutCommand) error {
+func (g *Git) handleCheckout(execCtx common.ExecutionContext, cmd CheckoutCommand) error {
 	if cmd.Create {
-		return g.handleCreate(ctx, cmd)
+		return g.handleCreate(execCtx, cmd)
 	}
 
 	if !cmd.AllProjects {
-		return g.checkoutSingle(cmd.Name, ctx)
+		return g.checkoutSingle(cmd.Name, execCtx)
 	}
 
 	if cmd.Name == previousBranchAlias {
@@ -215,7 +205,7 @@ func (g *Git) handleCheckout(ctx common.ExecutionContext, cmd CheckoutCommand) e
 		})
 	}
 
-	chosenBranches, err := g.chooseBranchesForAllProjects(cmd.Name, ctx)
+	chosenBranches, err := g.chooseBranchesForAllProjects(cmd.Name, execCtx)
 
 	if err != nil {
 		return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
@@ -237,14 +227,14 @@ func (g *Git) handleCheckout(ctx common.ExecutionContext, cmd CheckoutCommand) e
 	return nil
 }
 
-func (g *Git) Checkout(_ context.Context, cmd CheckoutCommand) error {
-	ctx, err := g.resolveContext(cmd.Workspace, cmd.Project, cmd.AllProjects)
+func (g *Git) Checkout(ctx context.Context, cmd CheckoutCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	if err := g.handleCheckout(ctx, cmd); err != nil {
+	if err := g.handleCheckout(execCtx, cmd); err != nil {
 		return g.tui.RecordIfError("Failed to checkout", err)
 	}
 
@@ -252,5 +242,5 @@ func (g *Git) Checkout(_ context.Context, cmd CheckoutCommand) error {
 		return nil
 	}
 
-	return g.tui.RecordIfError("Failed to pull", g.pullInContext(ctx, cmd.AllProjects, cmd.Rebase))
+	return g.tui.RecordIfError("Failed to pull", g.pullInContext(execCtx, cmd.AllProjects, cmd.Rebase))
 }

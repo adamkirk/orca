@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
 	"github.com/adamkirk/orca/internal/hostsys"
 )
 
@@ -123,8 +124,8 @@ func (g *Git) statusRow(name string, dir string) []string {
 	return []string{name, branch, changes, dir}
 }
 
-func (g *Git) Status(_ context.Context, query StatusQuery) error {
-	ctx, err := g.resolveContext(query.Workspace, query.Project, query.AllProjects)
+func (g *Git) Status(ctx context.Context, query StatusQuery) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
@@ -134,13 +135,13 @@ func (g *Git) Status(_ context.Context, query StatusQuery) error {
 
 	switch {
 	case query.AllProjects:
-		for _, p := range ctx.Workspace.Projects {
+		for _, p := range execCtx.Workspace.Projects {
 			rows = append(rows, g.statusRow(p.Name, p.ProjectDir))
 		}
-	case ctx.Project != nil:
-		rows = append(rows, g.statusRow(ctx.Project.Name, ctx.Project.ProjectDir))
+	case execCtx.Project != nil:
+		rows = append(rows, g.statusRow(execCtx.Project.Name, execCtx.Project.ProjectDir))
 	default:
-		rows = append(rows, g.statusRow("-", ctx.WorkingDirectory))
+		rows = append(rows, g.statusRow("-", execCtx.WorkingDirectory))
 	}
 
 	g.tui.Table([]string{

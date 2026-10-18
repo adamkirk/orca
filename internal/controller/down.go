@@ -19,14 +19,14 @@ func (DownCommand) MessageName() string {
 	return "down"
 }
 
-func determineShutdownOrder(ctx common.ExecutionContext) ([]string, error) {
-	if ctx.Project != nil {
+func determineShutdownOrder(execCtx common.ExecutionContext) ([]string, error) {
+	if execCtx.Project != nil {
 		return []string{
-			ctx.Project.Name,
+			execCtx.Project.Name,
 		}, nil
 	}
 
-	g, err := dag.NewGraph(ctx.Workspace.Projects)
+	g, err := dag.NewGraph(execCtx.Workspace.Projects)
 
 	if err != nil {
 		return nil, err
@@ -35,8 +35,8 @@ func determineShutdownOrder(ctx common.ExecutionContext) ([]string, error) {
 	return g.TopologicalKeysFromLeaves()
 }
 
-func (c *Controller) stopServices(ctx common.ExecutionContext) error {
-	ordered, err := determineShutdownOrder(ctx)
+func (c *Controller) stopServices(execCtx common.ExecutionContext) error {
+	ordered, err := determineShutdownOrder(execCtx)
 
 	if err != nil {
 		return err
@@ -45,13 +45,13 @@ func (c *Controller) stopServices(ctx common.ExecutionContext) error {
 	for _, p := range ordered {
 		// This shouldn't ever really return an error at this point, if it does
 		// something went wrong while building the runtime context
-		projectConfig, err := ctx.Workspace.GetProject(p)
+		projectConfig, err := execCtx.Workspace.GetProject(p)
 
 		if err != nil {
 			return err
 		}
 
-		if err := c.compose.Down(ctx.Workspace, projectConfig); err != nil {
+		if err := c.compose.Down(execCtx.Workspace, projectConfig); err != nil {
 			return err
 		}
 	}
@@ -59,12 +59,12 @@ func (c *Controller) stopServices(ctx common.ExecutionContext) error {
 	return nil
 }
 
-func (c *Controller) Down(_ context.Context, cmd DownCommand) error {
-	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
+func (c *Controller) Down(ctx context.Context, cmd DownCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.stopServices(ctx)
+	return c.stopServices(execCtx)
 }

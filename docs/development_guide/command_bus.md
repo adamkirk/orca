@@ -57,3 +57,35 @@ Hooks run before and after a message is handled:
 - `After` hooks always run, with the handler's result and error. Their errors are joined with the handler's.
 
 `b.Before(...)` and `b.After(...)` add hooks for a single message type, and `b.AddHook(...)` adds one that sees every message as a `bus.Event`.
+
+## Execution context
+
+Most commands run against a workspace and/or project, which is worked out from the flags, the current directory, or the current workspace. Rather than each handler doing this itself, `common.ExecutionContextMiddleware` resolves the `ExecutionContext` before the command is handled, and passes it along in the `context.Context`:
+
+```go
+func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	...
+}
+```
+
+It's only resolved for commands with a target registered in `GetExecutionContextMiddleware()`, in `cmd/orca/services.go`, which says where the workspace and project come from:
+
+```go
+ec.Target(func(cmd controller.UpCommand) common.ExecutionTarget {
+	return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+})
+```
+
+Set `WorkspaceOptional` for commands that still work without a workspace, such as the git commands, which then get an `ExecutionContext` with only the working directory.
+
+If it can't be resolved, the middleware shows the error and the command isn't run. Hooks run after the middleware, so they can read the `ExecutionContext` too.
+
+`Test_ExecutionContextHandlersHaveTargets` checks that every handler calling `common.ExecutionContextFrom` has a target registered for its message, so it should only be called from the handler itself, and helpers should take the `ExecutionContext` as an argument.
+
+The `context.Context` only carries the `ExecutionContext` from the middleware to the handler. After that it's passed explicitly, by convention as `execCtx`, so helpers say what they depend on and the compiler can check it. Don't add other context values for workspace or project data.

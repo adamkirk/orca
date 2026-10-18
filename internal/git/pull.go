@@ -22,16 +22,12 @@ func (PullCommand) MessageName() string {
 
 // pullInContext pulls the current branch for the resolved project (or working
 // directory), or for every project in the workspace when allProjects is set
-func (g *Git) pullInContext(ctx common.ExecutionContext, allProjects bool, rebase bool) error {
+func (g *Git) pullInContext(execCtx common.ExecutionContext, allProjects bool, rebase bool) error {
 	if !allProjects {
-		if ctx.Project == nil {
-			return g.PullBranch(PullBranchDTO{Dir: ctx.WorkingDirectory, Rebase: rebase})
-		}
-
-		return g.PullBranch(PullBranchDTO{Dir: ctx.Project.ProjectDir, Rebase: rebase})
+		return g.PullBranch(PullBranchDTO{Dir: execCtx.Dir(), Rebase: rebase})
 	}
 
-	for _, p := range ctx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.Projects {
 		if err := g.PullBranch(PullBranchDTO{Dir: p.ProjectDir, Rebase: rebase}); err != nil {
 			return err
 		}
@@ -40,12 +36,12 @@ func (g *Git) pullInContext(ctx common.ExecutionContext, allProjects bool, rebas
 	return nil
 }
 
-func (g *Git) Pull(_ context.Context, cmd PullCommand) error {
-	ctx, err := g.resolveContext(cmd.Workspace, cmd.Project, cmd.AllProjects)
+func (g *Git) Pull(ctx context.Context, cmd PullCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pullInContext(ctx, cmd.AllProjects, cmd.Rebase)
+	return g.pullInContext(execCtx, cmd.AllProjects, cmd.Rebase)
 }

@@ -18,10 +18,6 @@ type tui interface {
 	RecordIfError(msg string, err error) error
 }
 
-type contextResolver interface {
-	Resolve(ws string, project string) (common.ExecutionContext, error)
-}
-
 type etcHostsManager interface {
 	SyncForWorkspace(ws *common.Workspace) error
 }
@@ -51,7 +47,6 @@ type Controller struct {
 	workspaceRepo     workspaceRepository
 	compose           compose
 	tui               tui
-	contextResolver   contextResolver
 	etcHostsManager   etcHostsManager
 	provisionerRunner provisionerRunner
 }
@@ -61,7 +56,6 @@ func NewController(
 	wsRepo workspaceRepository,
 	compose compose,
 	tui tui,
-	contextResolver contextResolver,
 	etcHostsManager etcHostsManager,
 	provisionerRunner provisionerRunner,
 ) *Controller {
@@ -70,7 +64,6 @@ func NewController(
 		workspaceRepo:     wsRepo,
 		compose:           compose,
 		tui:               tui,
-		contextResolver:   contextResolver,
 		etcHostsManager:   etcHostsManager,
 		provisionerRunner: provisionerRunner,
 	}

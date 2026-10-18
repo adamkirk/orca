@@ -19,7 +19,6 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -45,14 +44,10 @@ type issuer struct {
 	cert *x509.Certificate
 }
 
-type contextResolver interface {
-	Resolve(ws string, project string) (common.ExecutionContext, error)
-}
 type CertificateManager struct {
-	fs              afero.Fs
-	contextResolver contextResolver
-	tui             tui
-	tlsDir          string
+	fs     afero.Fs
+	tui    tui
+	tlsDir string
 }
 
 func (cm *CertificateManager) GetCertsDir() string {
@@ -371,22 +366,11 @@ func (GenerateCommand) MessageName() string {
 	return "tls.gen"
 }
 
-func (cm *CertificateManager) Generate(_ context.Context, cmd GenerateCommand) error {
-	// Resolve the workspace as other commands do, so it can come from the project
-	// we're in or the current workspace, rather than requiring --workspace
-	execCtx, err := cm.contextResolver.Resolve(cmd.Workspace, "")
+func (cm *CertificateManager) Generate(ctx context.Context, cmd GenerateCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
-		var noWorkspaceErr common.ErrCouldNotDetermineWorkspace
-
-		if errors.As(err, &noWorkspaceErr) {
-			return cm.tui.RecordIfError(
-				"Could not determine the workspace; run this from within a project, pass --workspace, or choose one with 'orca ws switch'.",
-				err,
-			)
-		}
-
-		return cm.tui.RecordIfError("Failed to determine the workspace!", err)
+		return err
 	}
 
 	cm.tui.Info("Generating Root certificate if required...")
@@ -412,11 +396,10 @@ func (cm *CertificateManager) Generate(_ context.Context, cmd GenerateCommand) e
 	return nil
 }
 
-func NewCertificateManager(fs afero.Fs, contextResolver contextResolver, tui tui, tlsDir string) *CertificateManager {
+func NewCertificateManager(fs afero.Fs, tui tui, tlsDir string) *CertificateManager {
 	return &CertificateManager{
-		fs:              fs,
-		tlsDir:          tlsDir,
-		contextResolver: contextResolver,
-		tui:             tui,
+		fs:     fs,
+		tlsDir: tlsDir,
+		tui:    tui,
 	}
 }

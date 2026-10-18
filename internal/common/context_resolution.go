@@ -12,6 +12,16 @@ type ExecutionContext struct {
 	WorkingDirectory string
 }
 
+// Dir is the directory to run in: the project's, if there is one, otherwise
+// the working directory.
+func (e ExecutionContext) Dir() string {
+	if e.Project != nil {
+		return e.Project.ProjectDir
+	}
+
+	return e.WorkingDirectory
+}
+
 type configManager interface {
 	GetAllProjectMeta() []ProjectMeta
 	GetCurrentWorkspace() string

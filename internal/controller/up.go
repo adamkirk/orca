@@ -19,14 +19,14 @@ func (UpCommand) MessageName() string {
 	return "up"
 }
 
-func determineStartupOrder(ctx common.ExecutionContext) ([]string, error) {
-	if ctx.Project != nil {
+func determineStartupOrder(execCtx common.ExecutionContext) ([]string, error) {
+	if execCtx.Project != nil {
 		return []string{
-			ctx.Project.Name,
+			execCtx.Project.Name,
 		}, nil
 	}
 
-	g, err := dag.NewGraph(ctx.Workspace.Projects)
+	g, err := dag.NewGraph(execCtx.Workspace.Projects)
 
 	if err != nil {
 		return nil, err
@@ -35,8 +35,8 @@ func determineStartupOrder(ctx common.ExecutionContext) ([]string, error) {
 	return g.TopologicalKeysFromRoots()
 }
 
-func (c *Controller) startServices(ctx common.ExecutionContext) error {
-	ordered, err := determineStartupOrder(ctx)
+func (c *Controller) startServices(execCtx common.ExecutionContext) error {
+	ordered, err := determineStartupOrder(execCtx)
 
 	if err != nil {
 		return err
@@ -45,13 +45,13 @@ func (c *Controller) startServices(ctx common.ExecutionContext) error {
 	for _, p := range ordered {
 		// This shouldn't ever really return an error at this point, if it does
 		// something went wrong while building the runtime context
-		projectConfig, err := ctx.Workspace.GetProject(p)
+		projectConfig, err := execCtx.Workspace.GetProject(p)
 
 		if err != nil {
 			return err
 		}
 
-		if err := c.compose.Up(ctx.Workspace, projectConfig); err != nil {
+		if err := c.compose.Up(execCtx.Workspace, projectConfig); err != nil {
 			return err
 		}
 	}
@@ -59,12 +59,12 @@ func (c *Controller) startServices(ctx common.ExecutionContext) error {
 	return nil
 }
 
-func (c *Controller) Up(_ context.Context, cmd UpCommand) error {
-	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
+func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.startServices(ctx)
+	return c.startServices(execCtx)
 }

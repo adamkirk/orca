@@ -42,28 +42,22 @@ type workspaceRepo interface {
 	ParseUnconfiguredWorkspace(contents []byte, path string) (*common.UnconfiguredWorkspace, error)
 }
 
-type contextResolver interface {
-	Resolve(ws string, project string) (common.ExecutionContext, error)
-}
-
 type Manager struct {
-	fs              afero.Fs
-	tui             tui
-	configManager   config
-	git             git
-	githubClient    githubClient
-	workspaceRepo   workspaceRepo
-	contextResolver contextResolver
+	fs            afero.Fs
+	tui           tui
+	configManager config
+	git           git
+	githubClient  githubClient
+	workspaceRepo workspaceRepo
 }
 
-func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo, contextResolver contextResolver) *Manager {
+func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo) *Manager {
 	return &Manager{
-		fs:              fs,
-		tui:             tui,
-		configManager:   configManager,
-		git:             git,
-		githubClient:    githubClient,
-		workspaceRepo:   workspaceRepo,
-		contextResolver: contextResolver,
+		fs:            fs,
+		tui:           tui,
+		configManager: configManager,
+		git:           git,
+		githubClient:  githubClient,
+		workspaceRepo: workspaceRepo,
 	}
 }

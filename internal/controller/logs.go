@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
 )
 
 type LogsQuery struct {
@@ -18,12 +19,12 @@ func (LogsQuery) MessageName() string {
 	return "logs"
 }
 
-func (c *Controller) Logs(_ context.Context, query LogsQuery) error {
-	ctx, err := c.contextResolver.Resolve(query.Workspace, query.Project)
+func (c *Controller) Logs(ctx context.Context, query LogsQuery) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.compose.Logs(ctx.Workspace, ctx.Project, query.Service)
+	return c.compose.Logs(execCtx.Workspace, execCtx.Project, query.Service)
 }

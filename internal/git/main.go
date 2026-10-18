@@ -1,9 +1,7 @@
 package git
 
 import (
-	"errors"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,10 +11,6 @@ import (
 
 const ConfirmYes = "Yes"
 const ConfirmNo = "No"
-
-type contextResolver interface {
-	Resolve(ws string, project string) (common.ExecutionContext, error)
-}
 
 type tui interface {
 	Info(msg ...string)
@@ -42,44 +36,8 @@ func withDir(dir string, opts ...hostsys.ExecOpt) []hostsys.ExecOpt {
 }
 
 type Git struct {
-	exec            executor
-	tui             tui
-	contextResolver contextResolver
-}
-
-// resolveContext resolves the workspace/project context as usual. A workspace
-// is only really needed when acting on all projects, or a specific project. So
-// if one can't be determined otherwise, the command can still run against the
-// git repository in the current directory, e.g. one that isn't part of orca.
-func (g *Git) resolveContext(workspace string, project string, allProjects bool) (common.ExecutionContext, error) {
-	ctx, err := g.contextResolver.Resolve(workspace, project)
-
-	if err == nil {
-		return ctx, nil
-	}
-
-	var noWorkspaceErr common.ErrCouldNotDetermineWorkspace
-
-	if !errors.As(err, &noWorkspaceErr) {
-		return ctx, g.tui.RecordIfError("Failed to determine the workspace or project!", err)
-	}
-
-	if allProjects || project != "" {
-		return ctx, g.tui.RecordIfError(
-			"A workspace is required when using --all or --project; run this from within a project, pass --workspace, or choose one with 'orca ws switch'.",
-			err,
-		)
-	}
-
-	wd, err := os.Getwd()
-
-	if err != nil {
-		return common.ExecutionContext{}, err
-	}
-
-	return common.ExecutionContext{
-		WorkingDirectory: wd,
-	}, nil
+	exec executor
+	tui  tui
 }
 
 func (g *Git) mustBeInAGitRepository(dir string) error {
@@ -141,10 +99,9 @@ func (g *Git) DirectoryHasOrigin(dir string, origin string) (bool, error) {
 	return strings.TrimSpace(stdout.String()) == origin, nil
 }
 
-func NewGit(exec executor, tui tui, contextResolver contextResolver) *Git {
+func NewGit(exec executor, tui tui) *Git {
 	return &Git{
-		exec:            exec,
-		tui:             tui,
-		contextResolver: contextResolver,
+		exec: exec,
+		tui:  tui,
 	}
 }

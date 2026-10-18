@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/common"
 )
 
 type HostsCommand struct {
@@ -16,14 +17,14 @@ func (HostsCommand) MessageName() string {
 	return "hosts"
 }
 
-func (c *Controller) Hosts(_ context.Context, cmd HostsCommand) error {
-	ctx, err := c.contextResolver.Resolve(cmd.Workspace, "")
+func (c *Controller) Hosts(ctx context.Context, cmd HostsCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	ws, err := c.workspaceRepo.Load(ctx.Workspace.Name)
+	ws, err := c.workspaceRepo.Load(execCtx.Workspace.Name)
 
 	if err != nil {
 		return err

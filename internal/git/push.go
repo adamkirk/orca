@@ -53,16 +53,12 @@ func (PushCommand) MessageName() string {
 
 // pushInContext pushes the current branch for the resolved project (or working
 // directory), or for every project in the workspace when allProjects is set
-func (g *Git) pushInContext(ctx common.ExecutionContext, allProjects bool, force bool) error {
+func (g *Git) pushInContext(execCtx common.ExecutionContext, allProjects bool, force bool) error {
 	if !allProjects {
-		if ctx.Project == nil {
-			return g.PushBranch(PushBranchDTO{Dir: ctx.WorkingDirectory, Force: force})
-		}
-
-		return g.PushBranch(PushBranchDTO{Dir: ctx.Project.ProjectDir, Force: force})
+		return g.PushBranch(PushBranchDTO{Dir: execCtx.Dir(), Force: force})
 	}
 
-	for _, p := range ctx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.Projects {
 		if err := g.PushBranch(PushBranchDTO{Dir: p.ProjectDir, Force: force}); err != nil {
 			return g.tui.RecordIfError("Push failed, you should check the branches for all projects as this failed mid-flow", err)
 		}
@@ -71,12 +67,12 @@ func (g *Git) pushInContext(ctx common.ExecutionContext, allProjects bool, force
 	return nil
 }
 
-func (g *Git) Push(_ context.Context, cmd PushCommand) error {
-	ctx, err := g.resolveContext(cmd.Workspace, cmd.Project, cmd.AllProjects)
+func (g *Git) Push(ctx context.Context, cmd PushCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pushInContext(ctx, cmd.AllProjects, cmd.Force)
+	return g.pushInContext(execCtx, cmd.AllProjects, cmd.Force)
 }

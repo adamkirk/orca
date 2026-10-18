@@ -57,6 +57,8 @@ type services struct {
 	pluginManager *plugins.Manager
 
 	bus *bus.Bus
+
+	executionContextMiddleware *common.ExecutionContextMiddleware
 }
 
 func (s *services) GetFs() afero.Fs {
@@ -142,7 +144,6 @@ func (s *services) GetGit() *git.Git {
 	s.git = git.NewGit(
 		s.GetExecutor(),
 		s.GetTui(),
-		s.GetContextResolver(),
 	)
 
 	return s.git
@@ -183,7 +184,6 @@ func (s *services) GetWorkspaceManager() *workspaces.Manager {
 		s.GetGit(),
 		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
-		s.GetContextResolver(),
 	)
 
 	return s.workspaceManager
@@ -199,7 +199,6 @@ func (s *services) GetController() *controller.Controller {
 		s.GetWorkspaceRepository(),
 		s.GetCompose(),
 		s.GetTui(),
-		s.GetContextResolver(),
 		s.GetEtcHostsManager(),
 		s.GetProvisionerRunner(),
 	)
@@ -227,7 +226,6 @@ func (s *services) GetCertificateManager() *tls.CertificateManager {
 
 	s.certificateManager = tls.NewCertificateManager(
 		s.GetFs(),
-		s.GetContextResolver(),
 		s.GetTui(),
 		getTLSDir(),
 	)
@@ -307,7 +305,10 @@ func (s *services) GetBus() *bus.Bus {
 
 	b := bus.New()
 
-	b.Use(bus.LoggingMiddleware)
+	b.Use(
+		bus.LoggingMiddleware,
+		s.GetExecutionContextMiddleware().Handle,
+	)
 
 	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Up))
 	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Down))
@@ -344,6 +345,74 @@ func (s *services) GetBus() *bus.Bus {
 	s.bus = b
 
 	return s.bus
+}
+
+// GetExecutionContextMiddleware returns the middleware that resolves the
+// ExecutionContext for each command, with the target registered for every
+// command that runs against a workspace or project.
+func (s *services) GetExecutionContextMiddleware() *common.ExecutionContextMiddleware {
+	if s.executionContextMiddleware != nil {
+		return s.executionContextMiddleware
+	}
+
+	ec := common.NewExecutionContextMiddleware(
+		s.GetContextResolver(),
+		s.GetTui(),
+	)
+
+	ec.Target(func(cmd controller.UpCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd controller.DownCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd controller.ExecCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd controller.ExecuteExtensionCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query controller.LogsQuery) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd controller.ProvisionCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query controller.ShowComposeConfigQuery) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(query controller.ShowComposeCommandQuery) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd controller.HostsCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+
+	// The git commands still work in any repository without a workspace, unless
+	// they're acting on all of its projects
+	ec.Target(func(cmd git.CheckoutCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(cmd git.PullCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(cmd git.PushCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(query git.StatusQuery) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}
+	})
+
+	ec.Target(func(cmd workspaces.CloneCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.WorkspaceName}
+	})
+	ec.Target(func(cmd tls.GenerateCommand) common.ExecutionTarget {
+		return common.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+
+	s.executionContextMiddleware = ec
+
+	return s.executionContextMiddleware
 }
 
 // lazy turns a service method into a handler, which only gets (and so builds)

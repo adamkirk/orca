@@ -21,14 +21,14 @@ func (ExecCommand) MessageName() string {
 	return "exec"
 }
 
-func (c *Controller) ExecOrRun(_ context.Context, cmd ExecCommand) error {
-	ctx, err := c.contextResolver.Resolve(cmd.Workspace, cmd.Project)
+func (c *Controller) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
+	execCtx, err := common.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	svcExists, err := c.compose.DoesSvcExist(ctx.Workspace, ctx.Project, cmd.Service)
+	svcExists, err := c.compose.DoesSvcExist(execCtx.Workspace, execCtx.Project, cmd.Service)
 
 	if err != nil {
 		return err
@@ -41,15 +41,15 @@ func (c *Controller) ExecOrRun(_ context.Context, cmd ExecCommand) error {
 		}
 	}
 
-	isRunning, err := c.compose.IsSvcRunning(ctx.Workspace, ctx.Project, cmd.Service)
+	isRunning, err := c.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, cmd.Service)
 
 	if err != nil {
 		return err
 	}
 
 	if !isRunning {
-		return c.compose.Run(ctx.Workspace, ctx.Project, cmd.Service, cmd.Args)
+		return c.compose.Run(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
 	}
 
-	return c.compose.Exec(ctx.Workspace, ctx.Project, cmd.Service, cmd.Args)
+	return c.compose.Exec(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
 }
