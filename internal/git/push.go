@@ -8,13 +8,13 @@ import (
 	"github.com/adamkirk/orca/internal/hostsys"
 )
 
-type PushBranchDTO struct {
+type PushBranchOpts struct {
 	Force bool
 	// The directory to run the command in, defaults to the current directory
 	Dir string
 }
 
-func (g *Git) PushBranch(cmd PushBranchDTO) error {
+func (g *Git) PushBranch(cmd PushBranchOpts) error {
 	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
@@ -55,11 +55,11 @@ func (PushCommand) MessageName() string {
 // directory), or for every project in the workspace when allProjects is set
 func (g *Git) pushInContext(execCtx common.ExecutionContext, allProjects bool, force bool) error {
 	if !allProjects {
-		return g.PushBranch(PushBranchDTO{Dir: execCtx.Dir(), Force: force})
+		return g.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
 	}
 
 	for _, p := range execCtx.Workspace.Projects {
-		if err := g.PushBranch(PushBranchDTO{Dir: p.ProjectDir, Force: force}); err != nil {
+		if err := g.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
 			return g.tui.RecordIfError("Push failed, you should check the branches for all projects as this failed mid-flow", err)
 		}
 	}

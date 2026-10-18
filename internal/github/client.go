@@ -15,8 +15,8 @@ type GithubClient struct {
 	client *github.Client
 }
 
-func (self *GithubClient) LatestVersion(owner string, repo string) (*semver.Version, error) {
-	rel, resp, err := self.client.Repositories.GetLatestRelease(context.TODO(), owner, repo)
+func (c *GithubClient) LatestVersion(owner string, repo string) (*semver.Version, error) {
+	rel, resp, err := c.client.Repositories.GetLatestRelease(context.TODO(), owner, repo)
 
 	if err != nil {
 		return nil, common.ErrUnexpectedApiError{
@@ -38,8 +38,8 @@ func (self *GithubClient) LatestVersion(owner string, repo string) (*semver.Vers
 	}
 }
 
-func (self *GithubClient) VersionExists(owner string, repo string, v string) (bool, error) {
-	_, resp, err := self.client.Repositories.GetReleaseByTag(context.TODO(), owner, repo, v)
+func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool, error) {
+	_, resp, err := c.client.Repositories.GetReleaseByTag(context.TODO(), owner, repo, v)
 
 	if err != nil {
 		return false, common.ErrUnexpectedApiError{
@@ -65,8 +65,8 @@ func (self *GithubClient) VersionExists(owner string, repo string, v string) (bo
 
 // GetFileContents fetches the contents of the file at the given path on the
 // repository's default branch. The bool is false if the file does not exist.
-func (self *GithubClient) GetFileContents(owner string, repo string, path string) ([]byte, bool, error) {
-	file, _, resp, err := self.client.Repositories.GetContents(context.TODO(), owner, repo, path, nil)
+func (c *GithubClient) GetFileContents(owner string, repo string, path string) ([]byte, bool, error) {
+	file, _, resp, err := c.client.Repositories.GetContents(context.TODO(), owner, repo, path, nil)
 
 	var rateLimitErr *github.RateLimitError
 	var abuseRateLimitErr *github.AbuseRateLimitError

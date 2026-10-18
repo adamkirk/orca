@@ -27,14 +27,6 @@ func (err ErrToolNotFoundOnSystem) Error() string {
 	return fmt.Sprintf("tool not available on PATH: %s", err.Tool)
 }
 
-type ErrInvalidStrategy struct {
-	Msg string
-}
-
-func (err ErrInvalidStrategy) Error() string {
-	return fmt.Sprintf("invalid strategy: %s", err.Msg)
-}
-
 type ErrInvalidExecutionContext struct {
 	Msg string
 }
@@ -67,14 +59,6 @@ type ErrNoBranchesFound struct{}
 
 func (err ErrNoBranchesFound) Error() string {
 	return "no branches found"
-}
-
-type ErrInvalidSemVerValue struct {
-	Value string
-}
-
-func (err ErrInvalidSemVerValue) Error() string {
-	return fmt.Sprintf("invalid semver value given: %s", err.Value)
 }
 
 type ErrVersionNotFound struct {
@@ -236,23 +220,6 @@ type ErrDirectoryDoesNotMatchOrigin struct {
 
 func (err ErrDirectoryDoesNotMatchOrigin) Error() string {
 	return fmt.Sprintf("directory '%s' does not contain repo with origin: %s", err.Path, err.Origin)
-}
-
-type ErrRepositoryAlreadyCloned struct {
-	RepoURL string
-}
-
-func (err ErrRepositoryAlreadyCloned) Error() string {
-	return fmt.Sprintf("repository already cloned: %s", err.RepoURL)
-}
-
-type ErrInvalidProjectDependency struct {
-	ProjectName        string
-	InvalidRequirement string
-}
-
-func (err ErrInvalidProjectDependency) Error() string {
-	return fmt.Sprintf("project '%s' requires unknown project: '%s'", err.ProjectName, err.InvalidRequirement)
 }
 
 type ErrProjectConfigNotFound struct {

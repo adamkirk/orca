@@ -39,9 +39,9 @@ func AllAvailableToolsCsv() string {
 	return strings.Join(asStrings, ", ")
 }
 
-func (self AvailableTool) IsKnown() bool {
+func (t AvailableTool) IsKnown() bool {
 	for _, tool := range allAvailableTools {
-		if tool == self {
+		if tool == t {
 			return true
 		}
 	}
@@ -49,7 +49,7 @@ func (self AvailableTool) IsKnown() bool {
 	return false
 }
 
-func (self *HostSystem) extractExecutableFromArchive(archive []byte, path string) (io.Reader, error) {
+func (hs *HostSystem) extractExecutableFromArchive(archive []byte, path string) (io.Reader, error) {
 	buf := bytes.NewReader(archive)
 	gzr, err := gzip.NewReader(buf)
 	if err != nil {
@@ -83,10 +83,10 @@ func (self *HostSystem) extractExecutableFromArchive(archive []byte, path string
 	}
 }
 
-func (self *HostSystem) getExecutableFromArchiveUrl(url string, executableName string) ([]byte, error) {
-	archive, err := self.getFileFromUrl(url)
+func (hs *HostSystem) getExecutableFromArchiveUrl(url string, executableName string) ([]byte, error) {
+	archive, err := hs.getFileFromUrl(url)
 
-	executable, err := self.extractExecutableFromArchive(archive, executableName)
+	executable, err := hs.extractExecutableFromArchive(archive, executableName)
 
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (self *HostSystem) getExecutableFromArchiveUrl(url string, executableName s
 	return io.ReadAll(executable)
 }
 
-func (self *HostSystem) getFileFromUrl(url string) ([]byte, error) {
+func (hs *HostSystem) getFileFromUrl(url string) ([]byte, error) {
 
 	resp, err := http.Get(url)
 
@@ -116,7 +116,7 @@ func (self *HostSystem) getFileFromUrl(url string) ([]byte, error) {
 	return contents, nil
 }
 
-func (self *HostSystem) getHostctlOSForDownload() (string, error) {
+func (hs *HostSystem) getHostctlOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "macOS", nil
@@ -131,7 +131,7 @@ func (self *HostSystem) getHostctlOSForDownload() (string, error) {
 	}
 }
 
-func (self *HostSystem) getHostctlArchForDownload() (string, error) {
+func (hs *HostSystem) getHostctlArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "64-bit", nil
@@ -144,14 +144,14 @@ func (self *HostSystem) getHostctlArchForDownload() (string, error) {
 	}
 }
 
-func (self *HostSystem) installHostCtl() error {
-	os, err := self.getHostctlOSForDownload()
+func (hs *HostSystem) installHostCtl() error {
+	os, err := hs.getHostctlOSForDownload()
 
 	if err != nil {
 		return err
 	}
 
-	arch, err := self.getHostctlArchForDownload()
+	arch, err := hs.getHostctlArchForDownload()
 
 	if err != nil {
 		return err
@@ -165,34 +165,34 @@ func (self *HostSystem) installHostCtl() error {
 		arch,
 	)
 
-	contents, err := self.getExecutableFromArchiveUrl(url, "hostctl")
+	contents, err := hs.getExecutableFromArchiveUrl(url, "hostctl")
 
 	if err != nil {
 		return err
 	}
 
-	if err := self.fs.MkdirAll(self.toolsDir, 0755); err != nil {
+	if err := hs.fs.MkdirAll(hs.toolsDir, 0755); err != nil {
 		return err
 	}
 
-	targetPath := fmt.Sprintf("%s/%s", self.toolsDir, "hostctl")
+	targetPath := fmt.Sprintf("%s/%s", hs.toolsDir, "hostctl")
 
-	exists, err := afero.Exists(self.fs, targetPath)
+	exists, err := afero.Exists(hs.fs, targetPath)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err := self.fs.Remove(targetPath); err != nil {
+		if err := hs.fs.Remove(targetPath); err != nil {
 			return err
 		}
 	}
 
-	return afero.WriteFile(self.fs, targetPath, contents, 0755)
+	return afero.WriteFile(hs.fs, targetPath, contents, 0755)
 }
 
-func (self *HostSystem) getSopsOSForDownload() (string, error) {
+func (hs *HostSystem) getSopsOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "darwin", nil
@@ -205,7 +205,7 @@ func (self *HostSystem) getSopsOSForDownload() (string, error) {
 	}
 }
 
-func (self *HostSystem) getSopsArchForDownload() (string, error) {
+func (hs *HostSystem) getSopsArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "amd64", nil
@@ -218,14 +218,14 @@ func (self *HostSystem) getSopsArchForDownload() (string, error) {
 	}
 }
 
-func (self *HostSystem) installSops() error {
-	os, err := self.getSopsOSForDownload()
+func (hs *HostSystem) installSops() error {
+	os, err := hs.getSopsOSForDownload()
 
 	if err != nil {
 		return err
 	}
 
-	arch, err := self.getSopsArchForDownload()
+	arch, err := hs.getSopsArchForDownload()
 
 	if err != nil {
 		return err
@@ -239,31 +239,31 @@ func (self *HostSystem) installSops() error {
 		arch,
 	)
 
-	contents, err := self.getFileFromUrl(url)
+	contents, err := hs.getFileFromUrl(url)
 
 	if err != nil {
 		return err
 	}
 
-	if err := self.fs.MkdirAll(self.toolsDir, 0755); err != nil {
+	if err := hs.fs.MkdirAll(hs.toolsDir, 0755); err != nil {
 		return err
 	}
 
-	targetPath := fmt.Sprintf("%s/%s", self.toolsDir, "sops")
+	targetPath := fmt.Sprintf("%s/%s", hs.toolsDir, "sops")
 
-	exists, err := afero.Exists(self.fs, targetPath)
+	exists, err := afero.Exists(hs.fs, targetPath)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err := self.fs.Remove(targetPath); err != nil {
+		if err := hs.fs.Remove(targetPath); err != nil {
 			return err
 		}
 	}
 
-	return afero.WriteFile(self.fs, targetPath, contents, 0755)
+	return afero.WriteFile(hs.fs, targetPath, contents, 0755)
 }
 
 type InstallCommand struct {
@@ -276,9 +276,9 @@ func (InstallCommand) MessageName() string {
 	return "sys.install"
 }
 
-func (self *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
+func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	if !cmd.Tool.IsKnown() {
-		return self.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), common.ErrUnknownTool{
+		return hs.tui.RecordIfError(fmt.Sprintf("Unknown tool: %s", string(cmd.Tool)), common.ErrUnknownTool{
 			Tool: string(cmd.Tool),
 		})
 	}
@@ -286,26 +286,26 @@ func (self *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	var err error
 	switch cmd.Tool {
 	case ToolHostCtl:
-		err = self.installHostCtl()
+		err = hs.installHostCtl()
 	case ToolSops:
-		err = self.installSops()
+		err = hs.installSops()
 	default:
-		return self.tui.RecordIfError("This tool is not supported!", common.ErrNotImplemented{
+		return hs.tui.RecordIfError("This tool is not supported!", common.ErrNotImplemented{
 			Msg: "installation has not been implemented for this tool",
 		})
 	}
 
 	if err != nil {
-		self.tui.Error("Installation failed!")
+		hs.tui.Error("Installation failed!")
 		return err
 	}
 
-	self.tui.Success("Installation successful!")
+	hs.tui.Success("Installation successful!")
 
 	return nil
 }
 
-func (self *HostSystem) getOrcaOSForDownload() (string, error) {
+func (hs *HostSystem) getOrcaOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "Darwin", nil
@@ -320,7 +320,7 @@ func (self *HostSystem) getOrcaOSForDownload() (string, error) {
 	}
 }
 
-func (self *HostSystem) getOrcaArchForDownload() (string, error) {
+func (hs *HostSystem) getOrcaArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "X86_64", nil

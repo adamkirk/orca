@@ -24,11 +24,11 @@ func (PullCommand) MessageName() string {
 // directory), or for every project in the workspace when allProjects is set
 func (g *Git) pullInContext(execCtx common.ExecutionContext, allProjects bool, rebase bool) error {
 	if !allProjects {
-		return g.PullBranch(PullBranchDTO{Dir: execCtx.Dir(), Rebase: rebase})
+		return g.PullBranch(PullBranchOpts{Dir: execCtx.Dir(), Rebase: rebase})
 	}
 
 	for _, p := range execCtx.Workspace.Projects {
-		if err := g.PullBranch(PullBranchDTO{Dir: p.ProjectDir, Rebase: rebase}); err != nil {
+		if err := g.PullBranch(PullBranchOpts{Dir: p.ProjectDir, Rebase: rebase}); err != nil {
 			return err
 		}
 	}

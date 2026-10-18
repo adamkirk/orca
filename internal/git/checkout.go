@@ -42,7 +42,7 @@ func (g *Git) performCheckout(dir string, branch string, create bool) error {
 // checkoutOrCreate checks out the branch matching name exactly, creating it if
 // it doesn't already exist
 func (g *Git) checkoutOrCreate(dir string, name string) error {
-	branches, err := g.searchBranches(SearchBranchesDTO{
+	branches, err := g.searchBranches(searchBranchesOpts{
 		Search: name,
 		Dir:    dir,
 	})
@@ -83,7 +83,7 @@ func (g *Git) checkoutFromDirectory(branch string, dir string) error {
 		return nil
 	}
 
-	branches, err := g.searchBranches(SearchBranchesDTO{
+	branches, err := g.searchBranches(searchBranchesOpts{
 		Search: branch,
 		Dir:    dir,
 	})
@@ -135,7 +135,7 @@ func (g *Git) chooseBranchesForAllProjects(search string, execCtx common.Executi
 	chosenBranches := map[string]Branch{}
 
 	for _, p := range execCtx.Workspace.Projects {
-		branches, err := g.searchBranches(SearchBranchesDTO{
+		branches, err := g.searchBranches(searchBranchesOpts{
 			Search: search,
 			Dir:    p.ProjectDir,
 		})

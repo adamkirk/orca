@@ -69,7 +69,7 @@ func (branches Branches) StrictSearch(search string) Branches {
 	})
 }
 
-type SearchBranchesDTO struct {
+type searchBranchesOpts struct {
 	Search string
 	// The directory to run the command in, defaults to the current directory
 	Dir string
@@ -108,7 +108,7 @@ func parseGitBranchOutput(output string) Branches {
 	return branches
 }
 
-func (g *Git) searchBranches(dto SearchBranchesDTO) (Branches, error) {
+func (g *Git) searchBranches(dto searchBranchesOpts) (Branches, error) {
 	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (BranchesQuery) MessageName() string {
 }
 
 func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
-	branches, err := g.searchBranches(SearchBranchesDTO{
+	branches, err := g.searchBranches(searchBranchesOpts{
 		Search: query.Search,
 	})
 	if err != nil {
@@ -173,7 +173,7 @@ func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
 }
 
 func (g *Git) GetCurrentBranch(dir string) (string, error) {
-	branches, err := g.searchBranches(SearchBranchesDTO{
+	branches, err := g.searchBranches(searchBranchesOpts{
 		Dir: dir,
 	})
 
@@ -188,14 +188,14 @@ func (g *Git) GetCurrentBranch(dir string) (string, error) {
 	return branches.GetCurrent().Name, nil
 }
 
-type PullBranchDTO struct {
+type PullBranchOpts struct {
 	// The directory to run the command in, defaults to the current directory
 	Dir string
 	// Passes --rebase to git pull
 	Rebase bool
 }
 
-func (g *Git) PullBranch(dto PullBranchDTO) error {
+func (g *Git) PullBranch(dto PullBranchOpts) error {
 	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
 		return err
 	}
