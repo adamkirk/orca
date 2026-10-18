@@ -25,13 +25,13 @@ func (UndoLastXCommitsCommand) MessageName() string {
 	return "g.undo"
 }
 
-func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) error {
-	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
+func (m *Manager) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) error {
+	if err := m.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
 	if !cmd.SkipConfirmation {
-		result, err := g.tui.PresentChoices([]string{
+		result, err := m.tui.PresentChoices([]string{
 			ConfirmNo,
 			ConfirmYes,
 		}, "You might lose some precious changes, are you sure?")
@@ -45,12 +45,12 @@ func (g *Git) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) e
 		}
 
 		if result == ConfirmNo {
-			g.tui.Info("Aborting")
+			m.tui.Info("Aborting")
 			return nil
 		}
 	}
 
-	return g.exec.Exec("git", []string{
+	return m.exec.Exec("git", []string{
 		"reset",
 		"--hard",
 		fmt.Sprintf("HEAD~%d", cmd.Amount),

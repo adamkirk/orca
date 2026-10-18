@@ -12,7 +12,7 @@ cobra handler (cmd/orca)          reads flags, builds a message, dispatches it
        ├─ LoggingMiddleware       logs the dispatch at debug level
        ├─ ExecutionContextMiddleware   resolves the workspace/project, if the message has a target
        ├─ Before hooks
-       ├─ handler                 a method on a feature package's service
+       ├─ handler                 a method on a feature package's Manager
        └─ After hooks
   └─ reportError                  shows any error to the user, once (cmd/orca/exit.go)
 ```
@@ -83,7 +83,7 @@ For example, a `ps` command that shows the running services:
     }
     ```
 
-2. **Write the handler** as a method on the package's service, taking `(ctx context.Context, msg)`. If it runs against a workspace or project, read the `ExecutionContext` first:
+2. **Write the handler** as a method on the package's `Manager`, taking `(ctx context.Context, msg)`. If it runs against a workspace or project, read the `ExecutionContext` first:
 
     ```go
     func (m *Manager) Ps(ctx context.Context, query PsQuery) error {
@@ -140,8 +140,8 @@ Two tests in `cmd/orca/services_test.go` catch wiring mistakes that would otherw
 ## Conventions
 
 - **Files** are named after what's in them. Name a package's main file after the package (`git/git.go`), never `main.go`, which is for `package main`. Use one file per command handler (`stack/up.go`, `stack/down.go`), and put the package's errors in `errors.go`.
-- **Receivers** are short, and the same for every method on a type (`m *Manager`, `g *Git`). Never `self` or `this`.
-- **Feature services** are called `Manager` in newer packages (`stack.Manager`, `hosts.Manager`, `workspace.Manager`). Avoid names that repeat the package, like `workspace.WorkspaceRepository`.
+- **Receivers** are short, and the same for every method on a type (`m *Manager`, `c *Compose`). Never `self` or `this`.
+- **Feature services** are always called `Manager` (`stack.Manager`, `git.Manager`, `tls.Manager`...), built with `NewManager`. Their getters in `cmd/orca/services.go` are named after the package (`GetStack`, `GetTLS`). Avoid names that repeat the package, like `workspace.WorkspaceRepository`.
 - **Options structs** that aren't messages are named `...Opts` (`git.PullBranchOpts`), not `...DTO`.
 - **Errors** follow the conventions in [errors](./errors.md): return them, don't print them; use sentinels by default; check them with `errors.Is`/`errors.AsType`.
 - **Exiting:** never call `os.Exit`, `cobra.CheckErr` or `log.Fatal` directly. Return an error, or use `exit`/`checkErr` from `cmd/orca/exit.go`, so plugin processes are always stopped. `Test_NoDirectExits` enforces this.

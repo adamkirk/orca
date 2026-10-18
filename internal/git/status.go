@@ -86,10 +86,10 @@ func parseStatusPorcelain(output string) workingTreeChanges {
 	return changes
 }
 
-func (g *Git) getWorkingTreeChanges(dir string) (workingTreeChanges, error) {
+func (m *Manager) getWorkingTreeChanges(dir string) (workingTreeChanges, error) {
 	opt, stdout := process.WithStdout()
 
-	err := g.exec.Exec("git", []string{
+	err := m.exec.Exec("git", []string{
 		"status",
 		"--porcelain",
 	}, withDir(dir, opt)...)
@@ -104,12 +104,12 @@ func (g *Git) getWorkingTreeChanges(dir string) (workingTreeChanges, error) {
 // statusRow builds the table row for a single directory, describing anything
 // that couldn't be determined in the cell rather than erroring, so that one bad
 // project doesn't hide the others
-func (g *Git) statusRow(name string, dir string) []string {
-	if !g.isInGitRepository(dir) {
+func (m *Manager) statusRow(name string, dir string) []string {
+	if !m.isInGitRepository(dir) {
 		return []string{name, "(not a git repository)", "-", dir}
 	}
 
-	branch, err := g.GetCurrentBranch(dir)
+	branch, err := m.GetCurrentBranch(dir)
 
 	if err != nil {
 		branch = "(unknown)"
@@ -117,14 +117,14 @@ func (g *Git) statusRow(name string, dir string) []string {
 
 	changes := "-"
 
-	if c, err := g.getWorkingTreeChanges(dir); err == nil {
+	if c, err := m.getWorkingTreeChanges(dir); err == nil {
 		changes = c.String()
 	}
 
 	return []string{name, branch, changes, dir}
 }
 
-func (g *Git) Status(ctx context.Context, query StatusQuery) error {
+func (m *Manager) Status(ctx context.Context, query StatusQuery) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
@@ -136,15 +136,15 @@ func (g *Git) Status(ctx context.Context, query StatusQuery) error {
 	switch {
 	case query.AllProjects:
 		for _, p := range execCtx.Workspace.Projects {
-			rows = append(rows, g.statusRow(p.Name, p.ProjectDir))
+			rows = append(rows, m.statusRow(p.Name, p.ProjectDir))
 		}
 	case execCtx.Project != nil:
-		rows = append(rows, g.statusRow(execCtx.Project.Name, execCtx.Project.ProjectDir))
+		rows = append(rows, m.statusRow(execCtx.Project.Name, execCtx.Project.ProjectDir))
 	default:
-		rows = append(rows, g.statusRow("-", execCtx.WorkingDirectory))
+		rows = append(rows, m.statusRow("-", execCtx.WorkingDirectory))
 	}
 
-	g.tui.Table([]string{
+	m.tui.Table([]string{
 		"Project",
 		"Branch",
 		"Changes",

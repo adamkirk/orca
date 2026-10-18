@@ -169,7 +169,7 @@ func Test_CertificateManager_Generate(t *testing.T) {
 
 			fs := afero.NewMemMapFs()
 
-			cm := tls.NewCertificateManager(fs, tui, "/some/path")
+			cm := tls.NewManager(fs, tui, "/some/path")
 
 			// As resolved by the ExecutionContextMiddleware
 			ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: test.workspace})

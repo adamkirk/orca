@@ -14,12 +14,12 @@ func (CheckSetupQuery) MessageName() string {
 	return "sys.check"
 }
 
-func (hs *HostSystem) CheckSetup(_ context.Context, query CheckSetupQuery) error {
-	if err := hs.VerifySetup(); err != nil {
+func (m *Manager) CheckSetup(_ context.Context, query CheckSetupQuery) error {
+	if err := m.VerifySetup(); err != nil {
 		return err
 	}
 
-	hs.tui.Success("All requirements met!")
+	m.tui.Success("All requirements met!")
 
 	return nil
 }

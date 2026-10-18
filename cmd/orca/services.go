@@ -31,12 +31,12 @@ type services struct {
 
 	tui *tui.Tui
 
-	hostSystem      *sys.HostSystem
+	sys             *sys.Manager
 	etcHostsManager *hosts.EtcHostsManager
 
 	executor *process.Executor
 
-	git *git.Git
+	git *git.Manager
 
 	githubClient *github.GithubClient
 
@@ -48,13 +48,13 @@ type services struct {
 
 	workspaceRepo *workspace.Repository
 
-	certificateManager *tls.CertificateManager
+	tls *tls.Manager
 
 	compose                 *docker.Compose
 	composeParser           *docker.ComposeParser
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
 
-	provisionerRunner *provision.Runner
+	provision *provision.Manager
 
 	pluginManager *plugins.Manager
 
@@ -99,19 +99,19 @@ func (s *services) GetTui() *tui.Tui {
 	return s.tui
 }
 
-func (s *services) GetHostSystem() *sys.HostSystem {
-	if s.hostSystem != nil {
-		return s.hostSystem
+func (s *services) GetSys() *sys.Manager {
+	if s.sys != nil {
+		return s.sys
 	}
 
-	s.hostSystem = sys.NewHostSystem(
+	s.sys = sys.NewManager(
 		s.GetTui(),
 		s.GetFs(),
 		s.GetGithubClient(),
 		getToolsDir(),
 	)
 
-	return s.hostSystem
+	return s.sys
 }
 
 func (s *services) GetExecutor() *process.Executor {
@@ -138,12 +138,12 @@ func (s *services) GetEtcHostsManager() *hosts.EtcHostsManager {
 	return s.etcHostsManager
 }
 
-func (s *services) GetGit() *git.Git {
+func (s *services) GetGit() *git.Manager {
 	if s.git != nil {
 		return s.git
 	}
 
-	s.git = git.NewGit(
+	s.git = git.NewManager(
 		s.GetExecutor(),
 		s.GetTui(),
 	)
@@ -227,18 +227,18 @@ func (s *services) GetWorkspaceRepository() *workspace.Repository {
 	return s.workspaceRepo
 }
 
-func (s *services) GetCertificateManager() *tls.CertificateManager {
-	if s.certificateManager != nil {
-		return s.certificateManager
+func (s *services) GetTLS() *tls.Manager {
+	if s.tls != nil {
+		return s.tls
 	}
 
-	s.certificateManager = tls.NewCertificateManager(
+	s.tls = tls.NewManager(
 		s.GetFs(),
 		s.GetTui(),
 		getTLSDir(),
 	)
 
-	return s.certificateManager
+	return s.tls
 }
 
 func (s *services) GetCompose() *docker.Compose {
@@ -270,7 +270,7 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 		return s.composeOverlayGenerator
 	}
 
-	cm := s.GetCertificateManager()
+	cm := s.GetTLS()
 
 	s.composeOverlayGenerator = docker.NewComposeOverlayGenerator(
 		s.GetFs(),
@@ -282,17 +282,17 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 	return s.composeOverlayGenerator
 }
 
-func (s *services) GetProvisionerRunner() *provision.Runner {
-	if s.provisionerRunner != nil {
-		return s.provisionerRunner
+func (s *services) GetProvision() *provision.Manager {
+	if s.provision != nil {
+		return s.provision
 	}
 
-	s.provisionerRunner = provision.NewRunner(
+	s.provision = provision.NewManager(
 		s.GetFs(),
 		s.GetTui(),
 	)
 
-	return s.provisionerRunner
+	return s.provision
 }
 
 func (s *services) GetPluginManager() *plugins.Manager {
@@ -324,18 +324,18 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
 	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
-	b.HandleVoid(lazy(s.GetProvisionerRunner, (*provision.Runner).Provision))
+	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).Checkout))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).ShowBranches))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).RebaseInteractively))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).Push))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).UndoLastXCommits))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).Logl))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).Status))
-	b.HandleVoid(lazy(s.GetGit, (*git.Git).Pull))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).RebaseInteractively))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Push))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).UndoLastXCommits))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Logl))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Status))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Pull))
 
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Initialise))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Switch))
@@ -344,11 +344,11 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
 
-	b.HandleVoid(lazy(s.GetCertificateManager, (*tls.CertificateManager).Generate))
+	b.HandleVoid(lazy(s.GetTLS, (*tls.Manager).Generate))
 
-	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).CheckSetup))
-	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).Install))
-	b.HandleVoid(lazy(s.GetHostSystem, (*sys.HostSystem).UpdateSelf))
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).CheckSetup))
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).Install))
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).UpdateSelf))
 
 	s.bus = b
 

@@ -47,7 +47,7 @@ pkg/plugin/          the public plugin SDK, the only package in pkg/
 Every command that does something goes through the bus. The exceptions are ones that only inspect orca itself: `version`, `config`, `plugins ls` and `util gen-docs`.
 
 1. **Message:** in the feature package, next to its handler. Name it `XCommand`, or `XQuery` if it only reads and shows something. Embed `bus.Returns[bus.Void]`, and add `MessageName()`, returning the command's path joined with dots (`"ws.init"`, `"g.co"`).
-2. **Handler:** a method on the package's service, `func (m *Manager) X(ctx context.Context, cmd XCommand) error`. It writes output with the tui and returns errors. It never prints them.
+2. **Handler:** a method on the package's `Manager`, `func (m *Manager) X(ctx context.Context, cmd XCommand) error`. It writes output with the tui and returns errors. It never prints them.
 3. **Register** in `cmd/orca/services.go`, in `GetBus()`: `b.HandleVoid(lazy(s.GetStack, (*stack.Manager).X))`.
 4. **Execution context:** if the command runs against a workspace or project:
    - The handler reads it first, with `execCtx, err := workspace.ExecutionContextFrom(ctx)`.
@@ -76,10 +76,10 @@ Bus specifics:
 ## Conventions
 
 - **Files:** name a package's main file after the package (`git/git.go`), never `main.go`. Use one file per command handler, and put the package's errors in `errors.go`.
-- **Receivers:** short and consistent per type (`m *Manager`, `g *Git`). Never `self`/`this`.
+- **Receivers:** short and consistent per type (`m *Manager`, `c *Compose`). Never `self`/`this`.
 - **Names:**
   - Don't repeat the package in names (`workspace.Repository`, not `workspace.WorkspaceRepository`).
-  - New feature services are `Manager`.
+  - Every feature package's service is called `Manager` (`stack.Manager`, `git.Manager`...), built with `NewManager`, and has a `GetX()` getter in `services.go` named after the package (`GetStack`, `GetTLS`).
   - Options structs that aren't messages are `...Opts`, never `...DTO`.
 - **Dependencies:**
   - Declare small private interfaces in the package that uses them, with only the methods it calls.

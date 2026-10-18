@@ -21,15 +21,15 @@ type githubClient interface {
 	LatestVersion(owner string, repo string) (*semver.Version, error)
 }
 
-type HostSystem struct {
+type Manager struct {
 	tui      tui
 	fs       afero.Fs
 	toolsDir string
 	github   githubClient
 }
 
-func NewHostSystem(tui tui, fs afero.Fs, github githubClient, toolsDir string) *HostSystem {
-	return &HostSystem{
+func NewManager(tui tui, fs afero.Fs, github githubClient, toolsDir string) *Manager {
+	return &Manager{
 		tui:      tui,
 		fs:       fs,
 		github:   github,

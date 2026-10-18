@@ -109,13 +109,13 @@ func parseGitBranchOutput(output string) Branches {
 	return branches
 }
 
-func (g *Git) searchBranches(dto searchBranchesOpts) (Branches, error) {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (m *Manager) searchBranches(dto searchBranchesOpts) (Branches, error) {
+	if err := m.mustBeInAGitRepository(dto.Dir); err != nil {
 		return nil, err
 	}
 
 	opt, stdout := process.WithStdout()
-	err := g.exec.Exec("git", []string{
+	err := m.exec.Exec("git", []string{
 		"branch",
 		"-l",
 	}, withDir(dto.Dir, opt)...)
@@ -143,8 +143,8 @@ func (BranchesQuery) MessageName() string {
 	return "g.branches"
 }
 
-func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
-	branches, err := g.searchBranches(searchBranchesOpts{
+func (m *Manager) ShowBranches(_ context.Context, query BranchesQuery) error {
+	branches, err := m.searchBranches(searchBranchesOpts{
 		Search: query.Search,
 	})
 	if err != nil {
@@ -155,24 +155,24 @@ func (g *Git) ShowBranches(_ context.Context, query BranchesQuery) error {
 	}
 
 	if len(branches) == 0 {
-		g.tui.Info("No matching branches found!")
+		m.tui.Info("No matching branches found!")
 		return nil
 	}
 
 	if b := branches.GetCurrent(); b != nil {
-		g.tui.Success(fmt.Sprintf("[current] %s", b.Name))
-		g.tui.NewLine()
+		m.tui.Success(fmt.Sprintf("[current] %s", b.Name))
+		m.tui.NewLine()
 	}
 
 	for _, b := range branches.ExcludeCurrent() {
-		g.tui.Info(fmt.Sprintf("%s", b.Name))
+		m.tui.Info(fmt.Sprintf("%s", b.Name))
 	}
 
 	return nil
 }
 
-func (g *Git) GetCurrentBranch(dir string) (string, error) {
-	branches, err := g.searchBranches(searchBranchesOpts{
+func (m *Manager) GetCurrentBranch(dir string) (string, error) {
+	branches, err := m.searchBranches(searchBranchesOpts{
 		Dir: dir,
 	})
 
@@ -194,12 +194,12 @@ type PullBranchOpts struct {
 	Rebase bool
 }
 
-func (g *Git) PullBranch(dto PullBranchOpts) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (m *Manager) PullBranch(dto PullBranchOpts) error {
+	if err := m.mustBeInAGitRepository(dto.Dir); err != nil {
 		return err
 	}
 
-	current, err := g.GetCurrentBranch(dto.Dir)
+	current, err := m.GetCurrentBranch(dto.Dir)
 
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func (g *Git) PullBranch(dto PullBranchOpts) error {
 
 	args = append(args, "origin", current)
 
-	err = g.exec.Exec("git", args, withDir(dto.Dir, process.WithHostIO())...)
+	err = m.exec.Exec("git", args, withDir(dto.Dir, process.WithHostIO())...)
 
 	return usererr.Wrap(err, "Failed to pull branch!")
 }

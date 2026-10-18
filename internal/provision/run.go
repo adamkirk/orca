@@ -18,12 +18,12 @@ func (RunCommand) MessageName() string {
 	return "provision"
 }
 
-func (p *Runner) Provision(ctx context.Context, cmd RunCommand) error {
+func (m *Manager) Provision(ctx context.Context, cmd RunCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return p.RunAll(execCtx.Workspace, execCtx.Project)
+	return m.RunAll(execCtx.Workspace, execCtx.Project)
 }

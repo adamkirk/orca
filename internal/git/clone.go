@@ -6,11 +6,11 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-func (g *Git) Clone(repoURL string, target string, dir string) error {
+func (m *Manager) Clone(repoURL string, target string, dir string) error {
 	if repoURL == "" || target == "" {
 		return fmt.Errorf("%w to 'git.clone': 'repoURL' and 'target' cannot be empty", workspace.ErrInvalidInput)
 	}
-	return g.exec.Exec(
+	return m.exec.Exec(
 		"git",
 		[]string{
 			"clone",

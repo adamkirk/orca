@@ -22,13 +22,13 @@ func (LoglQuery) MessageName() string {
 	return "g.logl"
 }
 
-func (g *Git) Logl(_ context.Context, query LoglQuery) error {
-	if err := g.mustBeInAGitRepository(query.Dir); err != nil {
+func (m *Manager) Logl(_ context.Context, query LoglQuery) error {
+	if err := m.mustBeInAGitRepository(query.Dir); err != nil {
 		return err
 	}
 
 	opt, stdout := process.WithStdout()
-	err := g.exec.Exec("git", []string{
+	err := m.exec.Exec("git", []string{
 		"log",
 		"--oneline",
 	}, withDir(query.Dir, opt)...)
@@ -45,7 +45,7 @@ func (g *Git) Logl(_ context.Context, query LoglQuery) error {
 
 	output := strings.Join(lines[0:lineCount], "\n")
 
-	g.tui.Info(output)
+	m.tui.Info(output)
 
 	return nil
 }

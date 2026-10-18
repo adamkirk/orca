@@ -39,9 +39,9 @@ func buildFullCommand(tools ...Tool) []string {
 	return parts
 }
 
-func (hs *HostSystem) checkByPathLookup(tool Tool) error {
+func (m *Manager) checkByPathLookup(tool Tool) error {
 	if _, err := exec.LookPath(tool.Cmd); err != nil {
-		hs.tui.Error(fmt.Sprintf("'%s' was not found in the PATH", tool.Cmd))
+		m.tui.Error(fmt.Sprintf("'%s' was not found in the PATH", tool.Cmd))
 
 		return ToolsNotFoundError{
 			Errs: []ToolNotFoundError{
@@ -52,12 +52,12 @@ func (hs *HostSystem) checkByPathLookup(tool Tool) error {
 		}
 	}
 
-	hs.tui.Success(fmt.Sprintf("'%s' was found in the PATH!", tool.Cmd))
+	m.tui.Success(fmt.Sprintf("'%s' was found in the PATH!", tool.Cmd))
 
 	return nil
 }
 
-func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
+func (m *Manager) checkByExitCode(tool Tool, parents []Tool) error {
 	cmdParts := buildFullCommand(append(parents, tool)...)
 	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
 	fullCmdString := strings.Join(cmdParts, " ")
@@ -69,7 +69,7 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 	if err := cmd.Wait(); err != nil {
 		if exiterr, ok := errors.AsType[*exec.ExitError](err); ok {
 			if exiterr.ExitCode() != 0 {
-				hs.tui.Error(fmt.Sprintf("'%s' returned a non-zero exit code!", fullCmdString))
+				m.tui.Error(fmt.Sprintf("'%s' returned a non-zero exit code!", fullCmdString))
 
 				return ToolsNotFoundError{
 					Errs: []ToolNotFoundError{
@@ -84,18 +84,18 @@ func (hs *HostSystem) checkByExitCode(tool Tool, parents []Tool) error {
 		return usererr.Wrap(err, fmt.Sprintf("Something went wrong while checking '%s', this is most likely a bug!", fullCmdString))
 	}
 
-	hs.tui.Success(fmt.Sprintf("'%s' could be executed!", fullCmdString))
+	m.tui.Success(fmt.Sprintf("'%s' could be executed!", fullCmdString))
 
 	return nil
 }
 
-func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
+func (m *Manager) ensureToolExists(tool Tool, parents []Tool) error {
 	if len(parents) == 0 {
-		if err := hs.checkByPathLookup(tool); err != nil {
+		if err := m.checkByPathLookup(tool); err != nil {
 			return err
 		}
 	} else {
-		if err := hs.checkByExitCode(tool, parents); err != nil {
+		if err := m.checkByExitCode(tool, parents); err != nil {
 			return err
 		}
 	}
@@ -109,7 +109,7 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 	subErrs := []ToolNotFoundError{}
 
 	for _, sub := range tool.SubCmds {
-		if err := hs.ensureToolExists(sub, parents); err != nil {
+		if err := m.ensureToolExists(sub, parents); err != nil {
 			if notFoundErr, ok := errors.AsType[ToolsNotFoundError](err); ok {
 				subErrs = append(subErrs, notFoundErr.Errs...)
 			}
@@ -127,11 +127,11 @@ func (hs *HostSystem) ensureToolExists(tool Tool, parents []Tool) error {
 	return nil
 }
 
-func (hs *HostSystem) VerifySetup() error {
+func (m *Manager) VerifySetup() error {
 	errs := []ToolNotFoundError{}
 
 	for _, t := range defaultRequirements() {
-		err := hs.ensureToolExists(t, []Tool{})
+		err := m.ensureToolExists(t, []Tool{})
 
 		if err != nil {
 			if toolNotFoundErr, ok := errors.AsType[ToolsNotFoundError](err); ok {

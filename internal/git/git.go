@@ -35,13 +35,13 @@ func withDir(dir string, opts ...process.ExecOpt) []process.ExecOpt {
 	return append([]process.ExecOpt{process.ChdirOpt(dir)}, opts...)
 }
 
-type Git struct {
+type Manager struct {
 	exec executor
 	tui  tui
 }
 
-func (g *Git) mustBeInAGitRepository(dir string) error {
-	if g.isInGitRepository(dir) {
+func (m *Manager) mustBeInAGitRepository(dir string) error {
+	if m.isInGitRepository(dir) {
 		return nil
 	}
 
@@ -52,19 +52,19 @@ func (g *Git) mustBeInAGitRepository(dir string) error {
 
 }
 
-func (g *Git) isInGitRepository(dir string) bool {
-	err := g.exec.Exec("git", []string{"rev-parse", "--is-inside-work-tree"}, withDir(dir)...)
+func (m *Manager) isInGitRepository(dir string) bool {
+	err := m.exec.Exec("git", []string{"rev-parse", "--is-inside-work-tree"}, withDir(dir)...)
 
 	return err == nil
 }
 
-func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
+func (m *Manager) GetRepositoryRootFromPath(path string) (string, error) {
 	stdoutOpt, stdout := process.WithStdout()
 	stderrOpt, stderr := process.WithStderr()
 
 	dir := filepath.Dir(path)
 
-	err := g.exec.Exec("git", []string{
+	err := m.exec.Exec("git", []string{
 		"rev-parse",
 		"--show-toplevel",
 	}, process.ChdirOpt(dir), stdoutOpt, stderrOpt)
@@ -79,10 +79,10 @@ func (g *Git) GetRepositoryRootFromPath(path string) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-func (g *Git) DirectoryHasOrigin(dir string, origin string) (bool, error) {
+func (m *Manager) DirectoryHasOrigin(dir string, origin string) (bool, error) {
 	stdoutOpt, stdout := process.WithStdout()
 
-	err := g.exec.Exec("git", []string{
+	err := m.exec.Exec("git", []string{
 		"remote",
 		"get-url",
 		"origin",
@@ -95,8 +95,8 @@ func (g *Git) DirectoryHasOrigin(dir string, origin string) (bool, error) {
 	return strings.TrimSpace(stdout.String()) == origin, nil
 }
 
-func NewGit(exec executor, tui tui) *Git {
-	return &Git{
+func NewManager(exec executor, tui tui) *Manager {
+	return &Manager{
 		exec: exec,
 		tui:  tui,
 	}

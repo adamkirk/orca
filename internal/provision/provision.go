@@ -14,14 +14,14 @@ type tui interface {
 	Success(msg ...string)
 }
 
-type Runner struct {
+type Manager struct {
 	fs  afero.Fs
 	tui tui
 }
 
-func (p *Runner) RunAll(ws *workspace.Workspace, project *workspace.Project) error {
+func (m *Manager) RunAll(ws *workspace.Workspace, project *workspace.Project) error {
 	for _, provisioner := range project.Config.Provisioners {
-		if err := p.Run(ws, project, provisioner); err != nil {
+		if err := m.Run(ws, project, provisioner); err != nil {
 			return err
 		}
 	}
@@ -29,14 +29,14 @@ func (p *Runner) RunAll(ws *workspace.Workspace, project *workspace.Project) err
 	return nil
 }
 
-func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provisioner workspace.Provisioner) error {
+func (m *Manager) Run(ws *workspace.Workspace, project *workspace.Project, provisioner workspace.Provisioner) error {
 	if provisioner.ExampleFile == nil {
 		return fmt.Errorf("%w: the example file provisioner must be defined", ErrUnsupportedProvisioner)
 	}
 
 	srcPath := filepath.Join(project.ProjectDir, provisioner.ExampleFile.Src)
 	targetPath := filepath.Join(project.ProjectDir, provisioner.ExampleFile.Target)
-	targetExists, err := afero.Exists(p.fs, targetPath)
+	targetExists, err := afero.Exists(m.fs, targetPath)
 
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provis
 		return nil
 	}
 
-	srcExists, err := afero.Exists(p.fs, srcPath)
+	srcExists, err := afero.Exists(m.fs, srcPath)
 
 	if err != nil {
 		return err
@@ -60,31 +60,31 @@ func (p *Runner) Run(ws *workspace.Workspace, project *workspace.Project, provis
 		)
 	}
 
-	srcContents, err := afero.ReadFile(p.fs, srcPath)
+	srcContents, err := afero.ReadFile(m.fs, srcPath)
 
 	if err != nil {
 		return err
 	}
 
-	srcInfo, err := p.fs.Stat(srcPath)
+	srcInfo, err := m.fs.Stat(srcPath)
 
 	if err != nil {
 		return err
 	}
 
-	err = afero.WriteFile(p.fs, targetPath, srcContents, srcInfo.Mode())
+	err = afero.WriteFile(m.fs, targetPath, srcContents, srcInfo.Mode())
 
 	if err != nil {
 		return err
 	}
 
-	p.tui.Success(fmt.Sprintf("Successfully copied example file: %s->%s", srcPath, targetPath))
+	m.tui.Success(fmt.Sprintf("Successfully copied example file: %s->%s", srcPath, targetPath))
 
 	return nil
 }
 
-func NewRunner(fs afero.Fs, tui tui) *Runner {
-	return &Runner{
+func NewManager(fs afero.Fs, tui tui) *Manager {
+	return &Manager{
 		fs:  fs,
 		tui: tui,
 	}

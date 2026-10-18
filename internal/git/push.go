@@ -15,12 +15,12 @@ type PushBranchOpts struct {
 	Dir string
 }
 
-func (g *Git) PushBranch(cmd PushBranchOpts) error {
-	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
+func (m *Manager) PushBranch(cmd PushBranchOpts) error {
+	if err := m.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	branch, err := g.GetCurrentBranch(cmd.Dir)
+	branch, err := m.GetCurrentBranch(cmd.Dir)
 
 	if err != nil {
 		return usererr.Wrap(err, "Failed to determine current branch, and no branch was supplied!")
@@ -36,7 +36,7 @@ func (g *Git) PushBranch(cmd PushBranchOpts) error {
 
 	args = append(args, "origin", branch)
 
-	return g.exec.Exec("git", args, withDir(cmd.Dir, process.WithHostIO())...)
+	return m.exec.Exec("git", args, withDir(cmd.Dir, process.WithHostIO())...)
 }
 
 type PushCommand struct {
@@ -54,13 +54,13 @@ func (PushCommand) MessageName() string {
 
 // pushInContext pushes the current branch for the resolved project (or working
 // directory), or for every project in the workspace when allProjects is set
-func (g *Git) pushInContext(execCtx workspace.ExecutionContext, allProjects bool, force bool) error {
+func (m *Manager) pushInContext(execCtx workspace.ExecutionContext, allProjects bool, force bool) error {
 	if !allProjects {
-		return g.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
+		return m.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
 	}
 
 	for _, p := range execCtx.Workspace.Projects {
-		if err := g.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
+		if err := m.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
 			return usererr.Wrap(err, "Push failed, you should check the branches for all projects as this failed mid-flow")
 		}
 	}
@@ -68,12 +68,12 @@ func (g *Git) pushInContext(execCtx workspace.ExecutionContext, allProjects bool
 	return nil
 }
 
-func (g *Git) Push(ctx context.Context, cmd PushCommand) error {
+func (m *Manager) Push(ctx context.Context, cmd PushCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pushInContext(execCtx, cmd.AllProjects, cmd.Force)
+	return m.pushInContext(execCtx, cmd.AllProjects, cmd.Force)
 }

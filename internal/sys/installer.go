@@ -49,7 +49,7 @@ func (t AvailableTool) IsKnown() bool {
 	return false
 }
 
-func (hs *HostSystem) extractExecutableFromArchive(archive []byte, path string) (io.Reader, error) {
+func (m *Manager) extractExecutableFromArchive(archive []byte, path string) (io.Reader, error) {
 	buf := bytes.NewReader(archive)
 	gzr, err := gzip.NewReader(buf)
 	if err != nil {
@@ -83,10 +83,10 @@ func (hs *HostSystem) extractExecutableFromArchive(archive []byte, path string) 
 	}
 }
 
-func (hs *HostSystem) getExecutableFromArchiveUrl(url string, executableName string) ([]byte, error) {
-	archive, err := hs.getFileFromUrl(url)
+func (m *Manager) getExecutableFromArchiveUrl(url string, executableName string) ([]byte, error) {
+	archive, err := m.getFileFromUrl(url)
 
-	executable, err := hs.extractExecutableFromArchive(archive, executableName)
+	executable, err := m.extractExecutableFromArchive(archive, executableName)
 
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (hs *HostSystem) getExecutableFromArchiveUrl(url string, executableName str
 	return io.ReadAll(executable)
 }
 
-func (hs *HostSystem) getFileFromUrl(url string) ([]byte, error) {
+func (m *Manager) getFileFromUrl(url string) ([]byte, error) {
 
 	resp, err := http.Get(url)
 
@@ -116,7 +116,7 @@ func (hs *HostSystem) getFileFromUrl(url string) ([]byte, error) {
 	return contents, nil
 }
 
-func (hs *HostSystem) getHostctlOSForDownload() (string, error) {
+func (m *Manager) getHostctlOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "macOS", nil
@@ -129,7 +129,7 @@ func (hs *HostSystem) getHostctlOSForDownload() (string, error) {
 	}
 }
 
-func (hs *HostSystem) getHostctlArchForDownload() (string, error) {
+func (m *Manager) getHostctlArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "64-bit", nil
@@ -140,14 +140,14 @@ func (hs *HostSystem) getHostctlArchForDownload() (string, error) {
 	}
 }
 
-func (hs *HostSystem) installHostCtl() error {
-	os, err := hs.getHostctlOSForDownload()
+func (m *Manager) installHostCtl() error {
+	os, err := m.getHostctlOSForDownload()
 
 	if err != nil {
 		return err
 	}
 
-	arch, err := hs.getHostctlArchForDownload()
+	arch, err := m.getHostctlArchForDownload()
 
 	if err != nil {
 		return err
@@ -161,34 +161,34 @@ func (hs *HostSystem) installHostCtl() error {
 		arch,
 	)
 
-	contents, err := hs.getExecutableFromArchiveUrl(url, "hostctl")
+	contents, err := m.getExecutableFromArchiveUrl(url, "hostctl")
 
 	if err != nil {
 		return err
 	}
 
-	if err := hs.fs.MkdirAll(hs.toolsDir, 0755); err != nil {
+	if err := m.fs.MkdirAll(m.toolsDir, 0755); err != nil {
 		return err
 	}
 
-	targetPath := fmt.Sprintf("%s/%s", hs.toolsDir, "hostctl")
+	targetPath := fmt.Sprintf("%s/%s", m.toolsDir, "hostctl")
 
-	exists, err := afero.Exists(hs.fs, targetPath)
+	exists, err := afero.Exists(m.fs, targetPath)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err := hs.fs.Remove(targetPath); err != nil {
+		if err := m.fs.Remove(targetPath); err != nil {
 			return err
 		}
 	}
 
-	return afero.WriteFile(hs.fs, targetPath, contents, 0755)
+	return afero.WriteFile(m.fs, targetPath, contents, 0755)
 }
 
-func (hs *HostSystem) getSopsOSForDownload() (string, error) {
+func (m *Manager) getSopsOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "darwin", nil
@@ -199,7 +199,7 @@ func (hs *HostSystem) getSopsOSForDownload() (string, error) {
 	}
 }
 
-func (hs *HostSystem) getSopsArchForDownload() (string, error) {
+func (m *Manager) getSopsArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "amd64", nil
@@ -210,14 +210,14 @@ func (hs *HostSystem) getSopsArchForDownload() (string, error) {
 	}
 }
 
-func (hs *HostSystem) installSops() error {
-	os, err := hs.getSopsOSForDownload()
+func (m *Manager) installSops() error {
+	os, err := m.getSopsOSForDownload()
 
 	if err != nil {
 		return err
 	}
 
-	arch, err := hs.getSopsArchForDownload()
+	arch, err := m.getSopsArchForDownload()
 
 	if err != nil {
 		return err
@@ -231,31 +231,31 @@ func (hs *HostSystem) installSops() error {
 		arch,
 	)
 
-	contents, err := hs.getFileFromUrl(url)
+	contents, err := m.getFileFromUrl(url)
 
 	if err != nil {
 		return err
 	}
 
-	if err := hs.fs.MkdirAll(hs.toolsDir, 0755); err != nil {
+	if err := m.fs.MkdirAll(m.toolsDir, 0755); err != nil {
 		return err
 	}
 
-	targetPath := fmt.Sprintf("%s/%s", hs.toolsDir, "sops")
+	targetPath := fmt.Sprintf("%s/%s", m.toolsDir, "sops")
 
-	exists, err := afero.Exists(hs.fs, targetPath)
+	exists, err := afero.Exists(m.fs, targetPath)
 
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		if err := hs.fs.Remove(targetPath); err != nil {
+		if err := m.fs.Remove(targetPath); err != nil {
 			return err
 		}
 	}
 
-	return afero.WriteFile(hs.fs, targetPath, contents, 0755)
+	return afero.WriteFile(m.fs, targetPath, contents, 0755)
 }
 
 type InstallCommand struct {
@@ -268,7 +268,7 @@ func (InstallCommand) MessageName() string {
 	return "sys.install"
 }
 
-func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
+func (m *Manager) Install(_ context.Context, cmd InstallCommand) error {
 	if !cmd.Tool.IsKnown() {
 		return usererr.Wrap(
 			fmt.Errorf("%w: %s", ErrUnknownTool, string(cmd.Tool)),
@@ -279,9 +279,9 @@ func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 	var err error
 	switch cmd.Tool {
 	case ToolHostCtl:
-		err = hs.installHostCtl()
+		err = m.installHostCtl()
 	case ToolSops:
-		err = hs.installSops()
+		err = m.installSops()
 	default:
 		return usererr.Wrap(
 			fmt.Errorf("%w: installation has not been implemented for this tool", ErrNotImplemented),
@@ -293,12 +293,12 @@ func (hs *HostSystem) Install(_ context.Context, cmd InstallCommand) error {
 		return usererr.Wrap(err, "Installation failed!")
 	}
 
-	hs.tui.Success("Installation successful!")
+	m.tui.Success("Installation successful!")
 
 	return nil
 }
 
-func (hs *HostSystem) getOrcaOSForDownload() (string, error) {
+func (m *Manager) getOrcaOSForDownload() (string, error) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		return "Darwin", nil
@@ -311,7 +311,7 @@ func (hs *HostSystem) getOrcaOSForDownload() (string, error) {
 	}
 }
 
-func (hs *HostSystem) getOrcaArchForDownload() (string, error) {
+func (m *Manager) getOrcaArchForDownload() (string, error) {
 	switch arch := runtime.GOARCH; arch {
 	case "amd64":
 		return "X86_64", nil

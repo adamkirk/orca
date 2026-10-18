@@ -21,12 +21,12 @@ func (RebaseInteractivelyCommand) MessageName() string {
 	return "g.rbi"
 }
 
-func (g *Git) RebaseInteractively(_ context.Context, cmd RebaseInteractivelyCommand) error {
-	if err := g.mustBeInAGitRepository(cmd.Dir); err != nil {
+func (m *Manager) RebaseInteractively(_ context.Context, cmd RebaseInteractivelyCommand) error {
+	if err := m.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	return g.exec.Exec("git", []string{
+	return m.exec.Exec("git", []string{
 		"rebase",
 		"-i",
 		fmt.Sprintf("HEAD~%d", cmd.Amount),

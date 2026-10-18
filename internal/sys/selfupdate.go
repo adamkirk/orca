@@ -16,14 +16,14 @@ type VersioningStrategy string
 const VersioningStrategyLatest VersioningStrategy = "latest"
 const VersioningStrategySpecific VersioningStrategy = "specific"
 
-func (hs *HostSystem) replaceSelf(version string) error {
-	os, err := hs.getOrcaOSForDownload()
+func (m *Manager) replaceSelf(version string) error {
+	os, err := m.getOrcaOSForDownload()
 
 	if err != nil {
 		return err
 	}
 
-	arch, err := hs.getOrcaArchForDownload()
+	arch, err := m.getOrcaArchForDownload()
 
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func (hs *HostSystem) replaceSelf(version string) error {
 		arch,
 	)
 
-	contents, err := hs.getExecutableFromArchiveUrl(url, "orca")
+	contents, err := m.getExecutableFromArchiveUrl(url, "orca")
 
 	if err != nil {
 		return err
@@ -49,8 +49,8 @@ func (hs *HostSystem) replaceSelf(version string) error {
 	return selfupdate.Apply(reader, selfupdate.Options{})
 }
 
-func (hs *HostSystem) ensureSelfVersionExists(v *semver.Version) error {
-	exists, err := hs.github.VersionExists(orcaRepoOrg, orcaRepoName, fmt.Sprintf("v%s", v.String()))
+func (m *Manager) ensureSelfVersionExists(v *semver.Version) error {
+	exists, err := m.github.VersionExists(orcaRepoOrg, orcaRepoName, fmt.Sprintf("v%s", v.String()))
 
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (hs *HostSystem) ensureSelfVersionExists(v *semver.Version) error {
 	return nil
 }
 
-func (hs *HostSystem) getVersionForSelf(cmd UpdateSelfCommand) (*semver.Version, error) {
+func (m *Manager) getVersionForSelf(cmd UpdateSelfCommand) (*semver.Version, error) {
 	if cmd.Strategy == VersioningStrategySpecific {
 		v, err := semver.NewVersion(cmd.SpecifiedVersion)
 
@@ -71,14 +71,14 @@ func (hs *HostSystem) getVersionForSelf(cmd UpdateSelfCommand) (*semver.Version,
 			return nil, err
 		}
 
-		if err := hs.ensureSelfVersionExists(v); err != nil {
+		if err := m.ensureSelfVersionExists(v); err != nil {
 			return nil, err
 		}
 
 		return v, nil
 	}
 
-	return hs.github.LatestVersion(orcaRepoOrg, orcaRepoName)
+	return m.github.LatestVersion(orcaRepoOrg, orcaRepoName)
 }
 
 type UpdateSelfCommand struct {
@@ -92,16 +92,16 @@ func (UpdateSelfCommand) MessageName() string {
 	return "sys.self-update"
 }
 
-func (hs *HostSystem) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error {
-	v, err := hs.getVersionForSelf(cmd)
+func (m *Manager) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error {
+	v, err := m.getVersionForSelf(cmd)
 
 	if err != nil {
 		return usererr.Wrap(err, "Failed to find version!")
 	}
 
-	hs.tui.Info(fmt.Sprintf("Switching to version: %s", v.String()))
+	m.tui.Info(fmt.Sprintf("Switching to version: %s", v.String()))
 
-	err = hs.replaceSelf(v.String())
+	err = m.replaceSelf(v.String())
 
 	if err != nil {
 		return usererr.Wrap(
@@ -110,6 +110,6 @@ func (hs *HostSystem) UpdateSelf(_ context.Context, cmd UpdateSelfCommand) error
 		)
 	}
 
-	hs.tui.Success("Successfully switched!")
+	m.tui.Success("Successfully switched!")
 	return nil
 }
