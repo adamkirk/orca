@@ -96,6 +96,44 @@ Bus specifics:
   `workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws})`.
 - Check errors with `assert.ErrorIs`/`ErrorAs`, and their text with `EqualError`, rather than comparing error values.
 
+## Issues and planning
+
+Work is tracked in GitHub issues on `adamkirk/orca`, and planned in the [Orca roadmap](https://github.com/users/adamkirk/projects/2) project. Use the `gh` CLI for both. Project commands need the `project` scope: `gh auth refresh -s project,read:project`.
+
+- **The issue is the spec.** A feature issue describes the behaviour from the user's point of view. Its acceptance criteria are the definition of done. Read it with `gh issue view <n>` before starting, and check every criterion before calling the work done. There are no local copies of the specs. Don't create any, e.g. in `docs/proposals/`.
+- **Feature issues share a structure:**
+  - Summary
+  - Who it's for
+  - User stories
+  - Behaviour
+  - Configuration
+  - Rules and edge cases
+  - Interactions
+  - Out of scope
+  - Open questions, each with a recommended answer
+  - Acceptance criteria
+
+  Follow it for new ones, and refer to other issues by number (`#49`).
+- **Keep the spec current.** When a decision changes, or an open question is answered, update the issue body with `gh issue edit <n> --body-file <file>`. A settled answer moves out of "Open questions" and into the rules. Ask open questions one at a time, with context and a recommended answer, rather than guessing.
+- **Order and dependencies:**
+  - The project's Order field, and its "Implementation order" view, give the sequence to work in.
+  - Dependencies are GitHub "blocked by" relationships. Check them before starting:
+
+    ```sh
+    gh project item-list 2 --owner adamkirk --format json \
+      | jq -r '.items | sort_by(.order) | .[] | "\(.order)  #\(.content.number)  \(.status)  \(.content.title)"'
+    gh api repos/adamkirk/orca/issues/<n>/dependencies/blocked_by -q '.[].number'
+    ```
+
+  - New items go to the bottom of the project, so set their Order, and position them, when adding them.
+- **Labels:** every issue gets one type label (`enhancement`, `bug`, `documentation`, `tests`, `coding standards`, `release-process`), plus any that apply:
+  - `UX`, for user-facing changes
+  - one or more scope labels: `scope:workspace`, `scope:cli`, `scope:plugins`, `scope:git`, `scope:tls`
+
+  Use the existing labels. Only add a new `scope:` label when no existing one fits.
+- **Shipping:** a PR that implements an issue says `Closes #<n>`, and its commits follow the conventions below. Issues aren't user docs, so document the shipped behaviour in `docs/` as part of the same change.
+- **Only change GitHub when asked.** Creating, editing or closing issues, labels or project items is visible to everyone, so don't do it unprompted. Suggest the change instead.
+
 ## Docs and commits
 
 - The docs use mkdocs:
