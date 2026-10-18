@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/pkg/slices"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
@@ -116,9 +115,9 @@ func (c *Config) GetProjectMeta(wsName string, projectName string) (common.Proje
 		return common.ProjectMeta{}, err
 	}
 
-	p := slices.GetNamedElement(ws.Projects, projectName)
+	i := ws.projectIndex(projectName)
 
-	if p == nil {
+	if i == -1 {
 		return common.ProjectMeta{}, common.ErrUnknownProject{
 			Name: projectName,
 		}
@@ -126,25 +125,25 @@ func (c *Config) GetProjectMeta(wsName string, projectName string) (common.Proje
 
 	return common.ProjectMeta{
 		WorkspaceName: ws.Name,
-		Name:          p.Name,
-		Path:          p.Path,
+		Name:          ws.Projects[i].Name,
+		Path:          ws.Projects[i].Path,
 	}, nil
 }
 
 // GetWorkspaceLocation returns a tuple with name and path for the given namespace
 // if it does in fact exist. If it doesn't exist an error is returned.
 func (c *Config) GetWorkspaceMeta(name string) (common.WorkspaceMeta, error) {
-	v := slices.GetNamedElement(c.persisted.Workspaces, name)
+	i := c.persisted.workspaceIndex(name)
 
-	if v == nil {
+	if i == -1 {
 		return common.WorkspaceMeta{}, common.ErrUnknownWorkspace{
 			Name: name,
 		}
 	}
 
 	return common.WorkspaceMeta{
-		Name: v.Name,
-		Path: v.Path,
+		Name: c.persisted.Workspaces[i].Name,
+		Path: c.persisted.Workspaces[i].Path,
 	}, nil
 }
 
@@ -186,8 +185,8 @@ func (c *Config) SetProjectPath(wsName string, name string, path string) error {
 
 	project.Path = path
 
-	ws.Projects = slices.UpsertNamedElement(ws.Projects, project)
-	c.persisted.Workspaces = slices.UpsertNamedElement(c.persisted.Workspaces, ws)
+	ws.Projects = upsert(ws.Projects, ws.projectIndex(project.Name), project)
+	c.persisted.Workspaces = upsert(c.persisted.Workspaces, c.persisted.workspaceIndex(ws.Name), ws)
 
 	c.runtimeConfig.Workspaces = c.persisted.Workspaces
 

@@ -1,9 +1,7 @@
 package common
 
 import (
-	stdslices "slices"
-
-	"github.com/adamkirk/orca/pkg/slices"
+	"slices"
 )
 
 type ExampleFileProvisionerType string
@@ -83,10 +81,6 @@ type Project struct {
 	IsRegistered     bool
 }
 
-func (p Project) GetName() string {
-	return p.Name
-}
-
 func (p Project) GetKey() string {
 	return p.Name
 }
@@ -139,15 +133,17 @@ type Workspace struct {
 }
 
 func (ws *Workspace) GetProject(name string) (*Project, error) {
-	p := slices.GetNamedElement(ws.Projects, name)
+	i := slices.IndexFunc(ws.Projects, func(p Project) bool {
+		return p.Name == name
+	})
 
-	if p == nil {
+	if i == -1 {
 		return nil, ErrUnknownProject{
 			Name: name,
 		}
 	}
 
-	return p, nil
+	return &ws.Projects[i], nil
 }
 
 func (ws *Workspace) GetUniqueTLSCertificates() []string {
@@ -155,7 +151,7 @@ func (ws *Workspace) GetUniqueTLSCertificates() []string {
 
 	for _, p := range ws.Projects {
 		for _, c := range p.Config.TLSCertificates {
-			if !stdslices.Contains(certs, c) {
+			if !slices.Contains(certs, c) {
 				certs = append(certs, c)
 			}
 		}
@@ -169,7 +165,7 @@ func (ws *Workspace) GetUniqueHosts() []string {
 
 	for _, p := range ws.Projects {
 		for _, c := range p.Config.Hosts {
-			if !stdslices.Contains(hosts, c) {
+			if !slices.Contains(hosts, c) {
 				hosts = append(hosts, c)
 			}
 		}

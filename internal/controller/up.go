@@ -5,7 +5,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/pkg/dag"
+	"github.com/adamkirk/orca/internal/dag"
 )
 
 type UpCommand struct {
