@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func handleExt(cmd *cobra.Command, args []string) error {
 	extensionName := args[0]
 	extensionArgs := args[1:]
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ExecuteExtensionCommand{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ExecuteExtensionCommand{
 		Workspace: ws,
 		Project:   project,
 		Name:      extensionName,

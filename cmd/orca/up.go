@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ func handleUp(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.UpCommand{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.UpCommand{
 		Workspace: ws,
 		Project:   project,
 	})

@@ -1,4 +1,4 @@
-package controller
+package provision
 
 import (
 	"context"
@@ -7,23 +7,23 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-type ProvisionCommand struct {
+type RunCommand struct {
 	bus.Returns[bus.Void]
 
 	Workspace string
 	Project   string
 }
 
-func (ProvisionCommand) MessageName() string {
+func (RunCommand) MessageName() string {
 	return "provision"
 }
 
-func (c *Controller) Provision(ctx context.Context, cmd ProvisionCommand) error {
+func (p *Runner) Provision(ctx context.Context, cmd RunCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.provisionerRunner.RunAll(execCtx.Workspace, execCtx.Project)
+	return p.RunAll(execCtx.Workspace, execCtx.Project)
 }

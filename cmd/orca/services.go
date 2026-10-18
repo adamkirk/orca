@@ -7,14 +7,14 @@ import (
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/config"
-	"github.com/adamkirk/orca/internal/controller"
 	"github.com/adamkirk/orca/internal/docker"
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
 	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/adamkirk/orca/internal/process"
-	"github.com/adamkirk/orca/internal/provisioner"
+	"github.com/adamkirk/orca/internal/provision"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
 	"github.com/adamkirk/orca/internal/tui"
@@ -42,7 +42,9 @@ type services struct {
 
 	workspaceManager *workspace.Manager
 
-	controller *controller.Controller
+	stack *stack.Manager
+
+	hosts *hosts.Manager
 
 	workspaceRepo *workspace.Repository
 
@@ -52,7 +54,7 @@ type services struct {
 	composeParser           *docker.ComposeParser
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
 
-	provisionerRunner *provisioner.Runner
+	provisionerRunner *provision.Runner
 
 	pluginManager *plugins.Manager
 
@@ -189,21 +191,30 @@ func (s *services) GetWorkspaceManager() *workspace.Manager {
 	return s.workspaceManager
 }
 
-func (s *services) GetController() *controller.Controller {
-	if s.controller != nil {
-		return s.controller
+func (s *services) GetStack() *stack.Manager {
+	if s.stack != nil {
+		return s.stack
 	}
 
-	s.controller = controller.NewController(
-		s.GetConfig(),
-		s.GetWorkspaceRepository(),
+	s.stack = stack.NewManager(
 		s.GetCompose(),
 		s.GetTui(),
-		s.GetEtcHostsManager(),
-		s.GetProvisionerRunner(),
 	)
 
-	return s.controller
+	return s.stack
+}
+
+func (s *services) GetHosts() *hosts.Manager {
+	if s.hosts != nil {
+		return s.hosts
+	}
+
+	s.hosts = hosts.NewManager(
+		s.GetEtcHostsManager(),
+		s.GetTui(),
+	)
+
+	return s.hosts
 }
 
 func (s *services) GetWorkspaceRepository() *workspace.Repository {
@@ -274,12 +285,12 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 	return s.composeOverlayGenerator
 }
 
-func (s *services) GetProvisionerRunner() *provisioner.Runner {
+func (s *services) GetProvisionerRunner() *provision.Runner {
 	if s.provisionerRunner != nil {
 		return s.provisionerRunner
 	}
 
-	s.provisionerRunner = provisioner.NewRunner(
+	s.provisionerRunner = provision.NewRunner(
 		s.GetFs(),
 		s.GetTui(),
 	)
@@ -310,15 +321,15 @@ func (s *services) GetBus() *bus.Bus {
 		s.GetExecutionContextMiddleware().Handle,
 	)
 
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Up))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Down))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ExecOrRun))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ExecuteExtension))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Logs))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Hosts))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).Provision))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ShowComposeConfig))
-	b.HandleVoid(lazy(s.GetController, (*controller.Controller).ShowComposeCommand))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Down))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecOrRun))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
+	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
+	b.HandleVoid(lazy(s.GetProvisionerRunner, (*provision.Runner).Provision))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Git).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Git).ShowBranches))
@@ -360,31 +371,31 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 		s.GetTui(),
 	)
 
-	ec.Target(func(cmd controller.UpCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.DownCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd stack.DownCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.ExecCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd stack.ExecCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(cmd controller.ExecuteExtensionCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd stack.ExecuteExtensionCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(query controller.LogsQuery) workspace.ExecutionTarget {
+	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(cmd controller.ProvisionCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd provision.RunCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
-	ec.Target(func(query controller.ShowComposeConfigQuery) workspace.ExecutionTarget {
+	ec.Target(func(query stack.ShowComposeConfigQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(query controller.ShowComposeCommandQuery) workspace.ExecutionTarget {
+	ec.Target(func(query stack.ShowComposeCommandQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
-	ec.Target(func(cmd controller.HostsCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
 

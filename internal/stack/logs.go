@@ -1,4 +1,4 @@
-package controller
+package stack
 
 import (
 	"context"
@@ -19,12 +19,12 @@ func (LogsQuery) MessageName() string {
 	return "logs"
 }
 
-func (c *Controller) Logs(ctx context.Context, query LogsQuery) error {
+func (m *Manager) Logs(ctx context.Context, query LogsQuery) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.compose.Logs(execCtx.Workspace, execCtx.Project, query.Service)
+	return m.compose.Logs(execCtx.Workspace, execCtx.Project, query.Service)
 }

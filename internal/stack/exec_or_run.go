@@ -1,4 +1,4 @@
-package controller
+package stack
 
 import (
 	"context"
@@ -21,35 +21,35 @@ func (ExecCommand) MessageName() string {
 	return "exec"
 }
 
-func (c *Controller) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
+func (m *Manager) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	svcExists, err := c.compose.DoesSvcExist(execCtx.Workspace, execCtx.Project, cmd.Service)
+	svcExists, err := m.compose.DoesSvcExist(execCtx.Workspace, execCtx.Project, cmd.Service)
 
 	if err != nil {
 		return err
 	}
 
 	if !svcExists {
-		c.tui.Error(fmt.Sprintf("No such service: %s", cmd.Service))
+		m.tui.Error(fmt.Sprintf("No such service: %s", cmd.Service))
 		return ErrUnknownService{
 			Name: cmd.Service,
 		}
 	}
 
-	isRunning, err := c.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, cmd.Service)
+	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, cmd.Service)
 
 	if err != nil {
 		return err
 	}
 
 	if !isRunning {
-		return c.compose.Run(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
+		return m.compose.Run(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
 	}
 
-	return c.compose.Exec(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
+	return m.compose.Exec(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
 }

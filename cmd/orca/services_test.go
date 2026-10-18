@@ -68,7 +68,7 @@ func Test_ExecutionContextHandlersHaveTargets(t *testing.T) {
 }
 
 // findExecutionContextMessages returns the message type, e.g.
-// "controller.UpCommand", of each handler that calls workspace.ExecutionContextFrom.
+// "stack.UpCommand", of each handler that calls workspace.ExecutionContextFrom.
 func findExecutionContextMessages(t *testing.T, path string) []string {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, 0)
@@ -126,7 +126,7 @@ func callsExecutionContextFrom(fn *ast.FuncDecl) bool {
 }
 
 // findDispatchedMessages returns the type of each message literal passed to
-// Dispatch, e.g. "controller.UpCommand".
+// Dispatch, e.g. "stack.UpCommand".
 func findDispatchedMessages(t *testing.T, path string) []string {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, 0)

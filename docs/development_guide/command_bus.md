@@ -26,13 +26,13 @@ func (UpCommand) MessageName() string {
 Handlers are service methods, which take the message and return its result (or just an error, for `bus.Void`):
 
 ```go
-func (c *Controller) Up(ctx context.Context, cmd UpCommand) error
+func (m *Manager) Up(ctx context.Context, cmd UpCommand) error
 ```
 
 They're registered in `GetBus()` in `cmd/orca/services.go`. `lazy` wraps the method so the service is only built when its message is dispatched, rather than every service being built with the bus. `HandleVoid` is for messages that return `bus.Void`, and `Handle` for everything else.
 
 ```go
-b.HandleVoid(lazy(s.GetController, (*controller.Controller).Up))
+b.HandleVoid(lazy(s.GetController, (*stack.Manager).Up))
 ```
 
 A message without a handler only fails when it's dispatched, so `Test_AllDispatchedMessagesHaveHandlers` checks that every message the commands dispatch has one. For that to work, messages must be dispatched as literals.
@@ -40,7 +40,7 @@ A message without a handler only fails when it's dispatched, so `Test_AllDispatc
 CLI handlers then dispatch the message. The result type is inferred from the message, so no type arguments are needed:
 
 ```go
-_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.UpCommand{...})
+_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.UpCommand{...})
 ```
 
 The bus uses generic methods, so needs Go 1.27 or later. Interfaces can't declare generic methods, so the bus is a concrete type, and tests should fake the handlers rather than the bus.
@@ -63,7 +63,7 @@ Hooks run before and after a message is handled:
 Most commands run against a workspace and/or project, which is worked out from the flags, the current directory, or the current workspace. Rather than each handler doing this itself, `workspace.ExecutionContextMiddleware` resolves the `ExecutionContext` before the command is handled, and passes it along in the `context.Context`:
 
 ```go
-func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
+func (m *Manager) Up(ctx context.Context, cmd UpCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
@@ -77,7 +77,7 @@ func (c *Controller) Up(ctx context.Context, cmd UpCommand) error {
 It's only resolved for commands with a target registered in `GetExecutionContextMiddleware()`, in `cmd/orca/services.go`, which says where the workspace and project come from:
 
 ```go
-ec.Target(func(cmd controller.UpCommand) workspace.ExecutionTarget {
+ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
 	return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 })
 ```

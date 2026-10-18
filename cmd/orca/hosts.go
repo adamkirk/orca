@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func init() {
 func handleHosts(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.HostsCommand{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), hosts.SyncCommand{
 		Workspace: ws,
 	})
 

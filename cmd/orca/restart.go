@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func handleRestart(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	_, err := b.Dispatch(cmd.Context(), controller.DownCommand{
+	_, err := b.Dispatch(cmd.Context(), stack.DownCommand{
 		Workspace: ws,
 		Project:   project,
 	})
@@ -34,7 +34,7 @@ func handleRestart(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	_, err = b.Dispatch(cmd.Context(), controller.UpCommand{
+	_, err = b.Dispatch(cmd.Context(), stack.UpCommand{
 		Workspace: ws,
 		Project:   project,
 	})

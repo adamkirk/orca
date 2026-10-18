@@ -1,4 +1,4 @@
-package controller
+package stack
 
 import (
 	"context"
@@ -23,7 +23,7 @@ func (ExecuteExtensionCommand) MessageName() string {
 }
 
 // TODO: de-dupe this by reusing the ExecOrRun method
-func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx workspace.ExecutionContext, ext workspace.Extension) error {
+func (m *Manager) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx workspace.ExecutionContext, ext workspace.Extension) error {
 	cmdArgs := strings.Split(ext.Command, " ")
 
 	if len(cmd.Args) > 0 {
@@ -32,20 +32,20 @@ func (c *Controller) executeExtensionInService(cmd ExecuteExtensionCommand, exec
 		cmdArgs = append(cmdArgs, ext.DefaultArgs...)
 	}
 
-	isRunning, err := c.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, ext.Service)
+	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, ext.Service)
 
 	if err != nil {
 		return err
 	}
 
 	if !isRunning {
-		return c.compose.Run(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
+		return m.compose.Run(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
 	}
 
-	return c.compose.Exec(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
+	return m.compose.Exec(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
 }
 
-func (c *Controller) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionCommand) error {
+func (m *Manager) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
@@ -61,12 +61,12 @@ func (c *Controller) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionC
 	ext, err := execCtx.Project.FindExtension(cmd.Name)
 
 	if err != nil {
-		return c.tui.RecordIfError("Extension does not exist in project context.", err)
+		return m.tui.RecordIfError("Extension does not exist in project context.", err)
 	}
 
 	if ext.Service != "" {
-		return c.executeExtensionInService(cmd, execCtx, ext)
+		return m.executeExtensionInService(cmd, execCtx, ext)
 	}
 
-	return c.tui.RecordIfError("Extension must have a service defined", errors.New("alternative is not yet implemented"))
+	return m.tui.RecordIfError("Extension must have a service defined", errors.New("alternative is not yet implemented"))
 }

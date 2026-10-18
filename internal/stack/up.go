@@ -1,4 +1,4 @@
-package controller
+package stack
 
 import (
 	"context"
@@ -8,18 +8,18 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-type DownCommand struct {
+type UpCommand struct {
 	bus.Returns[bus.Void]
 
 	Workspace string
 	Project   string
 }
 
-func (DownCommand) MessageName() string {
-	return "down"
+func (UpCommand) MessageName() string {
+	return "up"
 }
 
-func determineShutdownOrder(execCtx workspace.ExecutionContext) ([]string, error) {
+func determineStartupOrder(execCtx workspace.ExecutionContext) ([]string, error) {
 	if execCtx.Project != nil {
 		return []string{
 			execCtx.Project.Name,
@@ -32,11 +32,11 @@ func determineShutdownOrder(execCtx workspace.ExecutionContext) ([]string, error
 		return nil, err
 	}
 
-	return g.TopologicalKeysFromLeaves()
+	return g.TopologicalKeysFromRoots()
 }
 
-func (c *Controller) stopServices(execCtx workspace.ExecutionContext) error {
-	ordered, err := determineShutdownOrder(execCtx)
+func (m *Manager) startServices(execCtx workspace.ExecutionContext) error {
+	ordered, err := determineStartupOrder(execCtx)
 
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (c *Controller) stopServices(execCtx workspace.ExecutionContext) error {
 			return err
 		}
 
-		if err := c.compose.Down(execCtx.Workspace, projectConfig); err != nil {
+		if err := m.compose.Up(execCtx.Workspace, projectConfig); err != nil {
 			return err
 		}
 	}
@@ -59,12 +59,12 @@ func (c *Controller) stopServices(execCtx workspace.ExecutionContext) error {
 	return nil
 }
 
-func (c *Controller) Down(ctx context.Context, cmd DownCommand) error {
+func (m *Manager) Up(ctx context.Context, cmd UpCommand) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return c.stopServices(execCtx)
+	return m.startServices(execCtx)
 }

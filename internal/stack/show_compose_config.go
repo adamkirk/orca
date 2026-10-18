@@ -1,4 +1,4 @@
-package controller
+package stack
 
 import (
 	"context"
@@ -7,18 +7,18 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-type ShowComposeCommandQuery struct {
+type ShowComposeConfigQuery struct {
 	bus.Returns[bus.Void]
 
 	Workspace string
 	Project   string
 }
 
-func (ShowComposeCommandQuery) MessageName() string {
-	return "debug.show-compose-command"
+func (ShowComposeConfigQuery) MessageName() string {
+	return "debug.show-compose-config"
 }
 
-func (c *Controller) ShowComposeCommand(ctx context.Context, query ShowComposeCommandQuery) error {
+func (m *Manager) ShowComposeConfig(ctx context.Context, query ShowComposeConfigQuery) error {
 	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
@@ -31,5 +31,5 @@ func (c *Controller) ShowComposeCommand(ctx context.Context, query ShowComposeCo
 		}
 	}
 
-	return c.compose.ShowCommand(execCtx.Workspace, execCtx.Project)
+	return m.compose.ShowConfig(execCtx.Workspace, execCtx.Project)
 }

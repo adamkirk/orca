@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ func handleDebugShowComposeConfig(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ShowComposeConfigQuery{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ShowComposeConfigQuery{
 		Workspace: ws,
 		Project:   project,
 	})
@@ -54,7 +54,7 @@ func handleDebugShowComposeCommand(cmd *cobra.Command, args []string) error {
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), controller.ShowComposeCommandQuery{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ShowComposeCommandQuery{
 		Workspace: ws,
 		Project:   project,
 	})
