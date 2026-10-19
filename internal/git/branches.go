@@ -68,9 +68,12 @@ func (branches Branches) Filter(f branchFilterFunc) Branches {
 	return new
 }
 
-func (branches Branches) StrictSearch(search string) Branches {
+// Search returns the branches whose names contain search, ignoring case.
+func (branches Branches) Search(search string) Branches {
+	search = strings.ToLower(search)
+
 	return branches.Filter(func(b Branch) bool {
-		return strings.Contains(b.Name, search)
+		return strings.Contains(strings.ToLower(b.Name), search)
 	})
 }
 
@@ -177,7 +180,7 @@ func (m *Manager) searchBranches(dto searchBranchesOpts) (Branches, error) {
 		return branches, nil
 	}
 
-	return branches.StrictSearch(dto.Search), nil
+	return branches.Search(dto.Search), nil
 }
 
 // remoteOnlyBranches lists the branches that are only on a remote, from git's

@@ -24,7 +24,7 @@ $ orca g push --all
 
 ### Checking out branches
 
-`orca g co` searches branch names for the text you give it. It searches your local branches first, then branches that only exist on a remote, by their name without the remote (`feature/x`, not `origin/feature/x`):
+`orca g co` searches branch names for the text you give it, ignoring case. It searches your local branches first, then branches that only exist on a remote, by their name without the remote (`feature/x`, not `origin/feature/x`):
 
 - If exactly one branch matches, it's checked out. A branch that's only on a remote is checked out as a new local branch tracking it, as `git checkout feature/x` does.
 - If several match, you choose from a list, with local branches first.
@@ -44,7 +44,7 @@ These act on the git repository you're in:
 
 | Command | Does |
 | ------- | ---- |
-| [`orca g branches [search]`](../CLI/orca_g_branches.md) | Lists branches containing `search`, or every branch. |
+| [`orca g branches [search]`](../CLI/orca_g_branches.md) | Lists branches containing `search`, ignoring case, or every branch. |
 | [`orca g logl`](../CLI/orca_g_logl.md) | Shows the last commits, one line each. `-n` sets how many (default 10). |
 | [`orca g rbi`](../CLI/orca_g_rbi.md) | Starts an interactive rebase of the last `-n` commits (default 2). |
 | [`orca g undo`](../CLI/orca_g_undo.md) | Removes the last `-n` commits (default 1) from the branch. |

@@ -50,3 +50,25 @@ func TestParseRemoteBranches(t *testing.T) {
 		})
 	}
 }
+
+func TestBranchesSearch(t *testing.T) {
+	branches := Branches{{Name: "main"}, {Name: "feature/Payments"}, {Name: "feature/search"}}
+
+	tests := []struct {
+		name     string
+		search   string
+		expected Branches
+	}{
+		{name: "part of a name", search: "search", expected: Branches{{Name: "feature/search"}}},
+		{name: "ignoring the search's case", search: "SEARCH", expected: Branches{{Name: "feature/search"}}},
+		{name: "ignoring the branch's case", search: "payments", expected: Branches{{Name: "feature/Payments"}}},
+		{name: "several matches", search: "feature/", expected: Branches{{Name: "feature/Payments"}, {Name: "feature/search"}}},
+		{name: "no matches", search: "nope", expected: Branches{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, branches.Search(tt.search))
+		})
+	}
+}
