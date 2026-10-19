@@ -132,16 +132,21 @@ func convertProvisioners(cfgProvisioners []model.Provisioner) []Provisioner {
 	return provisioners
 }
 
+func convertRepository(r model.WorkspaceProjectRepository) ProjectRepositoryConfig {
+	return ProjectRepositoryConfig{
+		SSH:    r.SSH,
+		Self:   r.Self,
+		Branch: r.Branch,
+	}
+}
+
 func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig) Project {
 	return Project{
-		Name: wsPCfg.Name,
-		RepositoryConfig: ProjectRepositoryConfig{
-			SSH:  meta.Repository.SSH,
-			Self: meta.Repository.Self,
-		},
-		IsRegistered: true,
-		ProjectDir:   meta.Path,
-		Requires:     wsPCfg.Requires,
+		Name:             wsPCfg.Name,
+		RepositoryConfig: convertRepository(wsPCfg.Repository),
+		IsRegistered:     true,
+		ProjectDir:       meta.Path,
+		Requires:         wsPCfg.Requires,
 		Config: ProjectConfig{
 			ComposeFiles:    convertComposeFiles(pCfg.ComposeFiles),
 			Properties:      convertProperties(pCfg.Properties),
@@ -243,6 +248,10 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		if hasSSH == p.Repository.Self {
 			problems = append(problems, fmt.Sprintf("%s: exactly one of 'repository.ssh' or 'repository.self' is required", label))
 		}
+
+		if p.Repository.Self && p.Repository.Branch != "" {
+			problems = append(problems, fmt.Sprintf("%s: 'repository.branch' can't be combined with 'repository.self'", label))
+		}
 	}
 
 	if len(problems) > 0 {
@@ -260,11 +269,8 @@ func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *Unconfi
 
 	for i, p := range ws.Projects {
 		projects[i] = UnconfiguredProject{
-			Name: p.Name,
-			RepositoryConfig: ProjectRepositoryConfig{
-				SSH:  p.Repository.SSH,
-				Self: p.Repository.Self,
-			},
+			Name:             p.Name,
+			RepositoryConfig: convertRepository(p.Repository),
 		}
 	}
 
@@ -329,15 +335,12 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		if err != nil {
 			if errors.Is(err, ErrUnknownProject) {
 				ws.Projects[i] = Project{
-					Name: pCfg.Name,
-					RepositoryConfig: ProjectRepositoryConfig{
-						SSH:  pCfg.Repository.SSH,
-						Self: pCfg.Repository.Self,
-					},
-					IsRegistered: false,
-					ProjectDir:   "",
-					Requires:     pCfg.Requires,
-					Config:       ProjectConfig{},
+					Name:             pCfg.Name,
+					RepositoryConfig: convertRepository(pCfg.Repository),
+					IsRegistered:     false,
+					ProjectDir:       "",
+					Requires:         pCfg.Requires,
+					Config:           ProjectConfig{},
 				}
 				continue
 			}

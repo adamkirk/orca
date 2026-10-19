@@ -15,9 +15,10 @@ $ orca ws init --repo acme/local-env
 
 With `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 
-1. Fetches the workspace config from the repository's default branch through the GitHub API, and checks that it's [valid](../configuration/workspace_config.md#validation). If it's missing or invalid, orca stops before cloning anything.
-2. Clones the repository over SSH (`git@github.com:acme/local-env.git`) into `{target}/{repo name}`, here `~/code/acme/local-env`. If that directory already exists, orca stops with an error rather than touch it.
-3. Carries on as if you'd run `orca ws init` from inside the clone (see [below](#from-a-local-directory)), so the other projects are cloned next to it.
+1. Fetches the workspace config from the repository's default branch, or `--branch`, through the GitHub API, and checks that it's [valid](../configuration/workspace_config.md#validation). If the branch or the config is missing, or the config is invalid, orca stops before cloning anything.
+2. Checks that every project's [`repository.branch`](../configuration/workspace_config.md#repository) exists on its remote. If any are missing, orca lists them all and stops before cloning anything.
+3. Clones the repository over SSH (`git@github.com:acme/local-env.git`) into `{target}/{repo name}`, here `~/code/acme/local-env`, on `--branch` if it's given. If that directory already exists, orca stops with an error rather than touch it.
+4. Carries on as if you'd run `orca ws init` from inside the clone (see [below](#from-a-local-directory)), so the other projects are cloned next to it.
 
 `--repo` only accepts GitHub repositories, in the form `owner/repo`. You'll need SSH access to the repository for the clone.
 
@@ -40,6 +41,7 @@ Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 | Flag | Description | Default |
 | ---- | ----------- | ------- |
 | `-r`, `--repo` | The GitHub repository to initialise from, as `owner/repo`. Can't be used with `--source`. | |
+| `-b`, `--branch` | The branch of the `--repo` repository to read the workspace config from, and to clone. It only applies to the workspace repository: each project's branch comes from its `repository.branch`. Can't be used with `--source`, which uses the local checkout on whichever branch it's on. | The repository's default branch |
 | `-s`, `--source` | The directory containing the workspace config. | The current directory |
 | `-c`, `--config` | The workspace config's file name, relative to the source directory or the repository's root. | `orca.workspace.yaml` |
 | `-t`, `--target` | The directory to clone projects into. | The current directory with `--repo`, otherwise its parent |
@@ -59,7 +61,9 @@ $ orca ws clone -p payments     # just one project
 - If its directory exists and the project is already registered, it's skipped.
 - If its directory exists and is a clone of the project's repository (checked by its git remote), it's registered as is.
 - If its directory exists but is something else, orca stops with an error, rather than overwrite it.
-- Otherwise the repository is cloned and registered.
+- Otherwise the repository is cloned, on its `repository.branch` if it has one, and registered.
+
+Before cloning anything, orca checks that the `repository.branch` of every project it's about to clone exists on its remote, and lists every missing one. The branch is only used for the first clone: projects that are already cloned are never switched to another branch.
 
 Projects are cloned into `{target}/{project name}`. `--target` defaults to the parent of the workspace config's repository, so projects end up next to it. With `-p` and `--target`, the project is cloned into `--target` itself.
 

@@ -71,6 +71,10 @@ type ProjectConfig struct {
 type ProjectRepositoryConfig struct {
 	SSH  string
 	Self bool
+
+	// Branch is checked out when the project is first cloned, it's never used
+	// to switch the branch of an existing clone.
+	Branch string
 }
 
 type Project struct {

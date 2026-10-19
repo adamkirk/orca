@@ -51,9 +51,16 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 }
 
 // GetFileContents fetches the contents of the file at the given path on the
-// repository's default branch. The bool is false if the file does not exist.
-func (c *GithubClient) GetFileContents(owner string, repo string, path string) ([]byte, bool, error) {
-	file, _, resp, err := c.client.Repositories.GetContents(context.TODO(), owner, repo, path, nil)
+// given ref, or the repository's default branch when it's empty. The bool is
+// false if the file does not exist.
+func (c *GithubClient) GetFileContents(owner string, repo string, path string, ref string) ([]byte, bool, error) {
+	file, _, resp, err := c.client.Repositories.GetContents(
+		context.TODO(),
+		owner,
+		repo,
+		path,
+		&github.RepositoryContentGetOptions{Ref: ref},
+	)
 
 	var rateLimitErr *github.RateLimitError
 	var abuseRateLimitErr *github.AbuseRateLimitError

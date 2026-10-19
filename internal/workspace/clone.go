@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/usererr"
@@ -23,16 +24,55 @@ func (CloneCommand) MessageName() string {
 	return "ws.clone"
 }
 
-func (m *Manager) setupAllProjects(ws *Workspace, into string) error {
-	for _, project := range ws.Projects {
-		dir := fmt.Sprintf("%s/%s", into, project.Name)
+// cloneTarget is a project and the directory it's cloned into.
+type cloneTarget struct {
+	project Project
+	into    string
+}
 
-		if err := m.cloneSingleProject(ws, project, dir); err != nil {
+// checkBranches checks that the branch of every project that is about to be
+// cloned exists on its remote, so a typo stops orca before anything is
+// cloned. Projects that are already cloned are skipped, as their branch is
+// never changed.
+func (m *Manager) checkBranches(targets []cloneTarget) error {
+	var missing []string
+
+	for _, t := range targets {
+		repo := t.project.RepositoryConfig
+
+		if repo.Self || repo.Branch == "" {
+			continue
+		}
+
+		exists, err := afero.Exists(m.fs, t.into)
+
+		if err != nil {
 			return err
+		}
+
+		if exists {
+			continue
+		}
+
+		branchExists, err := m.git.RemoteBranchExists(repo.SSH, repo.Branch)
+
+		if err != nil {
+			return usererr.Wrap(err, fmt.Sprintf("Failed to check branch '%s' of '%s'!", repo.Branch, repo.SSH))
+		}
+
+		if !branchExists {
+			missing = append(missing, fmt.Sprintf("%s: '%s' (%s)", t.project.Name, repo.Branch, repo.SSH))
 		}
 	}
 
-	return nil
+	if len(missing) == 0 {
+		return nil
+	}
+
+	return usererr.Wrap(
+		fmt.Errorf("%w: %s", ErrBranchNotFound, strings.Join(missing, ", ")),
+		"Some branches don't exist on their remotes, nothing was cloned!",
+	)
 }
 
 func (m *Manager) registerWorkspaceProject(ws *Workspace, project Project) error {
@@ -106,9 +146,9 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 		return err
 	}
 
-	m.tui.Info(fmt.Sprintf("Cloning '%s' into %s...", project.RepositoryConfig.SSH, into))
+	m.tui.Info(fmt.Sprintf("Cloning '%s'%s into %s...", project.RepositoryConfig.SSH, branchSuffix(project.RepositoryConfig.Branch), into))
 
-	err = m.git.Clone(project.RepositoryConfig.SSH, into, "")
+	err = m.git.Clone(project.RepositoryConfig.SSH, into, project.RepositoryConfig.Branch)
 
 	if err != nil {
 		return usererr.Wrap(err, "Clone failed!")
@@ -155,12 +195,23 @@ func (m *Manager) Clone(ctx context.Context, cmd CloneCommand) error {
 		return err
 	}
 
-	return m.clone(execCtx.Workspace.Name, cmd.Project, cmd.To)
+	return m.clone(execCtx.Workspace.Name, cmd.Project, cmd.To, false)
+}
+
+// branchSuffix describes the branch in progress messages, it's empty for the
+// default branch.
+func branchSuffix(branch string) string {
+	if branch == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(" (branch '%s')", branch)
 }
 
 // clone clones the given project, or all projects when it's empty, for the
-// workspace into the given directory.
-func (m *Manager) clone(wsName string, project string, to string) error {
+// workspace into the given directory. branchesChecked skips checking the
+// projects' branches exist, when the caller has already done so.
+func (m *Manager) clone(wsName string, project string, to string, branchesChecked bool) error {
 	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
@@ -183,7 +234,7 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 		return usererr.Wrap(err, "Failed to determine target directory!")
 	}
 
-	var cloneErr error = nil
+	var targets []cloneTarget
 
 	if project != "" {
 		project, err := cfg.GetProject(project)
@@ -198,17 +249,27 @@ func (m *Manager) clone(wsName string, project string, to string) error {
 			targetDir = fmt.Sprintf("%s/%s", targetDir, project.Name)
 		}
 
-		cloneErr = m.cloneSingleProject(cfg, *project, targetDir)
+		targets = append(targets, cloneTarget{project: *project, into: targetDir})
 	} else {
-		cloneErr = m.setupAllProjects(cfg, targetDir)
+		for _, p := range cfg.Projects {
+			targets = append(targets, cloneTarget{project: p, into: fmt.Sprintf("%s/%s", targetDir, p.Name)})
+		}
 	}
 
-	if cloneErr != nil {
-		if errors.Is(cloneErr, ErrDirectoryAlreadyExists) {
-			return usererr.Wrap(cloneErr, "Cannot clone into the given directory, it already exists!")
+	if !branchesChecked {
+		if err := m.checkBranches(targets); err != nil {
+			return err
 		}
+	}
 
-		return cloneErr
+	for _, t := range targets {
+		if err := m.cloneSingleProject(cfg, t.project, t.into); err != nil {
+			if errors.Is(err, ErrDirectoryAlreadyExists) {
+				return usererr.Wrap(err, "Cannot clone into the given directory, it already exists!")
+			}
+
+			return err
+		}
 	}
 
 	return nil
