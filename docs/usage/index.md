@@ -10,7 +10,8 @@ These pages cover what you can do with orca, by topic. Every command also has a 
 | [Git](./git.md) | `g co`, `g branches`, `g status`, `g pull`, `g push`, `g logl`, `g rbi`, `g undo` |
 | [Workspaces](./workspaces.md) | `ws init`, `ws clone`, `ws ls`, `ws switch`, `ws current`, `ws clear-current` |
 | [Plugins](../plugins/index.md) | `plugins ls`, and any commands your plugins add |
-| [Orca itself](./system.md) | `sys check`, `sys self-update`, `version`, `config`, `completion` |
+| [Orca itself](./system.md) | `sys check`, `sys self-update`, `version`, `config` |
+| [Shell completion](./shell_completion.md) | `completion` |
 
 Most commands work out which workspace and project to act on from your current directory. See [Choosing a workspace and project](../getting_started/context.md).
 
