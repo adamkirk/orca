@@ -56,7 +56,6 @@ These environment variables change where orca looks for things:
 | -------------------- | ------ | ------- |
 | `ORCA_CONFIG_PATH` | The user config file to use. | `~/.orca/orca.yaml` |
 | `ORCA_PLUGINS_PATH` | The default plugins directory (`plugins.dirs` are still searched as well). | `~/.orca/plugins` |
-| `ORCA_TOOLS_PATH` | Where [`orca sys install`](../CLI/orca_sys_install.md) puts tools. | `~/.orca/bin` |
 
 Orca also reads these, in the same way as the [GitHub CLI](https://cli.github.com/manual/gh_help_environment):
 

@@ -18,7 +18,6 @@ import (
 
 const configFileName = "orca.yaml"
 const configFileOverrideEnv = "ORCA_CONFIG_PATH"
-const configToolsPathOverrideEnv = "ORCA_TOOLS_PATH"
 const configPluginsPathOverrideEnv = "ORCA_PLUGINS_PATH"
 
 // Checked in order of precedence, matching the gh cli
@@ -43,21 +42,39 @@ utilities to interact with services form anywhere on the host.`,
 	RunE: handleGroup,
 }
 
-func handleGroup(cmd *cobra.Command, _ []string) error {
-	return cmd.Help()
-}
-
-func getToolsDir() string {
-	homeDir, err := os.UserHomeDir()
-	checkErr(err)
-
-	configFile := fmt.Sprintf("%s/.orca/bin", homeDir)
-
-	if override, found := os.LookupEnv(configToolsPathOverrideEnv); found {
-		configFile = override
+// handleGroup runs a command that only groups subcommands. Cobra only rejects
+// unknown subcommands for the root command, and passes them to other groups as
+// arguments, so they're rejected here, with the same message.
+func handleGroup(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return cmd.Help()
 	}
 
-	return configFile
+	// Cobra prints the error, and this replaces the usage it would print after it
+	cmd.SilenceUsage = true
+
+	return unknownCommandError(cmd, args[0])
+}
+
+func unknownCommandError(cmd *cobra.Command, arg string) error {
+	// Cobra's default for the root command, which is 0 (no suggestions) elsewhere
+	if cmd.SuggestionsMinimumDistance <= 0 {
+		cmd.SuggestionsMinimumDistance = 2
+	}
+
+	suggestions := ""
+	if found := cmd.SuggestionsFor(arg); len(found) > 0 {
+		suggestions = fmt.Sprintf("\n\nDid you mean this?\n\t%s\n", strings.Join(found, "\n\t"))
+	}
+
+	return fmt.Errorf(
+		"%w %q for %q%s\nRun '%s --help' for usage.",
+		ErrUnknownCommand,
+		arg,
+		cmd.CommandPath(),
+		suggestions,
+		cmd.CommandPath(),
+	)
 }
 
 func getPluginsDir() string {

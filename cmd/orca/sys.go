@@ -1,10 +1,7 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/adamkirk/orca/internal/sys"
-	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/cobra"
 )
 
@@ -22,16 +19,6 @@ var sysCheckCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
-var sysInstallCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Installs a tool system tool that is needed.",
-	Long: fmt.Sprintf(`Tools are installed 'locally' rather than globally, they will be stored within %s.
-
-The first argument must be one of: %s`, getToolsDir(), sys.AllAvailableToolsCsv()),
-	RunE:         handleErrors(handleSysInstall),
-	SilenceUsage: true,
-}
-
 var sysSelfUpdateCmd = &cobra.Command{
 	Use:   "self-update",
 	Short: "Updates this tool.",
@@ -44,32 +31,11 @@ func init() {
 	sysCmd.AddCommand(sysSelfUpdateCmd)
 
 	sysCmd.AddCommand(sysCheckCmd)
-	sysCmd.AddCommand(sysInstallCmd)
 	rootCmd.AddCommand(sysCmd)
 }
 
 func handleCheck(cmd *cobra.Command, _ []string) error {
 	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.CheckSetupQuery{})
-
-	return err
-}
-
-func handleSysInstall(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return usererr.Wrap(
-			fmt.Errorf("%w: 'tool' at position 1", ErrArgumentRequired),
-			"Must provide the name of the tool as the first argument",
-		)
-	} else if len(args) > 1 {
-		return usererr.Wrap(
-			fmt.Errorf("%w, expected only 1", ErrTooManyArguments),
-			"Too many arguments provided!",
-		)
-	}
-
-	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.InstallCommand{
-		Tool: sys.AvailableTool(args[0]),
-	})
 
 	return err
 }

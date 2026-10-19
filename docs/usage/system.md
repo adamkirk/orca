@@ -21,13 +21,11 @@ $ orca sys self-update --to 0.9.0  # a specific version
 
 [`orca version`](../CLI/orca_version.md) shows the version you're running, with `--short` for just the version number.
 
-## Installing tools
+## Installing other tools
 
-```sh
-$ orca sys install sops
-```
+Orca doesn't install the other tools your projects use. If your team wants to provide them, at the versions it uses, write a [plugin](../plugins/index.md) for it.
 
-[`orca sys install`](../CLI/orca_sys_install.md) downloads a supporting tool into `~/.orca/bin` (or `ORCA_TOOLS_PATH`), rather than installing it system-wide. The available tools are `hostctl` and `sops`.
+Earlier versions had an `orca sys install` command, which downloaded tools into `~/.orca/bin`. Orca no longer uses that directory or `ORCA_TOOLS_PATH`, so you can delete them.
 
 ## Config
 
