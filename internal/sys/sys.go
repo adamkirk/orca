@@ -2,7 +2,6 @@ package sys
 
 import (
 	"github.com/Masterminds/semver/v3"
-	"github.com/spf13/afero"
 )
 
 const orcaRepoOrg = "adamkirk"
@@ -22,17 +21,13 @@ type githubClient interface {
 }
 
 type Manager struct {
-	tui      tui
-	fs       afero.Fs
-	toolsDir string
-	github   githubClient
+	tui    tui
+	github githubClient
 }
 
-func NewManager(tui tui, fs afero.Fs, github githubClient, toolsDir string) *Manager {
+func NewManager(tui tui, github githubClient) *Manager {
 	return &Manager{
-		tui:      tui,
-		fs:       fs,
-		github:   github,
-		toolsDir: toolsDir,
+		tui:    tui,
+		github: github,
 	}
 }

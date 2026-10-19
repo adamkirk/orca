@@ -18,7 +18,6 @@ import (
 
 const configFileName = "orca.yaml"
 const configFileOverrideEnv = "ORCA_CONFIG_PATH"
-const configToolsPathOverrideEnv = "ORCA_TOOLS_PATH"
 const configPluginsPathOverrideEnv = "ORCA_PLUGINS_PATH"
 
 // Checked in order of precedence, matching the gh cli
@@ -45,19 +44,6 @@ utilities to interact with services form anywhere on the host.`,
 
 func handleGroup(cmd *cobra.Command, _ []string) error {
 	return cmd.Help()
-}
-
-func getToolsDir() string {
-	homeDir, err := os.UserHomeDir()
-	checkErr(err)
-
-	configFile := fmt.Sprintf("%s/.orca/bin", homeDir)
-
-	if override, found := os.LookupEnv(configToolsPathOverrideEnv); found {
-		configFile = override
-	}
-
-	return configFile
 }
 
 func getPluginsDir() string {

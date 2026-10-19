@@ -42,7 +42,7 @@ Feature packages hold the commands' handlers, and mirror the CLI's command group
 | `internal/provision` | `provision`, with the provisioner runner |
 | `internal/git` | `g`. It's also the wrapper around the git CLI that `workspace` uses to clone projects. |
 | `internal/tls` | `tls gen` |
-| `internal/sys` | `sys check`, `sys install`, `sys self-update` |
+| `internal/sys` | `sys check`, `sys self-update` |
 | `internal/workspace` | `ws` (see above) |
 
 ### Adapters and infrastructure

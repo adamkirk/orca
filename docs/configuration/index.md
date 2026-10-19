@@ -17,5 +17,4 @@ The workspace and project files are meant to be committed alongside your code, s
 | `~/.orca/orca.yaml` | Your [user config](./user_config.md). |
 | `~/.orca/overlays/{workspace}/{project}.yaml` | Generated [overlay](../compose_files/overlays/index.md) compose files. Safe to delete, they're regenerated as needed. |
 | `~/.orca/tls/` | The root certificate authority (`cert.pem`, `key.pem`) and generated certificates (`certs/`). See [Hosts & TLS](../usage/hosts_and_tls.md). |
-| `~/.orca/bin/` | Tools installed with [`orca sys install`](../CLI/orca_sys_install.md). |
 | `~/.orca/plugins/` | The default directory orca loads [plugins](../plugins/index.md) from. |

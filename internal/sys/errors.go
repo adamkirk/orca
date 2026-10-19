@@ -8,11 +8,9 @@ import (
 
 var (
 	ErrInvalidArchive          = errors.New("invalid archive used")
-	ErrNotImplemented          = errors.New("not implemented")
 	ErrVersionNotFound         = errors.New("version not found")
 	ErrUnsupportedOS           = errors.New("unsupported OS")
 	ErrUnsupportedArchitecture = errors.New("unsupported architecture")
-	ErrUnknownTool             = errors.New("unknown tool")
 )
 
 type ToolsNotFoundError struct {

@@ -106,9 +106,7 @@ func (s *services) GetSys() *sys.Manager {
 
 	s.sys = sys.NewManager(
 		s.GetTui(),
-		s.GetFs(),
 		s.GetGithubClient(),
-		getToolsDir(),
 	)
 
 	return s.sys
@@ -347,7 +345,6 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetTLS, (*tls.Manager).Generate))
 
 	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).CheckSetup))
-	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).Install))
 	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).UpdateSelf))
 
 	s.bus = b
