@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/sys"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ var sysInstallCmd = &cobra.Command{
 	Short: "Installs a tool system tool that is needed.",
 	Long: fmt.Sprintf(`Tools are installed 'locally' rather than globally, they will be stored within %s.
 
-The first argument must be one of: %s`, getToolsDir(), hostsys.AllAvailableToolsCsv()),
+The first argument must be one of: %s`, getToolsDir(), sys.AllAvailableToolsCsv()),
 	RunE:         handleErrors(handleSysInstall),
 	SilenceUsage: true,
 }
@@ -48,54 +48,44 @@ func init() {
 	rootCmd.AddCommand(sysCmd)
 }
 
-func handleCheck(_ *cobra.Command, _ []string) error {
-	tui := svcContainer.GetTui()
+func handleCheck(cmd *cobra.Command, _ []string) error {
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.CheckSetupQuery{})
 
-	hs := svcContainer.GetHostSystem()
-
-	err := hs.VerifySetup()
-
-	if err != nil {
-		return err
-	}
-
-	tui.Success("All requirements met!")
-
-	return nil
+	return err
 }
 
-func handleSysInstall(_ *cobra.Command, args []string) error {
-	tui := svcContainer.GetTui()
+func handleSysInstall(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
-		return tui.RecordIfError("Must provide the name of the tool as the first argument", common.ErrArgumentRequired{
-			Name:  "tool",
-			Index: 1,
-		})
+		return usererr.Wrap(
+			fmt.Errorf("%w: 'tool' at position 1", ErrArgumentRequired),
+			"Must provide the name of the tool as the first argument",
+		)
 	} else if len(args) > 1 {
-		return tui.RecordIfError("Too many arguments provided!", common.ErrTooManyArguments{
-			Expected: 1,
-		})
+		return usererr.Wrap(
+			fmt.Errorf("%w, expected only 1", ErrTooManyArguments),
+			"Too many arguments provided!",
+		)
 	}
 
-	sys := svcContainer.GetHostSystem()
-
-	return sys.Install(hostsys.InstallDTO{
-		Tool: hostsys.AvailableTool(args[0]),
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.InstallCommand{
+		Tool: sys.AvailableTool(args[0]),
 	})
+
+	return err
 }
 
 func handleSysSelfUpdate(cmd *cobra.Command, _ []string) error {
-	sys := svcContainer.GetHostSystem()
-
 	to := mustGetString(cmd, "to")
 
-	strategy := hostsys.VersioningStrategyLatest
+	strategy := sys.VersioningStrategyLatest
 
 	if to != "" {
-		strategy = hostsys.VersioningStrategySpecific
+		strategy = sys.VersioningStrategySpecific
 	}
-	return sys.UpdateSelf(hostsys.UpdateSelfDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), sys.UpdateSelfCommand{
 		Strategy:         strategy,
 		SpecifiedVersion: to,
 	})
+
+	return err
 }

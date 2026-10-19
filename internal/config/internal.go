@@ -1,8 +1,10 @@
 package config
 
 import (
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/pkg/slices"
+	"fmt"
+	"slices"
+
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type configLogging struct {
@@ -15,18 +17,10 @@ type configProject struct {
 	Path string
 }
 
-func (self configProject) GetName() string {
-	return self.Name
-}
-
 type configWorkspace struct {
 	Name     string
 	Path     string
 	Projects []configProject
-}
-
-func (self configWorkspace) GetName() string {
-	return self.Name
 }
 
 type configPlugins struct {
@@ -42,46 +36,69 @@ type config struct {
 	Plugins          configPlugins `yaml:"plugins,omitempty"`
 }
 
-func (self *config) workspaceExists(name string) bool {
-	return slices.NamedElementExists(self.Workspaces, name)
+func (c *config) workspaceIndex(name string) int {
+	return slices.IndexFunc(c.Workspaces, func(ws configWorkspace) bool {
+		return ws.Name == name
+	})
 }
 
-func (self *config) getWorkspace(name string) (configWorkspace, error) {
-	v := slices.GetNamedElement(self.Workspaces, name)
+func (ws configWorkspace) projectIndex(name string) int {
+	return slices.IndexFunc(ws.Projects, func(p configProject) bool {
+		return p.Name == name
+	})
+}
 
-	if v == nil {
-		return configWorkspace{}, common.ErrUnknownWorkspace{
-			Name: name,
-		}
+// upsert returns a copy of items, with item replacing the element at i, or
+// appended when i is -1. It's copied so the runtime and persisted configs never
+// share the same backing array.
+func upsert[T any](items []T, i int, item T) []T {
+	items = slices.Clone(items)
+
+	if i == -1 {
+		return append(items, item)
 	}
 
-	return *v, nil
+	items[i] = item
+
+	return items
 }
 
-func (self *config) projectExists(wsName string, name string) (bool, error) {
-	ws, err := self.getWorkspace(wsName)
+func (c *config) workspaceExists(name string) bool {
+	return c.workspaceIndex(name) != -1
+}
+
+func (c *config) getWorkspace(name string) (configWorkspace, error) {
+	i := c.workspaceIndex(name)
+
+	if i == -1 {
+		return configWorkspace{}, fmt.Errorf("%w: %s", workspace.ErrUnknownWorkspace, name)
+	}
+
+	return c.Workspaces[i], nil
+}
+
+func (c *config) projectExists(wsName string, name string) (bool, error) {
+	ws, err := c.getWorkspace(wsName)
 
 	if err != nil {
 		return false, err
 	}
 
-	return slices.NamedElementExists(ws.Projects, name), nil
+	return ws.projectIndex(name) != -1, nil
 }
 
-func (self *config) getProject(wsName string, name string) (configProject, error) {
-	ws, err := self.getWorkspace(wsName)
+func (c *config) getProject(wsName string, name string) (configProject, error) {
+	ws, err := c.getWorkspace(wsName)
 
 	if err != nil {
 		return configProject{}, err
 	}
 
-	v := slices.GetNamedElement(ws.Projects, name)
+	i := ws.projectIndex(name)
 
-	if v == nil {
-		return configProject{}, common.ErrUnknownProject{
-			Name: name,
-		}
+	if i == -1 {
+		return configProject{}, fmt.Errorf("%w: %s", workspace.ErrUnknownProject, name)
 	}
 
-	return *v, nil
+	return ws.Projects[i], nil
 }

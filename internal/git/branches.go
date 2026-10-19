@@ -1,11 +1,14 @@
 package git
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 type Branch struct {
@@ -67,7 +70,7 @@ func (branches Branches) StrictSearch(search string) Branches {
 	})
 }
 
-type SearchBranchesDTO struct {
+type searchBranchesOpts struct {
 	Search string
 	// The directory to run the command in, defaults to the current directory
 	Dir string
@@ -106,21 +109,19 @@ func parseGitBranchOutput(output string) Branches {
 	return branches
 }
 
-func (g *Git) searchBranches(dto SearchBranchesDTO) (Branches, error) {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (m *Manager) searchBranches(dto searchBranchesOpts) (Branches, error) {
+	if err := m.mustBeInAGitRepository(dto.Dir); err != nil {
 		return nil, err
 	}
 
-	opt, stdout := hostsys.WithStdout()
-	err := g.exec.Exec("git", []string{
+	opt, stdout := process.WithStdout()
+	err := m.exec.Exec("git", []string{
 		"branch",
 		"-l",
 	}, withDir(dto.Dir, opt)...)
 
 	if err != nil {
-		return nil, common.ErrInvalidExecutionContext{
-			Msg: "failed to execute 'git branch'",
-		}
+		return nil, fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "failed to execute 'git branch'")
 	}
 
 	branches := parseGitBranchOutput(stdout.String())
@@ -132,34 +133,46 @@ func (g *Git) searchBranches(dto SearchBranchesDTO) (Branches, error) {
 	return branches.StrictSearch(dto.Search), nil
 }
 
-func (g *Git) ShowBranches(dto SearchBranchesDTO) error {
-	branches, err := g.searchBranches(dto)
+type BranchesQuery struct {
+	bus.Returns[bus.Void]
+
+	Search string
+}
+
+func (BranchesQuery) MessageName() string {
+	return "g.branches"
+}
+
+func (m *Manager) ShowBranches(_ context.Context, query BranchesQuery) error {
+	branches, err := m.searchBranches(searchBranchesOpts{
+		Search: query.Search,
+	})
 	if err != nil {
-		return g.tui.RecordIfError(
-			"Failed to list branches!",
+		return usererr.Wrap(
 			err,
+			"Failed to list branches!",
 		)
 	}
 
 	if len(branches) == 0 {
-		g.tui.Info("No matching branches found!")
+		m.tui.Info("No matching branches found!")
 		return nil
 	}
 
 	if b := branches.GetCurrent(); b != nil {
-		g.tui.Success(fmt.Sprintf("[current] %s", b.Name))
-		g.tui.NewLine()
+		m.tui.Success(fmt.Sprintf("[current] %s", b.Name))
+		m.tui.NewLine()
 	}
 
 	for _, b := range branches.ExcludeCurrent() {
-		g.tui.Info(fmt.Sprintf("%s", b.Name))
+		m.tui.Info(fmt.Sprintf("%s", b.Name))
 	}
 
 	return nil
 }
 
-func (g *Git) GetCurrentBranch(dir string) (string, error) {
-	branches, err := g.searchBranches(SearchBranchesDTO{
+func (m *Manager) GetCurrentBranch(dir string) (string, error) {
+	branches, err := m.searchBranches(searchBranchesOpts{
 		Dir: dir,
 	})
 
@@ -168,25 +181,25 @@ func (g *Git) GetCurrentBranch(dir string) (string, error) {
 	}
 
 	if branches.GetCurrent() == nil {
-		return "", common.ErrCouldNotDetermineCurrentBranch{}
+		return "", ErrCouldNotDetermineCurrentBranch
 	}
 
 	return branches.GetCurrent().Name, nil
 }
 
-type PullBranchDTO struct {
+type PullBranchOpts struct {
 	// The directory to run the command in, defaults to the current directory
 	Dir string
 	// Passes --rebase to git pull
 	Rebase bool
 }
 
-func (g *Git) PullBranch(dto PullBranchDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (m *Manager) PullBranch(dto PullBranchOpts) error {
+	if err := m.mustBeInAGitRepository(dto.Dir); err != nil {
 		return err
 	}
 
-	current, err := g.GetCurrentBranch(dto.Dir)
+	current, err := m.GetCurrentBranch(dto.Dir)
 
 	if err != nil {
 		return err
@@ -200,7 +213,7 @@ func (g *Git) PullBranch(dto PullBranchDTO) error {
 
 	args = append(args, "origin", current)
 
-	err = g.exec.Exec("git", args, withDir(dto.Dir, hostsys.WithHostIO())...)
+	err = m.exec.Exec("git", args, withDir(dto.Dir, process.WithHostIO())...)
 
-	return g.tui.RecordIfError("Failed to pull branch!", err)
+	return usererr.Wrap(err, "Failed to pull branch!")
 }

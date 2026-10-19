@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -20,16 +20,16 @@ func init() {
 }
 
 func handleExec(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 	service := mustGetString(cmd, "service")
 
-	return ctrl.ExecOrRun(controller.ExecDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ExecCommand{
 		Workspace: ws,
 		Project:   project,
 		Service:   service,
 		Args:      args,
 	})
+
+	return err
 }

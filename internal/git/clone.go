@@ -1,24 +1,22 @@
 package git
 
 import (
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"fmt"
+	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
-func (g *Git) Clone(repoURL string, target string, dir string) error {
+func (m *Manager) Clone(repoURL string, target string, dir string) error {
 	if repoURL == "" || target == "" {
-		return common.ErrInvalidInput{
-			To:  "git.clone",
-			Msg: "'repoURL' and 'target' cannot be empty",
-		}
+		return fmt.Errorf("%w to 'git.clone': 'repoURL' and 'target' cannot be empty", workspace.ErrInvalidInput)
 	}
-	return g.exec.Exec(
+	return m.exec.Exec(
 		"git",
 		[]string{
 			"clone",
 			repoURL,
 			target,
 		},
-		withDir(dir, hostsys.WithHostIO())...,
+		withDir(dir, process.WithHostIO())...,
 	)
 }

@@ -9,7 +9,9 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/tui"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -23,23 +25,17 @@ import (
 //
 // This is enforced by Test_NoDirectExits.
 
-// handleErrors wraps a command handler. Handlers report errors to the user
-// themselves (usually via the tui), so cobra is told not to print them again.
+// handleErrors wraps a command handler. Handlers return their errors rather
+// than printing them, and they're shown to the user here, so cobra is told not
+// to print them again.
 func handleErrors(f runEHandlerFunc) runEHandlerFunc {
 	return func(cmd *cobra.Command, args []string) error {
 		err := f(cmd, args)
 
 		if err != nil {
-			// Set as a debug level here as it should already be logged earlier
-			// in the stack
-			slog.Debug("unhandled error", "err", err)
+			slog.Debug("command failed", "err", err)
 
-			// Config problems can surface from anywhere a workspace is loaded,
-			// so they're shown here rather than in each handler
-			var invalidCfg common.ErrInvalidWorkspaceConfig
-			if errors.As(err, &invalidCfg) {
-				showInvalidWorkspaceConfig(invalidCfg)
-			}
+			reportError(svcContainer.GetTui(), err)
 
 			cmd.SilenceErrors = true
 			cmd.SilenceUsage = true
@@ -49,14 +45,43 @@ func handleErrors(f runEHandlerFunc) runEHandlerFunc {
 	}
 }
 
-func showInvalidWorkspaceConfig(err common.ErrInvalidWorkspaceConfig) {
-	tui := svcContainer.GetTui()
+type errorPrinter interface {
+	Error(msg ...string)
+}
 
-	tui.Error(fmt.Sprintf("Workspace config '%s' is invalid:", err.Path))
-
-	for _, problem := range err.Problems {
-		tui.Error(fmt.Sprintf("  - %s", problem))
+// reportError shows a failed command's error to the user, once. That's the
+// most specific message attached with usererr.Wrap, followed by what caused it,
+// or just the error if there's no message.
+func reportError(out errorPrinter, err error) {
+	// The user chose to stop, so there's nothing to tell them
+	if errors.Is(err, tui.ErrUserAbortedExecution) {
+		return
 	}
+
+	msg, cause, hasMsg := usererr.Message(err)
+
+	if hasMsg {
+		out.Error(msg)
+	}
+
+	// Config problems can surface from anywhere a workspace is loaded, so
+	// they're shown here, in full, rather than in each handler
+	if invalidCfg, ok := errors.AsType[workspace.InvalidWorkspaceConfigError](err); ok {
+		out.Error(fmt.Sprintf("Workspace config '%s' is invalid:", invalidCfg.Path))
+
+		for _, problem := range invalidCfg.Problems {
+			out.Error(fmt.Sprintf("  - %s", problem))
+		}
+
+		return
+	}
+
+	if !hasMsg {
+		out.Error(fmt.Sprintf("Error: %s", err))
+		return
+	}
+
+	out.Error(fmt.Sprintf("  %s", cause))
 }
 
 // exit stops any running plugins and then exits with the given code.

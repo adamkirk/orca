@@ -44,54 +44,6 @@ func (_m *MockTui) EXPECT() *MockTui_Expecter {
 	return &MockTui_Expecter{mock: &_m.Mock}
 }
 
-// Error provides a mock function for the type MockTui
-func (_mock *MockTui) Error(msg ...string) {
-	if len(msg) > 0 {
-		_mock.Called(msg)
-	} else {
-		_mock.Called()
-	}
-
-	return
-}
-
-// MockTui_Error_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Error'
-type MockTui_Error_Call struct {
-	*mock.Call
-}
-
-// Error is a helper method to define mock.On call
-//   - msg ...string
-func (_e *MockTui_Expecter) Error(msg ...any) *MockTui_Error_Call {
-	return &MockTui_Error_Call{Call: _e.mock.On("Error",
-		append([]any{}, msg...)...)}
-}
-
-func (_c *MockTui_Error_Call) Run(run func(msg ...string)) *MockTui_Error_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []string
-		var variadicArgs []string
-		if len(args) > 0 {
-			variadicArgs = args[0].([]string)
-		}
-		arg0 = variadicArgs
-		run(
-			arg0...,
-		)
-	})
-	return _c
-}
-
-func (_c *MockTui_Error_Call) Return() *MockTui_Error_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockTui_Error_Call) RunAndReturn(run func(msg ...string)) *MockTui_Error_Call {
-	_c.Run(run)
-	return _c
-}
-
 // Info provides a mock function for the type MockTui
 func (_mock *MockTui) Info(msg ...string) {
 	if len(msg) > 0 {
@@ -170,63 +122,6 @@ func (_c *MockTui_NewLine_Call) Return() *MockTui_NewLine_Call {
 
 func (_c *MockTui_NewLine_Call) RunAndReturn(run func()) *MockTui_NewLine_Call {
 	_c.Run(run)
-	return _c
-}
-
-// RecordIfError provides a mock function for the type MockTui
-func (_mock *MockTui) RecordIfError(msg string, err error) error {
-	ret := _mock.Called(msg, err)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RecordIfError")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, error) error); ok {
-		r0 = returnFunc(msg, err)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockTui_RecordIfError_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RecordIfError'
-type MockTui_RecordIfError_Call struct {
-	*mock.Call
-}
-
-// RecordIfError is a helper method to define mock.On call
-//   - msg string
-//   - err error
-func (_e *MockTui_Expecter) RecordIfError(msg any, err any) *MockTui_RecordIfError_Call {
-	return &MockTui_RecordIfError_Call{Call: _e.mock.On("RecordIfError", msg, err)}
-}
-
-func (_c *MockTui_RecordIfError_Call) Run(run func(msg string, err error)) *MockTui_RecordIfError_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 error
-		if args[1] != nil {
-			arg1 = args[1].(error)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockTui_RecordIfError_Call) Return(err1 error) *MockTui_RecordIfError_Call {
-	_c.Call.Return(err1)
-	return _c
-}
-
-func (_c *MockTui_RecordIfError_Call) RunAndReturn(run func(msg string, err error) error) *MockTui_RecordIfError_Call {
-	_c.Call.Return(run)
 	return _c
 }
 

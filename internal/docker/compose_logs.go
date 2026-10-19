@@ -1,19 +1,20 @@
 package docker
 
 import (
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) Logs(ws *common.Workspace, p *common.Project, service string) error {
+func (c *Compose) Logs(ws *workspace.Workspace, p *workspace.Project, service string) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}
 
 	overlay, err := c.getOverlay(ws, p)
 	if err != nil {
-		return c.tui.RecordIfError("Failed to generate overlays!", err)
+		return usererr.Wrap(err, "Failed to generate overlays!")
 	}
 
 	cmd := buildBaseComposeCommand(ws, p, overlay)
@@ -22,10 +23,10 @@ func (c *Compose) Logs(ws *common.Workspace, p *common.Project, service string) 
 		cmd = append(cmd, service)
 	}
 
-	err = c.cli.Exec(cmd[0], cmd[1:], hostsys.WithHostIO(), hostsys.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
-		return c.tui.RecordIfError("Failed to tail logs!", err)
+		return usererr.Wrap(err, "Failed to tail logs!")
 	}
 
 	return nil

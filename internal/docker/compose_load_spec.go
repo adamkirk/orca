@@ -1,13 +1,13 @@
 package docker
 
 import (
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/compose-spec/compose-go/v2/types"
 	"go.yaml.in/yaml/v4"
 )
 
 // TODO: guard against nil arguments
-func (c *Compose) LoadSpec(ws *common.Workspace, p *common.Project) (*types.Project, error) {
+func (c *Compose) LoadSpec(ws *workspace.Workspace, p *workspace.Project) (*types.Project, error) {
 	rawSpec, err := c.LoadRawSpec(ws, p)
 
 	if err != nil {

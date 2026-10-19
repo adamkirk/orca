@@ -1,58 +1,66 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/config"
-	"github.com/adamkirk/orca/internal/controller"
 	"github.com/adamkirk/orca/internal/docker"
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/adamkirk/orca/internal/plugins"
-	"github.com/adamkirk/orca/internal/provisioner"
-	"github.com/adamkirk/orca/internal/repository"
+	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/provision"
+	"github.com/adamkirk/orca/internal/stack"
+	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
 	"github.com/adamkirk/orca/internal/tui"
-	"github.com/adamkirk/orca/internal/workspaces"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
 type services struct {
 	fs afero.Fs
 
-	contextResolver *common.ContextResolver
+	contextResolver *workspace.Resolver
 
 	config *config.Config
 
 	tui *tui.Tui
 
-	hostSystem      *hostsys.HostSystem
-	etcHostsManager *hostsys.EtcHostsManager
+	sys             *sys.Manager
+	etcHostsManager *hosts.EtcHostsManager
 
-	executor *hostsys.Executor
+	executor *process.Executor
 
-	git *git.Git
+	git *git.Manager
 
 	githubClient *github.GithubClient
 
-	workspaceManager *workspaces.Manager
+	workspaceManager *workspace.Manager
 
-	controller *controller.Controller
+	stack *stack.Manager
 
-	workspaceRepo *repository.WorkspaceRepository
+	hosts *hosts.Manager
 
-	certificateManager *tls.CertificateManager
+	workspaceRepo *workspace.Repository
+
+	tls *tls.Manager
 
 	compose                 *docker.Compose
 	composeParser           *docker.ComposeParser
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
 
-	provisionerRunner *provisioner.Runner
+	provision *provision.Manager
 
 	pluginManager *plugins.Manager
+
+	bus *bus.Bus
+
+	executionContextMiddleware *workspace.ExecutionContextMiddleware
 }
 
 func (s *services) GetFs() afero.Fs {
@@ -91,37 +99,37 @@ func (s *services) GetTui() *tui.Tui {
 	return s.tui
 }
 
-func (s *services) GetHostSystem() *hostsys.HostSystem {
-	if s.hostSystem != nil {
-		return s.hostSystem
+func (s *services) GetSys() *sys.Manager {
+	if s.sys != nil {
+		return s.sys
 	}
 
-	s.hostSystem = hostsys.NewHostSystem(
+	s.sys = sys.NewManager(
 		s.GetTui(),
 		s.GetFs(),
 		s.GetGithubClient(),
 		getToolsDir(),
 	)
 
-	return s.hostSystem
+	return s.sys
 }
 
-func (s *services) GetExecutor() *hostsys.Executor {
+func (s *services) GetExecutor() *process.Executor {
 	if s.executor != nil {
 		return s.executor
 	}
 
-	s.executor = hostsys.NewExecutor()
+	s.executor = process.NewExecutor()
 
 	return s.executor
 }
 
-func (s *services) GetEtcHostsManager() *hostsys.EtcHostsManager {
+func (s *services) GetEtcHostsManager() *hosts.EtcHostsManager {
 	if s.etcHostsManager != nil {
 		return s.etcHostsManager
 	}
 
-	mgr, err := hostsys.NewEtcHostsManager()
+	mgr, err := hosts.NewEtcHostsManager()
 
 	checkErr(err)
 
@@ -130,15 +138,14 @@ func (s *services) GetEtcHostsManager() *hostsys.EtcHostsManager {
 	return s.etcHostsManager
 }
 
-func (s *services) GetGit() *git.Git {
+func (s *services) GetGit() *git.Manager {
 	if s.git != nil {
 		return s.git
 	}
 
-	s.git = git.NewGit(
+	s.git = git.NewManager(
 		s.GetExecutor(),
 		s.GetTui(),
-		s.GetContextResolver(),
 	)
 
 	return s.git
@@ -154,12 +161,12 @@ func (s *services) GetGithubClient() *github.GithubClient {
 	return s.githubClient
 }
 
-func (s *services) GetContextResolver() *common.ContextResolver {
+func (s *services) GetContextResolver() *workspace.Resolver {
 	if s.contextResolver != nil {
 		return s.contextResolver
 	}
 
-	s.contextResolver = common.NewContextResolver(
+	s.contextResolver = workspace.NewResolver(
 		s.GetConfig(),
 		s.GetWorkspaceRepository(),
 	)
@@ -167,48 +174,52 @@ func (s *services) GetContextResolver() *common.ContextResolver {
 	return s.contextResolver
 }
 
-func (s *services) GetWorkspaceManager() *workspaces.Manager {
+func (s *services) GetWorkspaceManager() *workspace.Manager {
 	if s.workspaceManager != nil {
 		return s.workspaceManager
 	}
 
-	s.workspaceManager = workspaces.NewManager(
+	s.workspaceManager = workspace.NewManager(
 		s.GetFs(),
 		s.GetTui(),
 		s.GetConfig(),
 		s.GetGit(),
 		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
-		s.GetContextResolver(),
 	)
 
 	return s.workspaceManager
 }
 
-func (s *services) GetController() *controller.Controller {
-	if s.controller != nil {
-		return s.controller
+func (s *services) GetStack() *stack.Manager {
+	if s.stack != nil {
+		return s.stack
 	}
 
-	s.controller = controller.NewController(
-		s.GetConfig(),
-		s.GetWorkspaceRepository(),
-		s.GetCompose(),
-		s.GetTui(),
-		s.GetContextResolver(),
-		s.GetEtcHostsManager(),
-		s.GetProvisionerRunner(),
-	)
+	s.stack = stack.NewManager(s.GetCompose())
 
-	return s.controller
+	return s.stack
 }
 
-func (s *services) GetWorkspaceRepository() *repository.WorkspaceRepository {
+func (s *services) GetHosts() *hosts.Manager {
+	if s.hosts != nil {
+		return s.hosts
+	}
+
+	s.hosts = hosts.NewManager(
+		s.GetEtcHostsManager(),
+		s.GetTui(),
+	)
+
+	return s.hosts
+}
+
+func (s *services) GetWorkspaceRepository() *workspace.Repository {
 	if s.workspaceRepo != nil {
 		return s.workspaceRepo
 	}
 
-	s.workspaceRepo = repository.NewWorkspaceRepository(
+	s.workspaceRepo = workspace.NewRepository(
 		s.GetFs(),
 		s.GetConfig(),
 	)
@@ -216,19 +227,18 @@ func (s *services) GetWorkspaceRepository() *repository.WorkspaceRepository {
 	return s.workspaceRepo
 }
 
-func (s *services) GetCertificateManager() *tls.CertificateManager {
-	if s.certificateManager != nil {
-		return s.certificateManager
+func (s *services) GetTLS() *tls.Manager {
+	if s.tls != nil {
+		return s.tls
 	}
 
-	s.certificateManager = tls.NewCertificateManager(
+	s.tls = tls.NewManager(
 		s.GetFs(),
-		s.GetWorkspaceRepository(),
 		s.GetTui(),
 		getTLSDir(),
 	)
 
-	return s.certificateManager
+	return s.tls
 }
 
 func (s *services) GetCompose() *docker.Compose {
@@ -260,7 +270,7 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 		return s.composeOverlayGenerator
 	}
 
-	cm := s.GetCertificateManager()
+	cm := s.GetTLS()
 
 	s.composeOverlayGenerator = docker.NewComposeOverlayGenerator(
 		s.GetFs(),
@@ -272,17 +282,17 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 	return s.composeOverlayGenerator
 }
 
-func (s *services) GetProvisionerRunner() *provisioner.Runner {
-	if s.provisionerRunner != nil {
-		return s.provisionerRunner
+func (s *services) GetProvision() *provision.Manager {
+	if s.provision != nil {
+		return s.provision
 	}
 
-	s.provisionerRunner = provisioner.NewRunner(
+	s.provision = provision.NewManager(
 		s.GetFs(),
 		s.GetTui(),
 	)
 
-	return s.provisionerRunner
+	return s.provision
 }
 
 func (s *services) GetPluginManager() *plugins.Manager {
@@ -293,6 +303,130 @@ func (s *services) GetPluginManager() *plugins.Manager {
 	s.pluginManager = plugins.NewManager(slog.Default())
 
 	return s.pluginManager
+}
+
+// GetBus returns the command bus, with every command handler registered.
+func (s *services) GetBus() *bus.Bus {
+	if s.bus != nil {
+		return s.bus
+	}
+
+	b := bus.New()
+
+	b.Use(
+		bus.LoggingMiddleware,
+		s.GetExecutionContextMiddleware().Handle,
+	)
+
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Down))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecOrRun))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
+	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
+	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
+	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
+
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).RebaseInteractively))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Push))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).UndoLastXCommits))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Logl))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Status))
+	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Pull))
+
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Initialise))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Switch))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Ls))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ShowCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
+
+	b.HandleVoid(lazy(s.GetTLS, (*tls.Manager).Generate))
+
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).CheckSetup))
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).Install))
+	b.HandleVoid(lazy(s.GetSys, (*sys.Manager).UpdateSelf))
+
+	s.bus = b
+
+	return s.bus
+}
+
+// GetExecutionContextMiddleware returns the middleware that resolves the
+// ExecutionContext for each command, with the target registered for every
+// command that runs against a workspace or project.
+func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMiddleware {
+	if s.executionContextMiddleware != nil {
+		return s.executionContextMiddleware
+	}
+
+	ec := workspace.NewExecutionContextMiddleware(s.GetContextResolver())
+
+	ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd stack.DownCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd stack.ExecCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(cmd stack.ExecuteExtensionCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd provision.RunCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query stack.ShowComposeConfigQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(query stack.ShowComposeCommandQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+
+	// The git commands still work in any repository without a workspace, unless
+	// they're acting on all of its projects
+	ec.Target(func(cmd git.CheckoutCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(cmd git.PullCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(cmd git.PushCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(query git.StatusQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}
+	})
+
+	ec.Target(func(cmd workspace.CloneCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.WorkspaceName}
+	})
+	ec.Target(func(cmd tls.GenerateCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+
+	s.executionContextMiddleware = ec
+
+	return s.executionContextMiddleware
+}
+
+// lazy turns a service method into a handler, which only gets (and so builds)
+// the service when a message is dispatched to it, rather than when the bus is
+// built.
+func lazy[S any, M bus.Message[bus.Void]](get func() S, method func(S, context.Context, M) error) func(context.Context, M) error {
+	return func(ctx context.Context, msg M) error {
+		return method(get(), ctx, msg)
+	}
 }
 
 // KillPlugins stops any running plugin processes. Unlike GetPluginManager it

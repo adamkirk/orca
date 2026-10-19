@@ -8,6 +8,7 @@
 package tls
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -25,16 +26,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adamkirk/orca/internal/common"
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
 )
 
 type tui interface {
 	Info(msg ...string)
-	Error(msg ...string)
 	Success(msg ...string)
 	NewLine()
-	RecordIfError(msg string, err error) error
 }
 
 type issuer struct {
@@ -42,29 +43,25 @@ type issuer struct {
 	cert *x509.Certificate
 }
 
-type workspaceRepo interface {
-	Load(name string) (*common.Workspace, error)
-}
-type CertificateManager struct {
-	fs            afero.Fs
-	workspaceRepo workspaceRepo
-	tui           tui
-	tlsDir        string
+type Manager struct {
+	fs     afero.Fs
+	tui    tui
+	tlsDir string
 }
 
-func (cm *CertificateManager) GetCertsDir() string {
-	return fmt.Sprintf("%s/%s", strings.TrimSuffix(cm.tlsDir, "/"), "certs")
+func (m *Manager) GetCertsDir() string {
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(m.tlsDir, "/"), "certs")
 }
 
-func (cm *CertificateManager) GetRootKeyPath() string {
-	return fmt.Sprintf("%s/%s", strings.TrimSuffix(cm.tlsDir, "/"), "key.pem")
+func (m *Manager) GetRootKeyPath() string {
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(m.tlsDir, "/"), "key.pem")
 }
 
-func (cm *CertificateManager) GetRootCertPath() string {
-	return fmt.Sprintf("%s/%s", strings.TrimSuffix(cm.tlsDir, "/"), "cert.pem")
+func (m *Manager) GetRootCertPath() string {
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(m.tlsDir, "/"), "cert.pem")
 }
 
-func (cm *CertificateManager) createKey(path string) (crypto.Signer, error) {
+func (m *Manager) createKey(path string) (crypto.Signer, error) {
 	var key crypto.Signer
 	var err error
 
@@ -85,14 +82,14 @@ func (cm *CertificateManager) createKey(path string) (crypto.Signer, error) {
 		Bytes: der,
 	})
 
-	if err := afero.WriteFile(cm.fs, path, b, 0600); err != nil {
+	if err := afero.WriteFile(m.fs, path, b, 0600); err != nil {
 		return nil, err
 	}
 
 	return key, nil
 }
 
-func (cm *CertificateManager) calculateSKID(pubKey crypto.PublicKey) ([]byte, error) {
+func (m *Manager) calculateSKID(pubKey crypto.PublicKey) ([]byte, error) {
 	spkiASN1, err := x509.MarshalPKIXPublicKey(pubKey)
 	if err != nil {
 		return nil, err
@@ -110,14 +107,14 @@ func (cm *CertificateManager) calculateSKID(pubKey crypto.PublicKey) ([]byte, er
 	return skid[:], nil
 }
 
-func (cm *CertificateManager) createRootCert(key crypto.Signer, filename string) (*x509.Certificate, error) {
+func (m *Manager) createRootCert(key crypto.Signer, filename string) (*x509.Certificate, error) {
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 
 	if err != nil {
 		return nil, err
 	}
 
-	skid, err := cm.calculateSKID(key.Public())
+	skid, err := m.calculateSKID(key.Public())
 
 	if err != nil {
 		return nil, err
@@ -151,15 +148,15 @@ func (cm *CertificateManager) createRootCert(key crypto.Signer, filename string)
 		Bytes: der,
 	})
 
-	if err := afero.WriteFile(cm.fs, filename, b, 0600); err != nil {
+	if err := afero.WriteFile(m.fs, filename, b, 0600); err != nil {
 		return nil, err
 	}
 
 	return x509.ParseCertificate(der)
 }
 
-func (cm *CertificateManager) readCert(path string) (*x509.Certificate, error) {
-	contents, err := afero.ReadFile(cm.fs, path)
+func (m *Manager) readCert(path string) (*x509.Certificate, error) {
+	contents, err := afero.ReadFile(m.fs, path)
 
 	if err != nil {
 		return nil, err
@@ -175,8 +172,8 @@ func (cm *CertificateManager) readCert(path string) (*x509.Certificate, error) {
 	return x509.ParseCertificate(block.Bytes)
 }
 
-func (cm *CertificateManager) readKey(path string) (crypto.Signer, error) {
-	contents, err := afero.ReadFile(cm.fs, path)
+func (m *Manager) readKey(path string) (crypto.Signer, error) {
+	contents, err := afero.ReadFile(m.fs, path)
 
 	if err != nil {
 		return nil, err
@@ -197,66 +194,66 @@ func (cm *CertificateManager) readKey(path string) (crypto.Signer, error) {
 	return nil, fmt.Errorf("incorrect PEM type %s", block.Type)
 }
 
-func (cm *CertificateManager) getOrCreateKey(path string) (crypto.Signer, error) {
-	exists, err := afero.Exists(cm.fs, path)
+func (m *Manager) getOrCreateKey(path string) (crypto.Signer, error) {
+	exists, err := afero.Exists(m.fs, path)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if !exists {
-		cm.tui.Info(fmt.Sprintf("Creating key: %s", path))
-		key, err := cm.createKey(path)
+		m.tui.Info(fmt.Sprintf("Creating key: %s", path))
+		key, err := m.createKey(path)
 
 		if err != nil {
-			return nil, cm.tui.RecordIfError(fmt.Sprintf("Failed to create key %s", path), err)
+			return nil, usererr.Wrap(err, fmt.Sprintf("Failed to create key %s", path))
 		}
 
-		cm.tui.Success(fmt.Sprintf("Key %s created successfully!", path))
+		m.tui.Success(fmt.Sprintf("Key %s created successfully!", path))
 		return key, nil
 	}
 
-	cm.tui.Info(fmt.Sprintf("Key %s already exists, skipping creation.", path))
+	m.tui.Info(fmt.Sprintf("Key %s already exists, skipping creation.", path))
 
-	cert, err := cm.readKey(path)
+	cert, err := m.readKey(path)
 
-	return cert, cm.tui.RecordIfError(fmt.Sprintf("Failed to load key %s", path), err)
+	return cert, usererr.Wrap(err, fmt.Sprintf("Failed to load key %s", path))
 }
 
-func (cm *CertificateManager) getOrCreateRootCert(key crypto.Signer) (*x509.Certificate, error) {
-	path := cm.GetRootCertPath()
-	exists, err := afero.Exists(cm.fs, path)
+func (m *Manager) getOrCreateRootCert(key crypto.Signer) (*x509.Certificate, error) {
+	path := m.GetRootCertPath()
+	exists, err := afero.Exists(m.fs, path)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if !exists {
-		cm.tui.Info(fmt.Sprintf("Creating certificate: %s", path))
+		m.tui.Info(fmt.Sprintf("Creating certificate: %s", path))
 
-		cert, err := cm.createRootCert(key, path)
+		cert, err := m.createRootCert(key, path)
 
 		if err != nil {
-			return nil, cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificate %s", path), err)
+			return nil, usererr.Wrap(err, fmt.Sprintf("Failed to create certificate %s", path))
 		}
 
-		cm.tui.Success(fmt.Sprintf("Certificate %s created successfully!", path))
+		m.tui.Success(fmt.Sprintf("Certificate %s created successfully!", path))
 		return cert, nil
 	}
 
-	cm.tui.Info(fmt.Sprintf("Certificate %s already exists, skipping creation.", path))
+	m.tui.Info(fmt.Sprintf("Certificate %s already exists, skipping creation.", path))
 
-	return cm.readCert(path)
+	return m.readCert(path)
 }
 
-func (cm *CertificateManager) getRootIssuer() (*issuer, error) {
-	key, err := cm.getOrCreateKey(cm.GetRootKeyPath())
+func (m *Manager) getRootIssuer() (*issuer, error) {
+	key, err := m.getOrCreateKey(m.GetRootKeyPath())
 
 	if err != nil {
 		return nil, err
 	}
 
-	cert, err := cm.getOrCreateRootCert(key)
+	cert, err := m.getOrCreateRootCert(key)
 
 	if err != nil {
 		return nil, err
@@ -268,8 +265,8 @@ func (cm *CertificateManager) getRootIssuer() (*issuer, error) {
 	}, nil
 }
 
-func (cm *CertificateManager) createTLSDirsIfMissing() error {
-	exists, err := afero.DirExists(cm.fs, cm.GetCertsDir())
+func (m *Manager) createTLSDirsIfMissing() error {
+	exists, err := afero.DirExists(m.fs, m.GetCertsDir())
 
 	if err != nil {
 		return err
@@ -279,40 +276,40 @@ func (cm *CertificateManager) createTLSDirsIfMissing() error {
 		return nil
 	}
 
-	return cm.fs.MkdirAll(cm.GetCertsDir(), 0700)
+	return m.fs.MkdirAll(m.GetCertsDir(), 0700)
 }
 
-func (cm *CertificateManager) generateCertificateIfNotPresent(issuer *issuer, domain string) error {
+func (m *Manager) generateCertificateIfNotPresent(issuer *issuer, domain string) error {
 
 	cn := domain
 	var certName = strings.Replace(cn, "*", "_", -1)
 
-	keyPath := fmt.Sprintf("%s/%s.key", cm.GetCertsDir(), certName)
+	keyPath := fmt.Sprintf("%s/%s.key", m.GetCertsDir(), certName)
 
-	key, err := cm.getOrCreateKey(keyPath)
+	key, err := m.getOrCreateKey(keyPath)
 
 	if err != nil {
 		return err
 	}
 
-	certPath := fmt.Sprintf("%s/%s.cert", cm.GetCertsDir(), certName)
+	certPath := fmt.Sprintf("%s/%s.cert", m.GetCertsDir(), certName)
 
 	returnErrMessage := func(err error) error {
-		return cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificate %s", certPath), err)
+		return usererr.Wrap(err, fmt.Sprintf("Failed to create certificate %s", certPath))
 	}
 
-	certExists, err := afero.Exists(cm.fs, certPath)
+	certExists, err := afero.Exists(m.fs, certPath)
 
 	if err != nil {
 		return err
 	}
 
 	if certExists {
-		cm.tui.Info(fmt.Sprintf("Certificate %s already exists, skipping creation.", certPath))
+		m.tui.Info(fmt.Sprintf("Certificate %s already exists, skipping creation.", certPath))
 		return nil
 	}
 
-	cm.tui.Info(fmt.Sprintf("Creating certificate: %s", certPath))
+	m.tui.Info(fmt.Sprintf("Creating certificate: %s", certPath))
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 
 	if err != nil {
@@ -350,41 +347,47 @@ func (cm *CertificateManager) generateCertificateIfNotPresent(issuer *issuer, do
 		Bytes: der,
 	})
 
-	if err := afero.WriteFile(cm.fs, certPath, b, 0600); err != nil {
+	if err := afero.WriteFile(m.fs, certPath, b, 0600); err != nil {
 		return returnErrMessage(err)
 	}
 
-	cm.tui.Success(fmt.Sprintf("Certificate %s created successfully!", certPath))
+	m.tui.Success(fmt.Sprintf("Certificate %s created successfully!", certPath))
 	return nil
 }
 
-type GenerateDTO struct {
-	WorkspaceName string
+type GenerateCommand struct {
+	bus.Returns[bus.Void]
+
+	Workspace string
 }
 
-func (cm *CertificateManager) Generate(dto GenerateDTO) error {
-	cm.tui.Info("Generating Root certificate if required...")
-	if err := cm.createTLSDirsIfMissing(); err != nil {
-		return cm.tui.RecordIfError(fmt.Sprintf("Failed to create certificates directory at: %s", cm.GetCertsDir()), err)
-	}
+func (GenerateCommand) MessageName() string {
+	return "tls.gen"
+}
 
-	issuer, err := cm.getRootIssuer()
-	if err != nil {
-		return err
-	}
-
-	ws, err := cm.workspaceRepo.Load(dto.WorkspaceName)
+func (m *Manager) Generate(ctx context.Context, cmd GenerateCommand) error {
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	certsToGenerate := ws.GetUniqueTLSCertificates()
+	m.tui.Info("Generating Root certificate if required...")
+	if err := m.createTLSDirsIfMissing(); err != nil {
+		return usererr.Wrap(err, fmt.Sprintf("Failed to create certificates directory at: %s", m.GetCertsDir()))
+	}
+
+	issuer, err := m.getRootIssuer()
+	if err != nil {
+		return err
+	}
+
+	certsToGenerate := execCtx.Workspace.GetUniqueTLSCertificates()
 
 	for _, c := range certsToGenerate {
-		cm.tui.NewLine()
-		cm.tui.Info(fmt.Sprintf("Generating certificate for '%s'...", c))
-		if err := cm.generateCertificateIfNotPresent(issuer, c); err != nil {
+		m.tui.NewLine()
+		m.tui.Info(fmt.Sprintf("Generating certificate for '%s'...", c))
+		if err := m.generateCertificateIfNotPresent(issuer, c); err != nil {
 			return err
 		}
 	}
@@ -392,11 +395,10 @@ func (cm *CertificateManager) Generate(dto GenerateDTO) error {
 	return nil
 }
 
-func NewCertificateManager(fs afero.Fs, workspaceRepo workspaceRepo, tui tui, tlsDir string) *CertificateManager {
-	return &CertificateManager{
-		fs:            fs,
-		tlsDir:        tlsDir,
-		workspaceRepo: workspaceRepo,
-		tui:           tui,
+func NewManager(fs afero.Fs, tui tui, tlsDir string) *Manager {
+	return &Manager{
+		fs:     fs,
+		tlsDir: tlsDir,
+		tui:    tui,
 	}
 }

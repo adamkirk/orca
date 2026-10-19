@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/workspaces"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +62,7 @@ func init() {
 	wsInitCmd.Flags().StringP("source", "s", getWorkingDir(), "The directory of the workspace configuration.")
 	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects. Defaults to the current directory when --repo is used.")
 	wsInitCmd.Flags().StringP("repo", "r", "", "The github repository to clone the workspace from, in the format 'owner/repo'.")
-	wsInitCmd.Flags().StringP("config", "c", workspaces.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
+	wsInitCmd.Flags().StringP("config", "c", workspace.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
 	wsInitCmd.MarkFlagsMutuallyExclusive("repo", "source")
 	wsCmd.AddCommand(wsInitCmd)
 
@@ -82,30 +81,18 @@ If a single project is being clone then it will be cloned into {target}.`)
 }
 
 func handleWsSwitch(cmd *cobra.Command, args []string) error {
-	tui := svcContainer.GetTui()
-
 	if len(args) < 1 {
-		tui.Error("Must supply a workspace!")
-
-		return common.ErrUnknownWorkspace{
-			Name: "",
-		}
+		return usererr.Wrap(fmt.Errorf("%w: 'workspace' at position 1", ErrArgumentRequired), "Must supply a workspace!")
 	}
 
-	manager := svcContainer.GetConfig()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.SwitchCommand{
+		Workspace: args[0],
+	})
 
-	if err := manager.SwitchWorkspace(args[0]); err != nil {
-		return tui.RecordIfError("Failed to switch workspace!", err)
-	}
-
-	tui.Success(fmt.Sprintf("Switched to %s", args[0]))
-
-	return nil
+	return err
 }
 
 func handleWsInit(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
-
 	source := mustGetString(cmd, "source")
 	target := mustGetString(cmd, "target")
 	repo := mustGetString(cmd, "repo")
@@ -117,42 +104,44 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 		target = getWorkingDir()
 	}
 
-	return manager.Initialise(workspaces.InitialiseDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.InitialiseCommand{
 		SourceRepo:        repo,
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,
 	})
+
+	return err
 }
 
 func handleWsLs(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.LsQuery{})
 
-	return manager.Ls(workspaces.LsDTO{})
+	return err
 }
 
 func handleWsCurrent(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ShowCurrentQuery{})
 
-	return manager.ShowCurrent(workspaces.ShowCurrentDTO{})
+	return err
 }
 
 func handleWsClearCurrent(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ClearCurrentCommand{})
 
-	return manager.ClearCurrent(workspaces.ClearCurrentDTO{})
+	return err
 }
 
 func handleWsClone(cmd *cobra.Command, args []string) error {
-	manager := svcContainer.GetWorkspaceManager()
-
 	name := mustGetString(cmd, "workspace")
 	projectName := mustGetString(cmd, "project")
 	to := mustGetString(cmd, "target")
 
-	return manager.Clone(workspaces.CloneDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.CloneCommand{
 		WorkspaceName: name,
 		Project:       projectName,
 		To:            to,
 	})
+
+	return err
 }

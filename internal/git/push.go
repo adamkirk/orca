@@ -1,73 +1,79 @@
 package git
 
 import (
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"context"
+
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/process"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
-type PushBranchDTO struct {
+type PushBranchOpts struct {
 	Force bool
 	// The directory to run the command in, defaults to the current directory
 	Dir string
 }
 
-func (g *Git) PushBranch(dto PushBranchDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (m *Manager) PushBranch(cmd PushBranchOpts) error {
+	if err := m.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	branch, err := g.GetCurrentBranch(dto.Dir)
+	branch, err := m.GetCurrentBranch(cmd.Dir)
 
 	if err != nil {
-		return g.tui.RecordIfError("Failed to determine current branch, and no branch was supplied!", err)
+		return usererr.Wrap(err, "Failed to determine current branch, and no branch was supplied!")
 	}
 
 	args := []string{
 		"push",
 	}
 
-	if dto.Force {
+	if cmd.Force {
 		args = append(args, "-f")
 	}
 
 	args = append(args, "origin", branch)
 
-	return g.exec.Exec("git", args, withDir(dto.Dir, hostsys.WithHostIO())...)
+	return m.exec.Exec("git", args, withDir(cmd.Dir, process.WithHostIO())...)
 }
 
-type PushDTO struct {
+type PushCommand struct {
+	bus.Returns[bus.Void]
+
 	AllProjects bool
 	Workspace   string
 	Project     string
 	Force       bool
 }
 
+func (PushCommand) MessageName() string {
+	return "g.push"
+}
+
 // pushInContext pushes the current branch for the resolved project (or working
 // directory), or for every project in the workspace when allProjects is set
-func (g *Git) pushInContext(ctx common.ExecutionContext, allProjects bool, force bool) error {
+func (m *Manager) pushInContext(execCtx workspace.ExecutionContext, allProjects bool, force bool) error {
 	if !allProjects {
-		if ctx.Project == nil {
-			return g.PushBranch(PushBranchDTO{Dir: ctx.WorkingDirectory, Force: force})
-		}
-
-		return g.PushBranch(PushBranchDTO{Dir: ctx.Project.ProjectDir, Force: force})
+		return m.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
 	}
 
-	for _, p := range ctx.Workspace.Projects {
-		if err := g.PushBranch(PushBranchDTO{Dir: p.ProjectDir, Force: force}); err != nil {
-			return g.tui.RecordIfError("Push failed, you should check the branches for all projects as this failed mid-flow", err)
+	for _, p := range execCtx.Workspace.Projects {
+		if err := m.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
+			return usererr.Wrap(err, "Push failed, you should check the branches for all projects as this failed mid-flow")
 		}
 	}
 
 	return nil
 }
 
-func (g *Git) Push(dto PushDTO) error {
-	ctx, err := g.resolveContext(dto.Workspace, dto.Project, dto.AllProjects)
+func (m *Manager) Push(ctx context.Context, cmd PushCommand) error {
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	return g.pushInContext(ctx, dto.AllProjects, dto.Force)
+	return m.pushInContext(execCtx, cmd.AllProjects, cmd.Force)
 }

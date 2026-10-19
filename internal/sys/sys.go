@@ -1,0 +1,38 @@
+package sys
+
+import (
+	"github.com/Masterminds/semver/v3"
+	"github.com/spf13/afero"
+)
+
+const orcaRepoOrg = "adamkirk"
+const orcaRepoName = "orca"
+
+// const orcaRepo = "adamkirk/orca"
+
+type tui interface {
+	Info(msg ...string)
+	Error(msg ...string)
+	Success(msg ...string)
+}
+
+type githubClient interface {
+	VersionExists(owner string, repo string, v string) (bool, error)
+	LatestVersion(owner string, repo string) (*semver.Version, error)
+}
+
+type Manager struct {
+	tui      tui
+	fs       afero.Fs
+	toolsDir string
+	github   githubClient
+}
+
+func NewManager(tui tui, fs afero.Fs, github githubClient, toolsDir string) *Manager {
+	return &Manager{
+		tui:      tui,
+		fs:       fs,
+		github:   github,
+		toolsDir: toolsDir,
+	}
+}

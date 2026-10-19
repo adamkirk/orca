@@ -1,0 +1,215 @@
+package workspace
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"path/filepath"
+
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/usererr"
+	"github.com/spf13/afero"
+)
+
+type CloneCommand struct {
+	bus.Returns[bus.Void]
+
+	WorkspaceName string
+	Project       string
+	To            string
+}
+
+func (CloneCommand) MessageName() string {
+	return "ws.clone"
+}
+
+func (m *Manager) setupAllProjects(ws *Workspace, into string) error {
+	for _, project := range ws.Projects {
+		dir := fmt.Sprintf("%s/%s", into, project.Name)
+
+		if err := m.cloneSingleProject(ws, project, dir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *Manager) registerWorkspaceProject(ws *Workspace, project Project) error {
+	wsLocation, err := m.configManager.GetWorkspaceMeta(ws.Name)
+
+	if err != nil {
+		return err
+	}
+
+	root, err := m.git.GetRepositoryRootFromPath(wsLocation.Path)
+
+	if err != nil {
+		return err
+	}
+
+	return m.configManager.SetProjectPath(ws.Name, project.Name, root)
+}
+
+func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string) error {
+	projectExists, err := m.configManager.ProjectExists(ws.Name, project.Name)
+
+	if err != nil {
+		return err
+	}
+
+	if project.RepositoryConfig.Self {
+		m.tui.Info(fmt.Sprintf("Registering workspace as project: %s", project.Name))
+
+		return usererr.Wrap(
+			m.registerWorkspaceProject(ws, project),
+			"Failed to register workspace as a project!",
+		)
+	}
+
+	exists, err := afero.Exists(m.fs, into)
+
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		if projectExists {
+			m.tui.Info(fmt.Sprintf("Skipping '%s' as it already exists!", project.Name))
+			return nil
+		}
+
+		isCloned, err := m.projectIsAlreadyClonedAtLocation(project, into)
+
+		if err != nil {
+			return usererr.Wrap(
+				err,
+				"Failed to verify existing directory!",
+			)
+		}
+
+		if isCloned {
+			m.tui.Info(fmt.Sprintf("Skipping '%s' already cloned at '%s'!", project.Name, into))
+
+			return usererr.Wrap(
+				m.configManager.SetProjectPath(ws.Name, project.Name, into),
+				"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
+			)
+		}
+
+		return fmt.Errorf("%w: '%s' (expected %s)", ErrDirectoryDoesNotMatchOrigin, into, project.RepositoryConfig.SSH)
+	}
+
+	parentDir := filepath.Dir(into)
+
+	if err := m.fs.MkdirAll(parentDir, 0755); err != nil {
+		return err
+	}
+
+	m.tui.Info(fmt.Sprintf("Cloning '%s' into %s...", project.RepositoryConfig.SSH, into))
+
+	err = m.git.Clone(project.RepositoryConfig.SSH, into, "")
+
+	if err != nil {
+		return usererr.Wrap(err, "Clone failed!")
+	}
+
+	return usererr.Wrap(
+		m.configManager.SetProjectPath(ws.Name, project.Name, into),
+		"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
+	)
+}
+
+func (m *Manager) projectIsAlreadyClonedAtLocation(proj Project, into string) (bool, error) {
+	exists, err := afero.DirExists(m.fs, into)
+
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	return m.git.DirectoryHasOrigin(into, proj.RepositoryConfig.SSH)
+}
+
+func (m *Manager) getCloneTargetDir(wsConfigPath string, target string) (string, error) {
+	if target != "" {
+		return filepath.Abs(target)
+	}
+
+	wsRoot, err := m.git.GetRepositoryRootFromPath(wsConfigPath)
+
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(fmt.Sprintf("%s/..", wsRoot))
+}
+
+func (m *Manager) Clone(ctx context.Context, cmd CloneCommand) error {
+	execCtx, err := ExecutionContextFrom(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	return m.clone(execCtx.Workspace.Name, cmd.Project, cmd.To)
+}
+
+// clone clones the given project, or all projects when it's empty, for the
+// workspace into the given directory.
+func (m *Manager) clone(wsName string, project string, to string) error {
+	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
+
+	if err != nil {
+		if errors.Is(err, ErrUnknownWorkspace) {
+			return usererr.Wrap(err, fmt.Sprintf("Unknown workspace: %s", wsName))
+		}
+
+		return err
+	}
+
+	cfg, err := m.workspaceRepo.Load(wsMeta.Name)
+
+	if err != nil {
+		return err
+	}
+
+	targetDir, err := m.getCloneTargetDir(wsMeta.Path, to)
+
+	if err != nil {
+		return usererr.Wrap(err, "Failed to determine target directory!")
+	}
+
+	var cloneErr error = nil
+
+	if project != "" {
+		project, err := cfg.GetProject(project)
+
+		if err != nil {
+			return usererr.Wrap(err, "Failed to clone specified project!")
+		}
+
+		targetDir := targetDir
+
+		if to == "" {
+			targetDir = fmt.Sprintf("%s/%s", targetDir, project.Name)
+		}
+
+		cloneErr = m.cloneSingleProject(cfg, *project, targetDir)
+	} else {
+		cloneErr = m.setupAllProjects(cfg, targetDir)
+	}
+
+	if cloneErr != nil {
+		if errors.Is(cloneErr, ErrDirectoryAlreadyExists) {
+			return usererr.Wrap(cloneErr, "Cannot clone into the given directory, it already exists!")
+		}
+
+		return cloneErr
+	}
+
+	return nil
+}

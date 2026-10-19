@@ -2,6 +2,16 @@
 
 This repository uses [Github Flow](https://docs.github.com/en/get-started/using-github/github-flow) branching strategy; feature branches come off of main, should be short-lived, and then are merged back into main. The configuration of the repository is configured to allow only squash merging, to keep the commit history clean and informative. To aid this it is following the [conventional commit standard](https://www.conventionalcommits.org/en/v1.0.0/), which is enforced via a CI check.
 
+## Code structure
+
+How the code is organised, and the conventions to follow, are covered in their own pages:
+
+- [Architecture](./architecture.md): the package layout, how a command runs, and adding a new one.
+- [Command bus](./command_bus.md): messages, handlers, middleware, hooks and the execution context.
+- [Errors](./errors.md): returning, wrapping, showing and defining errors.
+
+The same conventions are summarised for coding agents in `CLAUDE.md` (also linked as `AGENTS.md`) at the root of the repository. Keep it in step with these pages.
+
 ## Commit standards
 
 As mentioned above we use conventional commits. In order to ensure this there is a CI workflow that runs on each PR, whichc checks that every commit on the head branch (that isn't on the base) follows this convention. To do this we use [commitlintjs](https://commitlint.js.org/), and you'll find the exact configuration for this check in `commitlint.config.js`.

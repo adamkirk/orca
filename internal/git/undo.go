@@ -1,13 +1,19 @@
 package git
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
-	"github.com/adamkirk/orca/internal/common"
-	"github.com/adamkirk/orca/internal/hostsys"
+	"github.com/adamkirk/orca/internal/bus"
+	"github.com/adamkirk/orca/internal/process"
+	orcatui "github.com/adamkirk/orca/internal/tui"
+	"github.com/adamkirk/orca/internal/usererr"
 )
 
-type UndoLastXCommitsDTO struct {
+type UndoLastXCommitsCommand struct {
+	bus.Returns[bus.Void]
+
 	// The amount of commits to remoe
 	Amount           int
 	SkipConfirmation bool
@@ -15,34 +21,38 @@ type UndoLastXCommitsDTO struct {
 	Dir string
 }
 
-func (g *Git) UndoLastXCommits(dto UndoLastXCommitsDTO) error {
-	if err := g.mustBeInAGitRepository(dto.Dir); err != nil {
+func (UndoLastXCommitsCommand) MessageName() string {
+	return "g.undo"
+}
+
+func (m *Manager) UndoLastXCommits(_ context.Context, cmd UndoLastXCommitsCommand) error {
+	if err := m.mustBeInAGitRepository(cmd.Dir); err != nil {
 		return err
 	}
 
-	if !dto.SkipConfirmation {
-		result, err := g.tui.PresentChoices([]string{
+	if !cmd.SkipConfirmation {
+		result, err := m.tui.PresentChoices([]string{
 			ConfirmNo,
 			ConfirmYes,
 		}, "You might lose some precious changes, are you sure?")
 
 		if err != nil {
-			if _, ok := err.(common.ErrUserAbortedExecution); ok {
+			if errors.Is(err, orcatui.ErrUserAbortedExecution) {
 				return err
 			}
 
-			return g.tui.RecordIfError("Something went wrong, this is most likely a bug!", err)
+			return usererr.Wrap(err, "Something went wrong, this is most likely a bug!")
 		}
 
 		if result == ConfirmNo {
-			g.tui.Info("Aborting")
+			m.tui.Info("Aborting")
 			return nil
 		}
 	}
 
-	return g.exec.Exec("git", []string{
+	return m.exec.Exec("git", []string{
 		"reset",
 		"--hard",
-		fmt.Sprintf("HEAD~%d", dto.Amount),
-	}, withDir(dto.Dir, hostsys.WithHostIO())...)
+		fmt.Sprintf("HEAD~%d", cmd.Amount),
+	}, withDir(cmd.Dir, process.WithHostIO())...)
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/provision"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +16,7 @@ func init() {
 }
 
 func handleProvision(cmd *cobra.Command, args []string) error {
-	c := svcContainer.GetController()
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), provision.RunCommand{})
 
-	return c.Provision(controller.ProvisionDTO{})
+	return err
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/adamkirk/orca/internal/controller"
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/spf13/cobra"
 )
 
@@ -20,15 +20,15 @@ func init() {
 }
 
 func handleLogs(cmd *cobra.Command, args []string) error {
-	ctrl := svcContainer.GetController()
-
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 	service := mustGetString(cmd, "service")
 
-	return ctrl.Logs(controller.LogsDTO{
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.LogsQuery{
 		Workspace: ws,
 		Project:   project,
 		Service:   service,
 	})
+
+	return err
 }
