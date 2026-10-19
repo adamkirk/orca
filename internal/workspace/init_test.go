@@ -61,8 +61,7 @@ func TestParseGithubRepo(t *testing.T) {
 	}
 }
 
-// stubGithub knows the branches of one repository, and the workspace config on
-// each of them.
+// stubGithub knows the workspace config on each branch of one repository.
 type stubGithub struct {
 	configs map[string]string
 	refs    []string
@@ -76,19 +75,14 @@ func (g *stubGithub) GetFileContents(owner string, repo string, path string, ref
 	return []byte(contents), ok, nil
 }
 
-func (g *stubGithub) BranchExists(owner string, repo string, branch string) (bool, error) {
-	_, ok := g.configs[branch]
-
-	return ok, nil
-}
-
 func TestInitialiseFromBranch(t *testing.T) {
 	newManager := func() (*Manager, *stubGit, *stubGithub) {
 		fs := afero.NewMemMapFs()
 		git := &stubGit{
 			branches: map[string][]string{
-				"git@github.com:acme/api.git": {"main", "orca-adoption"},
-				"git@github.com:acme/web.git": {"main"},
+				"git@github.com:acme/api.git":       {"main", "orca-adoption"},
+				"git@github.com:acme/web.git":       {"main"},
+				"git@github.com:acme/local-env.git": {"main", "orca-adoption"},
 			},
 		}
 		github := &stubGithub{

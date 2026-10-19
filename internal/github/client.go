@@ -96,33 +96,6 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string, r
 	}
 }
 
-// BranchExists checks whether the branch exists in the repository.
-func (c *GithubClient) BranchExists(owner string, repo string, branch string) (bool, error) {
-	_, resp, err := c.client.Repositories.GetBranch(context.TODO(), owner, repo, branch, 1)
-
-	var rateLimitErr *github.RateLimitError
-	var abuseRateLimitErr *github.AbuseRateLimitError
-
-	if errors.As(err, &rateLimitErr) || errors.As(err, &abuseRateLimitErr) {
-		return false, fmt.Errorf("%w for 'github'", ErrRateLimited)
-	}
-
-	if resp == nil {
-		return false, fmt.Errorf("%w: error from client: %w", ErrUnexpectedAPIResponse, err)
-	}
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return true, nil
-	case http.StatusNotFound:
-		return false, nil
-	case http.StatusTooManyRequests:
-		return false, fmt.Errorf("%w for 'github'", ErrRateLimited)
-	default:
-		return false, fmt.Errorf("%w: got %d response when getting branch", ErrUnexpectedAPIResponse, resp.StatusCode)
-	}
-}
-
 // NewGithubClient creates a client for the github API, if the token is empty
 // then requests are unauthenticated.
 func NewGithubClient(token string) *GithubClient {

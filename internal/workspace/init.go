@@ -132,7 +132,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 	}
 
 	if branch != "" {
-		exists, err := m.githubClient.BranchExists(repo.Owner, repo.Name, branch)
+		exists, err := m.git.RemoteBranchExists(repo.CloneURL, branch)
 
 		if err != nil {
 			return usererr.Wrap(err, fmt.Sprintf("Failed to check branch '%s' of %s/%s!", branch, repo.Owner, repo.Name))
@@ -141,12 +141,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 		if !exists {
 			return usererr.Wrap(
 				fmt.Errorf("%w: %s/%s: '%s'", ErrBranchNotFound, repo.Owner, repo.Name, branch),
-				fmt.Sprintf(
-					"Could not find branch '%s' in %s/%s (if the repository is private, set GH_TOKEN or GITHUB_TOKEN)",
-					branch,
-					repo.Owner,
-					repo.Name,
-				),
+				fmt.Sprintf("Could not find branch '%s' in %s/%s!", branch, repo.Owner, repo.Name),
 			)
 		}
 	}

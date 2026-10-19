@@ -31,7 +31,6 @@ type git interface {
 
 type githubClient interface {
 	GetFileContents(owner string, repo string, path string, ref string) ([]byte, bool, error)
-	BranchExists(owner string, repo string, branch string) (bool, error)
 }
 
 type workspaceRepo interface {
