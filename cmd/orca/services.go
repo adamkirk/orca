@@ -337,6 +337,7 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Logl))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Status))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Pull))
+	b.Handle(lazyResult(s.GetGit, (*git.Manager).BranchChoices))
 
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Initialise))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Switch))
@@ -411,6 +412,9 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	})
 	ec.Target(func(cmd git.PushCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
+	})
+	ec.Target(func(query git.BranchChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: true}
 	})
 	ec.Target(func(query git.StatusQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}

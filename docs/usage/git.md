@@ -29,6 +29,8 @@ $ orca g push --all
 - If exactly one branch matches, it's checked out. A branch that's only on a remote is checked out as a new local branch tracking it, as `git checkout feature/x` does.
 - If several match, you choose from a list, with local branches first.
 
+With [shell completion](./shell_completion.md) installed, `orca g co <tab>` offers the same branches, in the same order.
+
 Remote branches are read from what git already knows, without fetching, so a branch pushed since you last fetched won't be found. Run [`orca g pull`](../CLI/orca_g_pull.md), or `git fetch`, first.
 
 | Flag | Effect |

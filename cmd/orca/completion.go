@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/stack"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
@@ -108,4 +109,26 @@ func completeExtensions(cmd *cobra.Command, _ []string, toComplete string) ([]co
 	})
 
 	return toCompletions(choices, err, toComplete)
+}
+
+// completeBranches offers the branches in the repository, local ones first, so
+// the shell is told to keep their order.
+func completeBranches(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	// The branches of one repository would be misleading for all of them
+	if all, _ := cmd.Flags().GetBool("all"); all {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Not every command completing branches has these
+	ws, _ := cmd.Flags().GetString("workspace")
+	project, _ := cmd.Flags().GetString("project")
+
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), git.BranchChoicesQuery{
+		Workspace: ws,
+		Project:   project,
+	})
+
+	completions, directive := toCompletions(choices, err, toComplete)
+
+	return completions, directive | cobra.ShellCompDirectiveKeepOrder
 }

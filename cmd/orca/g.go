@@ -32,7 +32,8 @@ refs, without fetching.`,
 
 		return nil
 	},
-	RunE: handleErrors(handleGCo),
+	ValidArgsFunction: firstArgOnly(completeBranches),
+	RunE:              handleErrors(handleGCo),
 }
 
 var gBranchesCmd = &cobra.Command{
@@ -40,7 +41,8 @@ var gBranchesCmd = &cobra.Command{
 	Short: "Searches branches for the git repository.",
 	Long: `Will search for any branches containing the given search term (case-insensitive).
 If no search term is given, will list all branches.`,
-	RunE: handleErrors(handleGBranches),
+	ValidArgsFunction: firstArgOnly(completeBranches),
+	RunE:              handleErrors(handleGBranches),
 }
 
 var gPullCmd = &cobra.Command{
