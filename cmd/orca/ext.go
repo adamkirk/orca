@@ -6,9 +6,10 @@ import (
 )
 
 var extCmd = &cobra.Command{
-	Use:   "ext",
-	Short: "Execute a custom extension, defined in the project configuration",
-	RunE:  handleErrors(handleExt),
+	Use:               "ext <extension> [args...]",
+	Short:             "Execute a custom extension, defined in the project configuration",
+	ValidArgsFunction: firstArgOnly(completeExtensions),
+	RunE:              handleErrors(handleExt),
 }
 
 func init() {

@@ -13,9 +13,11 @@ extensions:
     command: php artisan
     defaultArgs:
       - list
+    description: Run an artisan command
   - name: composer
     service: app
     command: composer
+    description: Run composer
 ```
 
 Run them with [`orca ext`](../CLI/orca_ext.md), from inside the project (or with `-p`):
@@ -29,6 +31,7 @@ $ orca ext composer require foo/bar # composer require foo/bar
 - Arguments after the extension's name are appended to its `command`. If you don't give any, its `defaultArgs` are used instead.
 - Like [`orca exec`](./environments.md#running-commands-in-a-service), the command runs in the existing container if the service is running, or in a throwaway one (`docker compose run --rm`) if not.
 - `command` is split on spaces, so it can't contain quoted arguments. Use a script in the container for anything more involved.
+- With [shell completion](./shell_completion.md) installed, `orca ext <tab>` lists the project's extensions, with their `description`s.
 
 !!! note
     `service` is required: extensions that run on your machine rather than in a container aren't supported yet. Extensions also accept a `chdir` property, but it isn't used yet.

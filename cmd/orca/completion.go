@@ -100,3 +100,12 @@ func completeServices(cmd *cobra.Command, _ []string, toComplete string) ([]cobr
 
 	return toCompletions(choices, err, toComplete)
 }
+
+func completeExtensions(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ExtensionChoicesQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+		Project:   mustGetString(cmd, "project"),
+	})
+
+	return toCompletions(choices, err, toComplete)
+}

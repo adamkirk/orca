@@ -42,6 +42,8 @@ type Extension struct {
 	Command     string
 	Service     string
 	DefaultArgs []string
+	// Shown next to the name when completing it
+	Description string
 }
 
 type EnvFile struct {

@@ -45,3 +45,36 @@ func (m *Manager) ServiceChoices(ctx context.Context, _ ServiceChoicesQuery) ([]
 
 	return choices, nil
 }
+
+// ExtensionChoicesQuery lists the project's extensions, with their descriptions.
+type ExtensionChoicesQuery struct {
+	bus.Returns[[]workspace.Choice]
+
+	Workspace string
+	Project   string
+}
+
+func (ExtensionChoicesQuery) MessageName() string {
+	return "choices.extensions"
+}
+
+func (m *Manager) ExtensionChoices(ctx context.Context, _ ExtensionChoicesQuery) ([]workspace.Choice, error) {
+	execCtx, err := workspace.ExecutionContextFrom(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if execCtx.Project == nil {
+		return nil, ErrNoProject
+	}
+
+	exts := execCtx.Project.Config.Extensions
+	choices := make([]workspace.Choice, len(exts))
+
+	for i, ext := range exts {
+		choices[i] = workspace.Choice{Value: ext.Name, Description: ext.Description}
+	}
+
+	return choices, nil
+}
