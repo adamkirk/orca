@@ -23,8 +23,7 @@ Then install orca's script:
 === "Linux"
 
     ```sh
-    $ mkdir -p ~/.local/share/bash-completion/completions
-    $ orca completion bash > ~/.local/share/bash-completion/completions/orca
+    $ mkdir -p ~/.local/share/bash-completion/completions && orca completion bash > ~/.local/share/bash-completion/completions/orca
     ```
 
     This installs it for your user only. To install it for everyone, write it to `/etc/bash_completion.d/orca` instead, with `sudo`.
@@ -37,11 +36,10 @@ Write the script to a directory on your `fpath`, as a file named `_orca`. Which 
 
 === "oh-my-zsh"
 
-    oh-my-zsh already adds `$ZSH_CUSTOM/completions` to your `fpath`, and enables completion:
+    oh-my-zsh already adds `$ZSH_CUSTOM/completions` to your `fpath`, and enables completion, but doesn't create the directory:
 
     ```sh
-    $ mkdir -p "$ZSH_CUSTOM/completions"
-    $ orca completion zsh > "$ZSH_CUSTOM/completions/_orca"
+    $ mkdir -p "$ZSH_CUSTOM/completions" && orca completion zsh > "$ZSH_CUSTOM/completions/_orca"
     ```
 
 === "Homebrew's zsh"
@@ -57,8 +55,7 @@ Write the script to a directory on your `fpath`, as a file named `_orca`. Which 
     Create a directory for your own completions:
 
     ```sh
-    $ mkdir -p ~/.zsh/completions
-    $ orca completion zsh > ~/.zsh/completions/_orca
+    $ mkdir -p ~/.zsh/completions && orca completion zsh > ~/.zsh/completions/_orca
     ```
 
     Then add it to your `fpath` in `~/.zshrc`, before completion is enabled. If `~/.zshrc` doesn't already run `compinit`, add that too:
@@ -81,7 +78,7 @@ $ rm -f ~/.zcompdump*
 fish loads completions from `~/.config/fish/completions` automatically:
 
 ```sh
-$ orca completion fish > ~/.config/fish/completions/orca.fish
+$ mkdir -p ~/.config/fish/completions && orca completion fish > ~/.config/fish/completions/orca.fish
 ```
 
 New shells pick it up straight away. To try it in the current shell, run `orca completion fish | source`.
