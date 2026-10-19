@@ -96,6 +96,13 @@ func getOverlayDir() string {
 	return fmt.Sprintf("%s/.orca/overlays", homeDir)
 }
 
+func getPluginCommandCachePath() string {
+	homeDir, err := os.UserHomeDir()
+	checkErr(err)
+
+	return fmt.Sprintf("%s/.orca/cache/plugin-commands.json", homeDir)
+}
+
 func getTLSDir() string {
 	homeDir, err := os.UserHomeDir()
 	checkErr(err)
@@ -268,6 +275,7 @@ func run() int {
 	// Starting every plugin would make completion far too slow
 	if !completing {
 		registerPluginCommands(svcContainer.GetConfig())
+		cachePluginCommands()
 	}
 
 	err := rootCmd.Execute()

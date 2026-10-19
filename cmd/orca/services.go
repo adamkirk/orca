@@ -56,7 +56,8 @@ type services struct {
 
 	provision *provision.Manager
 
-	pluginManager *plugins.Manager
+	pluginManager      *plugins.Manager
+	pluginCommandCache *plugins.CommandCache
 
 	bus *bus.Bus
 
@@ -302,6 +303,16 @@ func (s *services) GetPluginManager() *plugins.Manager {
 	s.pluginManager = plugins.NewManager(slog.Default())
 
 	return s.pluginManager
+}
+
+func (s *services) GetPluginCommandCache() *plugins.CommandCache {
+	if s.pluginCommandCache != nil {
+		return s.pluginCommandCache
+	}
+
+	s.pluginCommandCache = plugins.NewCommandCache(s.GetFs(), getPluginCommandCachePath())
+
+	return s.pluginCommandCache
 }
 
 // GetBus returns the command bus, with every command handler registered.

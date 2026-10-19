@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/config"
@@ -54,6 +55,17 @@ func registerPluginCommands(cfg *config.Config) {
 
 			rootCmd.AddCommand(cmd)
 		}
+	}
+}
+
+// cachePluginCommands stores the commands of the plugins that loaded, so that
+// completion can offer them without starting the plugins. It's only a cache,
+// so failing to write it never fails the command.
+func cachePluginCommands() {
+	err := svcContainer.GetPluginCommandCache().Write(svcContainer.GetPluginManager().Loaded())
+
+	if err != nil {
+		slog.Debug("failed to write the plugin command cache", "err", err)
 	}
 }
 

@@ -29,10 +29,20 @@ sequenceDiagram
 1. **Discovery.** Before running any command, orca looks for executable files named `orca-plugin-*` in its [plugin directories](./index.md#plugin-directories).
 2. **Start-up.** Orca starts each plugin, completes the go-plugin handshake, and calls `GetCommands`. A plugin that fails any of this is logged and skipped.
 3. **Registration.** Each command spec becomes a cobra command, with its flags, and is added to orca's root command, unless its name clashes with an existing command. Orca's commands are all registered first, so built-in commands always win.
-4. **Execution.** If the user ran a plugin command, orca calls `Execute` with the command's path, arguments and flag values. The plugin's stdout and stderr are streamed back and written to the terminal.
-5. **Shutdown.** Orca stops every plugin before it exits. This happens through a single exit path (see `cmd/orca/exit.go`), and also covers fatal errors and SIGINT, SIGTERM and SIGHUP.
+4. **Caching.** The command specs of every plugin that loaded are written to `~/.orca/cache/plugin-commands.json`, replacing what was there. See [The command cache](#the-command-cache).
+5. **Execution.** If the user ran a plugin command, orca calls `Execute` with the command's path, arguments and flag values. The plugin's stdout and stderr are streamed back and written to the terminal.
+6. **Shutdown.** Orca stops every plugin before it exits. This happens through a single exit path (see `cmd/orca/exit.go`), and also covers fatal errors and SIGINT, SIGTERM and SIGHUP.
 
 Plugins built with the Go SDK also watch their parent process. If orca dies without stopping them (SIGKILL, or a SIGPIPE from `orca ... | head`), the plugin is re-parented, notices its parent process ID has changed, and exits within 250ms.
+
+## The command cache
+
+[Shell completion](../usage/shell_completion.md) runs orca on every <kbd>Tab</kbd>, and starting every plugin each time would be far too slow. So orca keeps a cache of the commands plugins provide, at `~/.orca/cache/plugin-commands.json`, and completion reads that instead.
+
+- It's rewritten every time orca runs a command, from whatever plugins loaded. So a plugin's commands are added once orca has run with it installed, and removed once orca has run without it.
+- Completion never writes it, or starts plugins.
+- Failing to write it never fails the command. It's logged at debug level.
+- It's only a cache, so it's always safe to delete.
 
 ## The protocol
 
@@ -88,7 +98,7 @@ go-plugin's [guide to writing plugins in other languages](https://github.com/has
 | ---- | -------- |
 | `proto/orca/plugin/v1/plugin.proto` | The gRPC protocol. |
 | `pkg/plugin/` | The public Go SDK: the `CommandProvider` interface, `Serve`, the handshake and the gRPC adapters. |
-| `internal/plugins/` | Orca's side: discovery, starting and stopping plugins, and turning command specs into cobra commands. |
-| `cmd/orca/plugins.go` | Registers plugin commands, and the `orca plugins` commands. |
+| `internal/plugins/` | Orca's side: discovery, starting and stopping plugins, turning command specs into cobra commands, and the command cache. |
+| `cmd/orca/plugins.go` | Registers plugin commands, writes the command cache, and the `orca plugins` commands. |
 | `cmd/orca/exit.go` | The exit and signal handling that makes sure plugins are always stopped. |
 | `examples/plugins/hello/` | A minimal example plugin. |
