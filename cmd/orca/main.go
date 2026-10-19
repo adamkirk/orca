@@ -272,8 +272,11 @@ func run() int {
 	// and before plugin commands are added, as their arguments may be files
 	noFileCompletions(rootCmd)
 
-	// Starting every plugin would make completion far too slow
-	if !completing {
+	// Starting every plugin would make completion far too slow, so it uses
+	// the commands they provided the last time orca ran
+	if completing {
+		registerCachedPluginCommands()
+	} else {
 		registerPluginCommands(svcContainer.GetConfig())
 		cachePluginCommands()
 	}

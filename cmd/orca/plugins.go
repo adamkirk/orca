@@ -47,14 +47,43 @@ func registerPluginCommands(cfg *config.Config) {
 	}
 
 	for _, p := range mgr.Load(paths) {
-		for _, cmd := range plugins.BuildCommands(p.Provider, p.Commands) {
-			if cmd.Name() == "" || commandNameTaken(cmd.Name()) {
-				logger.Warn("plugin command conflicts with an existing command, skipping", "plugin", p.Name, "command", cmd.Name())
-				continue
-			}
+		addPluginCommands(p.Name, plugins.BuildCommands(p.Provider, p.Commands), logger)
+	}
+}
 
-			rootCmd.AddCommand(cmd)
+// registerCachedPluginCommands adds the commands from the plugin command cache
+// to the root command, for completion, which can't start the plugins. They're
+// only completed, never run, so they have no plugin to call.
+func registerCachedPluginCommands() {
+	cached, err := svcContainer.GetPluginCommandCache().Read()
+
+	if err != nil {
+		slog.Debug("failed to read the plugin command cache", "err", err)
+		return
+	}
+
+	for _, p := range cached {
+		cmds := plugins.BuildCommands(nil, p.Commands)
+
+		// Shown next to the command, so it's clear where it comes from
+		for _, cmd := range cmds {
+			cmd.Short = strings.TrimSpace(fmt.Sprintf("%s (plugin: %s)", cmd.Short, p.Name))
 		}
+
+		addPluginCommands(p.Name, cmds, slog.Default())
+	}
+}
+
+// addPluginCommands adds a plugin's commands to the root command, skipping any
+// whose name is already taken.
+func addPluginCommands(plugin string, cmds []*cobra.Command, logger *slog.Logger) {
+	for _, cmd := range cmds {
+		if cmd.Name() == "" || commandNameTaken(cmd.Name()) {
+			logger.Warn("plugin command conflicts with an existing command, skipping", "plugin", plugin, "command", cmd.Name())
+			continue
+		}
+
+		rootCmd.AddCommand(cmd)
 	}
 }
 

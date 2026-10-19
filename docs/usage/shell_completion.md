@@ -101,6 +101,7 @@ orca completion powershell | Out-String | Invoke-Expression
 | `orca <tab>` | Commands, with a short description in zsh, fish and PowerShell. |
 | `orca g <tab>` | Subcommands of a command group. |
 | `orca up --<tab>` | The command's flags. |
+| `orca <tab>`, for [plugin](../plugins/index.md) commands | Plugin commands, with `(plugin: <name>)` after their description, and their subcommands and flags. See below. |
 | `-w <tab>`, on any command with it | Your registered workspaces. |
 | `-p <tab>`, on any command with it | The projects in the workspace, worked out as the command would: from `-w`, if you've typed it, otherwise from your current directory, or your current workspace. See [Choosing a workspace and project](../getting_started/context.md). |
 | `orca ws switch <tab>` | Your registered workspaces. |
@@ -108,9 +109,19 @@ orca completion powershell | Out-String | Invoke-Expression
 | `orca g co <tab>`, `orca g branches <tab>` | Branches in the repository, apart from the current one: local branches first, then those only on a remote, without the remote's name (`feature/x`, not `origin/feature/x`). Remote branches are those git already knows about, so fetch to see new ones. With `--all`, nothing is offered, as the branches of one repository would be misleading for every project. |
 | `orca exec <tab>`, `orca logs <tab>` | The services in the project's compose file (`composeFiles.primary`). Docker isn't needed, so this works when it isn't running. |
 
-Anything that can't be worked out, such as projects outside any workspace, or with an invalid config, offers nothing. File names are never offered, as orca's arguments are always names.
+Anything that can't be worked out, such as projects outside any workspace, or with an invalid config, offers nothing. Orca's own commands never offer file names for their arguments, as they're always names.
 
 To show only names, without descriptions, generate the script with `--no-descriptions`, e.g. `orca completion zsh --no-descriptions`.
+
+### Plugin commands
+
+Starting every plugin on each <kbd>Tab</kbd> would be far too slow, so completion uses the commands plugins provided the last time orca ran a command, which it keeps in `~/.orca/cache/plugin-commands.json`. So:
+
+- After installing, updating or removing a plugin, run any orca command, such as `orca plugins ls`, to update what completes.
+- On a fresh install, plugin commands aren't offered until orca has run a command once.
+- Only command and flag names complete, not the values plugins expect for their arguments.
+
+The cache is safe to delete. See [The command cache](../plugins/how_it_works.md#the-command-cache).
 
 ## Troubleshooting
 
