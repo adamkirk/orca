@@ -56,3 +56,57 @@ func Test_HandleGroup(t *testing.T) {
 		})
 	}
 }
+
+func Test_ParsePersistentFlagsEarly(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "before the command",
+			args: []string{"--log-level", "debug", "up"},
+			want: "debug",
+		},
+		{
+			name: "after the command",
+			args: []string{"up", "--log-level", "debug"},
+			want: "debug",
+		},
+		{
+			name: "before exec's service",
+			args: []string{"exec", "--log-level", "debug", "app", "sh"},
+			want: "debug",
+		},
+		{
+			name: "after exec's service, it's the container's",
+			args: []string{"exec", "app", "sh", "--log-level", "debug"},
+		},
+		{
+			name: "a plugin's command, which doesn't exist yet",
+			args: []string{"some-plugin", "--plugin-flag", "--log-level", "debug"},
+			want: "debug",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flag := rootCmd.PersistentFlags().Lookup("log-level")
+			before := flag.Value.String()
+
+			t.Cleanup(func() {
+				flag.Value.Set(before)
+				flag.Changed = false
+			})
+
+			parsePersistentFlagsEarly(tt.args)
+
+			if tt.want == "" {
+				assert.False(t, flag.Changed)
+				return
+			}
+
+			assert.Equal(t, tt.want, flag.Value.String())
+		})
+	}
+}

@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -12,7 +11,6 @@ import (
 	"github.com/adamkirk/orca/internal/logging"
 	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -205,20 +203,28 @@ func bootstrap() {
 	slog.SetDefault(slog.New(h))
 }
 
-// parsePersistentFlagsEarly parses the root command's persistent flags (e.g.
-// --log-level) before cobra does, ignoring any other flags. Plugins are loaded
-// before cobra runs, and they need to respect these.
-func parsePersistentFlagsEarly() {
-	fs := pflag.NewFlagSet("early", pflag.ContinueOnError)
-	fs.ParseErrorsAllowlist.UnknownFlags = true
-	fs.SetOutput(io.Discard)
-	fs.Usage = func() {}
+// parsePersistentFlagsEarly parses the flags (e.g. --log-level) before cobra
+// does. Plugins are loaded before cobra runs, and they need to respect these.
+//
+// They're parsed as cobra will parse them, for the command being run, so that
+// arguments passed through to a container, as exec and ext do, aren't mistaken
+// for orca's own flags. Plugin commands don't exist yet, so a line running one
+// is parsed as the root command's.
+func parsePersistentFlagsEarly(args []string) {
+	cmd, flagArgs, err := rootCmd.Find(args)
 
-	// Shares the underlying flags, so parsed values land on the root command
-	fs.AddFlagSet(rootCmd.PersistentFlags())
+	if err != nil {
+		cmd, flagArgs = rootCmd, args
+	}
+
+	// A plugin command's flags don't exist yet, so are skipped. Restored after,
+	// so cobra still rejects unknown flags.
+	allowlist := cmd.FParseErrWhitelist
+	cmd.FParseErrWhitelist.UnknownFlags = true
+	defer func() { cmd.FParseErrWhitelist = allowlist }()
 
 	// Any real errors will be reported when cobra parses the flags
-	_ = fs.Parse(os.Args[1:])
+	_ = cmd.ParseFlags(flagArgs)
 }
 
 func main() {
@@ -231,7 +237,7 @@ func main() {
 func run() int {
 	// Configure logging from flags/env before plugins are started, cobra will run
 	// bootstrap again once it has parsed the flags itself.
-	parsePersistentFlagsEarly()
+	parsePersistentFlagsEarly(os.Args[1:])
 	bootstrap()
 
 	stopHandlingSignals := handleSignals()
