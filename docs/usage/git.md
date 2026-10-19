@@ -24,15 +24,17 @@ $ orca g push --all
 
 ### Checking out branches
 
-`orca g co` searches branch names for the text you give it (case-insensitive):
+`orca g co` searches branch names for the text you give it. It searches your local branches first, then branches that only exist on a remote, by their name without the remote (`feature/x`, not `origin/feature/x`):
 
-- If exactly one branch matches, it's checked out.
-- If several match, you choose from a list.
+- If exactly one branch matches, it's checked out. A branch that's only on a remote is checked out as a new local branch tracking it, as `git checkout feature/x` does.
+- If several match, you choose from a list, with local branches first.
+
+Remote branches are read from what git already knows, without fetching, so a branch pushed since you last fetched won't be found. Run [`orca g pull`](../CLI/orca_g_pull.md), or `git fetch`, first.
 
 | Flag | Effect |
 | ---- | ------ |
 | `-a`, `--all` | Check out the branch in every project in the workspace. |
-| `-b`, `--create` | Create the branch if it doesn't exist. Can't be used with `--pull`. |
+| `-b`, `--create` | Create the branch if it doesn't exist, locally or on a remote. Can't be used with `--pull`. |
 | `--pull` | Pull the branch from `origin` after checking it out. |
 | `-r`, `--rebase` | With `--pull`, pull with `--rebase`. |
 

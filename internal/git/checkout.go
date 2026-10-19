@@ -43,11 +43,12 @@ func (m *Manager) performCheckout(dir string, branch string, create bool) error 
 }
 
 // checkoutOrCreate checks out the branch matching name exactly, creating it if
-// it doesn't already exist
+// it doesn't already exist, locally or on a remote
 func (m *Manager) checkoutOrCreate(dir string, name string) error {
 	branches, err := m.searchBranches(searchBranchesOpts{
-		Search: name,
-		Dir:    dir,
+		Search:        name,
+		Dir:           dir,
+		IncludeRemote: true,
 	})
 
 	if err != nil {
@@ -87,8 +88,9 @@ func (m *Manager) checkoutFromDirectory(branch string, dir string) error {
 	}
 
 	branches, err := m.searchBranches(searchBranchesOpts{
-		Search: branch,
-		Dir:    dir,
+		Search:        branch,
+		Dir:           dir,
+		IncludeRemote: true,
 	})
 
 	if err != nil {
@@ -138,8 +140,9 @@ func (m *Manager) chooseBranchesForAllProjects(search string, execCtx workspace.
 
 	for _, p := range execCtx.Workspace.Projects {
 		branches, err := m.searchBranches(searchBranchesOpts{
-			Search: search,
-			Dir:    p.ProjectDir,
+			Search:        search,
+			Dir:           p.ProjectDir,
+			IncludeRemote: true,
 		})
 
 		if err != nil {
