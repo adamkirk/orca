@@ -101,6 +101,11 @@ orca completion powershell | Out-String | Invoke-Expression
 | `orca <tab>` | Commands, with a short description in zsh, fish and PowerShell. |
 | `orca g <tab>` | Subcommands of a command group. |
 | `orca up --<tab>` | The command's flags. |
+| `-w <tab>`, on any command with it | Your registered workspaces. |
+| `-p <tab>`, on any command with it | The projects in the workspace, worked out as the command would: from `-w`, if you've typed it, otherwise from your current directory, or your current workspace. See [Choosing a workspace and project](../getting_started/context.md). |
+| `orca ws switch <tab>` | Your registered workspaces. |
+
+Anything that can't be worked out, such as projects outside any workspace, or with an invalid config, offers nothing. File names are never offered, as orca's arguments are always names.
 
 To show only names, without descriptions, generate the script with `--no-descriptions`, e.g. `orca completion zsh --no-descriptions`.
 

@@ -28,6 +28,7 @@ cmd/orca/            the only package that knows about cobra, flags and wiring
   services.go        builds services lazily; GetBus() registers every handler,
                      GetExecutionContextMiddleware() registers every execution target
   exit.go            handleErrors/reportError (the one place errors are shown), exit/checkErr
+  completion.go      shell completion: completing mode, and the functions that dispatch ...ChoicesQuery
 internal/
   workspace/         domain: model, config loading (Repository), Resolver, ExecutionContext
                      and its middleware, and the `ws` commands (Manager)
@@ -54,6 +55,11 @@ Every command that does something goes through the bus. The exceptions are ones 
    - Register a target in `GetExecutionContextMiddleware()`. Set `WorkspaceOptional` if the command still works outside a workspace, as the git commands do.
    - Only call `ExecutionContextFrom` in the handler itself, and pass `execCtx` explicitly to helpers. Don't add other context values for workspace or project data.
 5. **CLI:** the cobra handler, wrapped in `handleErrors`, only reads flags and dispatches a message *literal*: `_, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.XCommand{...})`.
+6. **Completion:** every argument or flag whose value comes from config or the environment (service, extension, branch names...) completes:
+   - Add an `XChoicesQuery` returning `[]workspace.Choice` (`bus.Returns[[]workspace.Choice]`, `MessageName` `"choices.x"`) in the feature package. Register it with `b.Handle(lazyResult(...))`, plus a target if it reads the execution context.
+   - In `cmd/orca/completion.go`, add a `completeX` that dispatches it as a literal and returns `toCompletions(choices, err, toComplete)`. Use it as the command's `ValidArgsFunction` (`firstArgOnly(...)` for the first argument only), or with `RegisterFlagCompletionFunc`.
+   - `-w` and `-p` already complete. File names are never offered, `noFileCompletions` turns them off for any command without its own completion.
+   - Completion runs on every <tab>, so it must be fast and silent: never start plugins, print, prompt or log. Add the new values to "What completes" in `docs/usage/shell_completion.md`.
 
 `cmd/orca/services_test.go` checks the wiring, and fails if a dispatched message has no handler, or a handler reading the execution context has no target. That only works if messages are dispatched as literals, and `ExecutionContextFrom` is only called in handlers.
 

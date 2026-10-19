@@ -341,6 +341,8 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ShowCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
+	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).WorkspaceChoices))
+	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).ProjectChoices))
 
 	b.HandleVoid(lazy(s.GetTLS, (*tls.Manager).Generate))
 
@@ -411,6 +413,9 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(cmd tls.GenerateCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
+	ec.Target(func(query workspace.ProjectChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace}
+	})
 
 	s.executionContextMiddleware = ec
 
@@ -422,6 +427,13 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 // built.
 func lazy[S any, M bus.Message[bus.Void]](get func() S, method func(S, context.Context, M) error) func(context.Context, M) error {
 	return func(ctx context.Context, msg M) error {
+		return method(get(), ctx, msg)
+	}
+}
+
+// lazyResult is lazy, for messages that return a result.
+func lazyResult[S any, M bus.Message[R], R any](get func() S, method func(S, context.Context, M) (R, error)) func(context.Context, M) (R, error) {
+	return func(ctx context.Context, msg M) (R, error) {
 		return method(get(), ctx, msg)
 	}
 }

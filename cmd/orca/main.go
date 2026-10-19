@@ -175,6 +175,7 @@ func addServiceOption(cmd *cobra.Command, required bool) {
 
 func addWorkspaceOption(cmd *cobra.Command, required bool) {
 	cmd.Flags().StringP("workspace", "w", "", "The name of the workspace to run this command for.")
+	checkErr(cmd.RegisterFlagCompletionFunc("workspace", completeWorkspaces))
 
 	if required {
 		cmd.MarkFlagRequired("workspace")
@@ -183,6 +184,7 @@ func addWorkspaceOption(cmd *cobra.Command, required bool) {
 
 func addProjectOption(cmd *cobra.Command) {
 	cmd.Flags().StringP("project", "p", "", "The name of the project within the workspace to run this command for.")
+	checkErr(cmd.RegisterFlagCompletionFunc("project", completeProjects))
 }
 
 func bootstrap() {
@@ -197,6 +199,12 @@ func bootstrap() {
 
 	err := viper.Unmarshal(cfg.GetRuntimeConfig())
 	checkErr(err)
+
+	// Anything logged would be shown in the middle of the user's command line
+	if completing {
+		slog.SetDefault(slog.New(slog.DiscardHandler))
+		return
+	}
 
 	h, err := logging.NewSlogHandler(cfg)
 
@@ -239,8 +247,14 @@ func run() int {
 	// Deferred after the above, so signals are still handled while plugins stop
 	defer svcContainer.KillPlugins()
 
-	// Done here rather than in init, so all builtin commands are registered first
-	registerPluginCommands(svcContainer.GetConfig())
+	// Done here rather than in init, so all builtin commands are registered first,
+	// and before plugin commands are added, as their arguments may be files
+	noFileCompletions(rootCmd)
+
+	// Starting every plugin would make completion far too slow
+	if !completing {
+		registerPluginCommands(svcContainer.GetConfig())
+	}
 
 	err := rootCmd.Execute()
 
