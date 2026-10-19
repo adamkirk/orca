@@ -33,6 +33,10 @@ func handleExec(cmd *cobra.Command, args []string) error {
 		return usererr.Wrap(fmt.Errorf("%w: 'service' at position 1", ErrArgumentRequired), "Must supply a service!")
 	}
 
+	if err := rejectDashesAfterName(args, "service"); err != nil {
+		return err
+	}
+
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
 

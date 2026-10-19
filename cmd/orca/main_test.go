@@ -110,3 +110,30 @@ func Test_ParsePersistentFlagsEarly(t *testing.T) {
 		})
 	}
 }
+
+func Test_RejectDashesAfterName(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+	}{
+		{name: "just the name", args: []string{"app"}},
+		{name: "a command", args: []string{"app", "ls", "-la"}},
+		{name: "dashes later on are the command's", args: []string{"app", "ls", "--", "-la"}},
+		{name: "dashes straight after the name", args: []string{"app", "--", "ls"}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := rejectDashesAfterName(tt.args, "service")
+
+			if !tt.wantErr {
+				assert.NoError(t, err)
+				return
+			}
+
+			assert.ErrorIs(t, err, ErrUnneededDashes)
+			assert.EqualError(t, err, "Everything after the service is passed on as it is, flags included, so drop the '--'!: unneeded '--' after the service")
+		})
+	}
+}

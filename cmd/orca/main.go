@@ -10,6 +10,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/logging"
 	"github.com/adamkirk/orca/internal/plugins"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -175,6 +176,21 @@ func addWorkspaceOption(cmd *cobra.Command, required bool) {
 func addProjectOption(cmd *cobra.Command) {
 	cmd.Flags().StringP("project", "p", "", "The name of the project within the workspace to run this command for.")
 	checkErr(cmd.RegisterFlagCompletionFunc("project", completeProjects))
+}
+
+// rejectDashesAfterName fails if args[0], the name of what the rest of args are
+// passed to (e.g. exec's service), is followed by '--'. Everything after the
+// name is passed through as it is, including a '--', which used to be needed
+// before flags, and would now be passed on as an argument.
+func rejectDashesAfterName(args []string, what string) error {
+	if len(args) < 2 || args[1] != "--" {
+		return nil
+	}
+
+	return usererr.Wrap(
+		fmt.Errorf("%w after the %s", ErrUnneededDashes, what),
+		fmt.Sprintf("Everything after the %s is passed on as it is, flags included, so drop the '--'!", what),
+	)
 }
 
 func bootstrap() {
