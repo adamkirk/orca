@@ -26,9 +26,12 @@ Run them with [`orca ext`](../CLI/orca_ext.md), from inside the project (or with
 $ orca ext artisan                  # php artisan list
 $ orca ext artisan migrate          # php artisan migrate
 $ orca ext composer require foo/bar # composer require foo/bar
+$ orca ext artisan migrate --force  # php artisan migrate --force
 ```
 
 - Arguments after the extension's name are appended to its `command`. If you don't give any, its `defaultArgs` are used instead.
+- Everything after the extension's name is passed on as it is, flags included, like `--force` above. So orca's own flags, like `-p`, must come before the name: `orca ext -p api artisan migrate`. This is the same as [`orca exec`](./environments.md#running-commands-in-a-service) and its service.
+- Earlier versions needed `--` before flags meant for the extension. Drop it: a `--` straight after the name is an error.
 - Like [`orca exec`](./environments.md#running-commands-in-a-service), the command runs in the existing container if the service is running, or in a throwaway one (`docker compose run --rm`) if not.
 - `command` is split on spaces, so it can't contain quoted arguments. Use a script in the container for anything more involved.
 - With [shell completion](./shell_completion.md) installed, `orca ext <tab>` lists the project's extensions, with their `description`s.

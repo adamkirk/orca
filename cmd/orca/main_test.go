@@ -83,6 +83,10 @@ func Test_ParsePersistentFlagsEarly(t *testing.T) {
 			args: []string{"exec", "app", "sh", "--log-level", "debug"},
 		},
 		{
+			name: "after ext's name, it's the extension's",
+			args: []string{"ext", "artisan", "--log-level", "debug"},
+		},
+		{
 			name: "a plugin's command, which doesn't exist yet",
 			args: []string{"some-plugin", "--plugin-flag", "--log-level", "debug"},
 			want: "debug",
