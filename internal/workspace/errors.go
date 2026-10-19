@@ -20,6 +20,7 @@ var (
 	ErrWorkspaceConfigNotFound     = errors.New("workspace config not found")
 	ErrConfigIsNotValidYAML        = errors.New("config is not valid yaml")
 	ErrUnknownExtension            = errors.New("unknown extension")
+	ErrBranchNotFound              = errors.New("branch not found")
 )
 
 type InvalidWorkspaceConfigError struct {

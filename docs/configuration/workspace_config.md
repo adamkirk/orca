@@ -52,12 +52,15 @@ projects:
 
 ### Repository
 
-Each project needs exactly one of these:
+Each project needs exactly one of `ssh` or `self`:
 
 | Property | Description |
 | -------- | ----------- |
 | `ssh` | The git URL to clone the project from, e.g. `git@github.com:acme/api.git`. |
 | `self` | Set to `true` if the project is the repository containing this workspace config. Nothing is cloned; the repository's root is registered as the project's directory. |
+| `branch` | Optional. The branch to check out when the project is first cloned. Without it, the remote's default branch is used. Can't be combined with `self`. |
+
+`branch` is only used for the first clone. Orca never switches an existing clone to another branch, or warns that it's on a different branch from its config: which branch you're on is up to you. It's meant for trying orca out on a branch before merging, see [Trying orca on a branch](../guides/setting_up_a_workspace.md#trying-orca-on-a-branch).
 
 ## Validation
 
@@ -66,6 +69,7 @@ Orca checks the workspace config whenever it loads it, so every command fails if
 - `name` is set.
 - Every project has a `name`.
 - Every project has exactly one of `repository.ssh` or `repository.self`.
+- No project has both `repository.self` and `repository.branch`.
 
 Every problem found is listed, e.g.:
 

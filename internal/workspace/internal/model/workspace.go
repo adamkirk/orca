@@ -6,6 +6,10 @@ type WorkspaceProjectRepository struct {
 	// Self signifies that this project is actually the same repo as the workspace
 	// itself.
 	Self bool
+
+	// Branch is checked out when the project is first cloned, instead of the
+	// remote's default branch.
+	Branch string
 }
 
 type WorkspaceProjectConfig struct {

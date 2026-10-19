@@ -299,6 +299,32 @@ Add it to `orca.workspace.yaml` and commit it. Everyone else then pulls the chan
 $ orca ws clone -p new-project
 ```
 
+### Trying orca on a branch
+
+To try the setup before merging it into every repository's main branch, commit the config to a branch instead. Put `orca.workspace.yaml` on, say, an `orca-adoption` branch of the workspace repository, add each `orca.project.yaml` on an `orca-adoption` branch of its project, and give those projects a `branch` in the workspace config:
+
+```yaml
+projects:
+  - name: api
+    repository:
+      ssh: git@github.com:acme/api.git
+      branch: orca-adoption
+```
+
+Colleagues then initialise from that branch:
+
+```sh
+$ orca ws init --repo acme/local-env --branch orca-adoption
+```
+
+The workspace repository is cloned on `orca-adoption`, and so is every project with a `branch`. Projects without one are cloned on their default branch. If any of the branches is missing, orca lists them and stops before cloning anything.
+
+Once everything is merged, remove the `branch` properties from the config. Existing clones stay on whatever branch they're on, as orca only uses `branch` for the first clone, so everyone moves to main as they would for any other branch:
+
+```sh
+$ orca g co main --all
+```
+
 ### A single repository
 
 A workspace can have just one project. A repository with its own `orca.workspace.yaml` (with one `self: true` project) and `orca.project.yaml` still gets you hosts, TLS, extensions and the rest. Leave the network overlay disabled, as there's nothing to connect it to.

@@ -24,7 +24,8 @@ var wsInitCmd = &cobra.Command{
 	Short: "Initialises a workspace.",
 	Long: `Initialises a new workspace with orca. Either a local directory or a GitHub repository can be supplied.
 When using a local directory, will locate an orca workspace config and clone the relevant projects.
-When using a GitHub repository (--repo owner/repo), will check the workspace config on its default branch is valid, clone the repository over SSH into the target, and then clone any other required repositories based on that workspace config.
+When using a GitHub repository (--repo owner/repo), will check the workspace config on its default branch (or --branch) is valid, clone the repository over SSH into the target, and then clone any other required repositories based on that workspace config.
+Projects with a 'repository.branch' in the workspace config are cloned on that branch. Every branch is checked before anything is cloned.
 Set GH_TOKEN or GITHUB_TOKEN to use a private repository.`,
 	RunE: handleErrors(handleWsInit),
 }
@@ -63,7 +64,9 @@ func init() {
 	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects. Defaults to the current directory when --repo is used.")
 	wsInitCmd.Flags().StringP("repo", "r", "", "The github repository to clone the workspace from, in the format 'owner/repo'.")
 	wsInitCmd.Flags().StringP("config", "c", workspace.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
+	wsInitCmd.Flags().StringP("branch", "b", "", "The branch of the --repo repository to read the workspace config from, and to clone. Defaults to the repository's default branch. Each project's branch comes from its 'repository.branch'.")
 	wsInitCmd.MarkFlagsMutuallyExclusive("repo", "source")
+	wsInitCmd.MarkFlagsMutuallyExclusive("branch", "source")
 	wsCmd.AddCommand(wsInitCmd)
 
 	wsCmd.AddCommand(wsLsCmd)
@@ -97,6 +100,7 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 	target := mustGetString(cmd, "target")
 	repo := mustGetString(cmd, "repo")
 	configFile := mustGetString(cmd, "config")
+	branch := mustGetString(cmd, "branch")
 
 	// When cloning the workspace repo, it lands inside the target alongside the
 	// other projects, so default to the current directory rather than its parent
@@ -106,6 +110,7 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 
 	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.InitialiseCommand{
 		SourceRepo:        repo,
+		Branch:            branch,
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,

@@ -24,12 +24,14 @@ type config interface {
 
 type git interface {
 	GetRepositoryRootFromPath(path string) (string, error)
-	Clone(repoUrl string, target string, dir string) error
+	Clone(repoUrl string, target string, branch string) error
+	RemoteBranchExists(repoUrl string, branch string) (bool, error)
 	DirectoryHasOrigin(dir string, origin string) (bool, error)
 }
 
 type githubClient interface {
-	GetFileContents(owner string, repo string, path string) ([]byte, bool, error)
+	GetFileContents(owner string, repo string, path string, ref string) ([]byte, bool, error)
+	BranchExists(owner string, repo string, branch string) (bool, error)
 }
 
 type workspaceRepo interface {

@@ -21,6 +21,10 @@ type InitialiseCommand struct {
 	// config from, takes precedence over SourceDirectory
 	SourceRepo string
 
+	// The branch of SourceRepo to read the workspace config from, and to
+	// clone. Empty means the repository's default branch.
+	Branch string
+
 	SourceDirectory   string
 	WorkspaceFileName string
 	Into              string
@@ -32,13 +36,26 @@ func (InitialiseCommand) MessageName() string {
 
 func (m *Manager) Initialise(ctx context.Context, cmd InitialiseCommand) error {
 	if cmd.SourceRepo != "" {
-		return m.InitialiseFromRemoteRepo(ctx, cmd.SourceRepo, cmd.WorkspaceFileName, cmd.Into)
+		return m.InitialiseFromRemoteRepo(ctx, cmd.SourceRepo, cmd.Branch, cmd.WorkspaceFileName, cmd.Into)
 	}
 
-	return m.InitialiseFromLocalDirectory(ctx, cmd.SourceDirectory, cmd.WorkspaceFileName, cmd.Into)
+	if cmd.Branch != "" {
+		return usererr.Wrap(
+			fmt.Errorf("%w to 'ws.init': 'branch' can only be used with 'repo'", ErrInvalidInput),
+			"A branch can only be given when initialising from a repository (--repo)!",
+		)
+	}
+
+	return m.InitialiseFromLocalDirectory(ctx, cmd.SourceDirectory, cmd.WorkspaceFileName, cmd.Into, false)
 }
 
-func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, workspaceFile string, into string) error {
+// InitialiseFromLocalDirectory registers the workspace config in dir, and
+// clones its projects. branchesChecked skips checking the projects' branches
+// exist, when the caller has already done so.
+//
+// The branches are checked before the workspace is registered, so a missing
+// branch leaves nothing behind.
+func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, workspaceFile string, into string, branchesChecked bool) error {
 	workspaceConfigPath := fmt.Sprintf("%s/%s", dir, workspaceFile)
 	exists, err := afero.Exists(m.fs, workspaceConfigPath)
 
@@ -59,6 +76,12 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return usererr.Wrap(err, fmt.Sprintf("Failed to load workspace config '%s'!", workspaceConfigPath))
 	}
 
+	if !branchesChecked {
+		if err := m.checkWorkspaceBranches(cfg, into); err != nil {
+			return err
+		}
+	}
+
 	err = m.configManager.AddWorkspace(workspaceConfigPath, cfg.Name)
 
 	if err != nil {
@@ -69,7 +92,7 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return usererr.Wrap(err, "Failed to register workspace, this is likely a bug!")
 	}
 
-	if err := m.clone(cfg.Name, "", into); err != nil {
+	if err := m.clone(cfg.Name, "", into, true); err != nil {
 		return err
 	}
 
@@ -101,18 +124,38 @@ func parseGithubRepo(input string) (githubRepo, error) {
 	}, nil
 }
 
-func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string, workspaceFile string, into string) error {
+func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string, branch string, workspaceFile string, into string) error {
 	repo, err := parseGithubRepo(repoName)
 
 	if err != nil {
 		return usererr.Wrap(err, fmt.Sprintf("Invalid repository '%s', expected the format 'owner/repo'!", repoName))
 	}
 
+	if branch != "" {
+		exists, err := m.githubClient.BranchExists(repo.Owner, repo.Name, branch)
+
+		if err != nil {
+			return usererr.Wrap(err, fmt.Sprintf("Failed to check branch '%s' of %s/%s!", branch, repo.Owner, repo.Name))
+		}
+
+		if !exists {
+			return usererr.Wrap(
+				fmt.Errorf("%w: %s/%s: '%s'", ErrBranchNotFound, repo.Owner, repo.Name, branch),
+				fmt.Sprintf(
+					"Could not find branch '%s' in %s/%s (if the repository is private, set GH_TOKEN or GITHUB_TOKEN)",
+					branch,
+					repo.Owner,
+					repo.Name,
+				),
+			)
+		}
+	}
+
 	workspaceFilePath := strings.TrimPrefix(path.Clean(workspaceFile), "/")
 
-	m.tui.Info(fmt.Sprintf("Checking for '%s' in %s/%s...", workspaceFilePath, repo.Owner, repo.Name))
+	m.tui.Info(fmt.Sprintf("Checking for '%s' in %s/%s%s...", workspaceFilePath, repo.Owner, repo.Name, branchSuffix(branch)))
 
-	contents, exists, err := m.githubClient.GetFileContents(repo.Owner, repo.Name, workspaceFilePath)
+	contents, exists, err := m.githubClient.GetFileContents(repo.Owner, repo.Name, workspaceFilePath, branch)
 
 	if err != nil {
 		return usererr.Wrap(err, "Failed to check repository for workspace config!")
@@ -130,7 +173,9 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 		)
 	}
 
-	if _, err := m.workspaceRepo.ParseUnconfiguredWorkspace(contents, workspaceFilePath); err != nil {
+	wsCfg, err := m.workspaceRepo.ParseUnconfiguredWorkspace(contents, workspaceFilePath)
+
+	if err != nil {
 		return usererr.Wrap(
 			err,
 			fmt.Sprintf("Workspace config '%s' in %s/%s is invalid!", workspaceFilePath, repo.Owner, repo.Name),
@@ -156,15 +201,42 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 		)
 	}
 
+	// Check the projects' branches before cloning anything, including the
+	// workspace repo itself
+	if err := m.checkWorkspaceBranches(wsCfg, into); err != nil {
+		return err
+	}
+
 	if err := m.fs.MkdirAll(into, 0755); err != nil {
 		return usererr.Wrap(err, "Failed to create target directory!")
 	}
 
-	m.tui.Info(fmt.Sprintf("Cloning '%s' into %s...", repo.CloneURL, cloneDir))
+	m.tui.Info(fmt.Sprintf("Cloning '%s'%s into %s...", repo.CloneURL, branchSuffix(branch), cloneDir))
 
-	if err := m.git.Clone(repo.CloneURL, cloneDir, ""); err != nil {
+	if err := m.git.Clone(repo.CloneURL, cloneDir, branch); err != nil {
 		return usererr.Wrap(err, "Clone failed!")
 	}
 
-	return m.InitialiseFromLocalDirectory(ctx, cloneDir, workspaceFile, into)
+	return m.InitialiseFromLocalDirectory(ctx, cloneDir, workspaceFile, into, true)
+}
+
+// checkWorkspaceBranches checks the branches of a workspace's projects before
+// it's registered, as clone would for the projects cloned into the target.
+func (m *Manager) checkWorkspaceBranches(cfg *UnconfiguredWorkspace, into string) error {
+	targetDir, err := filepath.Abs(into)
+
+	if err != nil {
+		return usererr.Wrap(err, "Failed to determine target directory!")
+	}
+
+	targets := make([]cloneTarget, len(cfg.Projects))
+
+	for i, p := range cfg.Projects {
+		targets[i] = cloneTarget{
+			project: Project{Name: p.Name, RepositoryConfig: p.RepositoryConfig},
+			into:    fmt.Sprintf("%s/%s", targetDir, p.Name),
+		}
+	}
+
+	return m.checkBranches(targets)
 }

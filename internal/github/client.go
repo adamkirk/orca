@@ -51,9 +51,16 @@ func (c *GithubClient) VersionExists(owner string, repo string, v string) (bool,
 }
 
 // GetFileContents fetches the contents of the file at the given path on the
-// repository's default branch. The bool is false if the file does not exist.
-func (c *GithubClient) GetFileContents(owner string, repo string, path string) ([]byte, bool, error) {
-	file, _, resp, err := c.client.Repositories.GetContents(context.TODO(), owner, repo, path, nil)
+// given ref, or the repository's default branch when it's empty. The bool is
+// false if the file does not exist.
+func (c *GithubClient) GetFileContents(owner string, repo string, path string, ref string) ([]byte, bool, error) {
+	file, _, resp, err := c.client.Repositories.GetContents(
+		context.TODO(),
+		owner,
+		repo,
+		path,
+		&github.RepositoryContentGetOptions{Ref: ref},
+	)
 
 	var rateLimitErr *github.RateLimitError
 	var abuseRateLimitErr *github.AbuseRateLimitError
@@ -86,6 +93,33 @@ func (c *GithubClient) GetFileContents(owner string, repo string, path string) (
 		return nil, false, fmt.Errorf("%w for 'github'", ErrRateLimited)
 	default:
 		return nil, false, fmt.Errorf("%w: got %d response when getting file contents", ErrUnexpectedAPIResponse, resp.StatusCode)
+	}
+}
+
+// BranchExists checks whether the branch exists in the repository.
+func (c *GithubClient) BranchExists(owner string, repo string, branch string) (bool, error) {
+	_, resp, err := c.client.Repositories.GetBranch(context.TODO(), owner, repo, branch, 1)
+
+	var rateLimitErr *github.RateLimitError
+	var abuseRateLimitErr *github.AbuseRateLimitError
+
+	if errors.As(err, &rateLimitErr) || errors.As(err, &abuseRateLimitErr) {
+		return false, fmt.Errorf("%w for 'github'", ErrRateLimited)
+	}
+
+	if resp == nil {
+		return false, fmt.Errorf("%w: error from client: %w", ErrUnexpectedAPIResponse, err)
+	}
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	case http.StatusTooManyRequests:
+		return false, fmt.Errorf("%w for 'github'", ErrRateLimited)
+	default:
+		return false, fmt.Errorf("%w: got %d response when getting branch", ErrUnexpectedAPIResponse, resp.StatusCode)
 	}
 }
 
