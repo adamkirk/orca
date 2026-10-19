@@ -274,7 +274,7 @@ $ orca logs                 # follow the API's logs
 $ orca ext migrate          # runs "./bin/migrate up" in the app service
 $ orca ext migrate down 1   # runs "./bin/migrate down 1" instead
 $ orca ext test             # runs the tests
-$ orca exec -s app sh       # a shell in the app container
+$ orca exec app sh          # a shell in the app container
 $ orca restart              # restart just the API
 
 $ orca g status --all       # current branch and changes, in every project

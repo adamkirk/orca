@@ -165,14 +165,6 @@ func init() {
 	checkErr(viper.BindPFlag("logging.format", rootCmd.PersistentFlags().Lookup("log-format")))
 }
 
-func addServiceOption(cmd *cobra.Command, required bool) {
-	cmd.Flags().StringP("service", "s", "", "The service within the project to exec into")
-
-	if required {
-		cmd.MarkFlagRequired("service")
-	}
-}
-
 func addWorkspaceOption(cmd *cobra.Command, required bool) {
 	cmd.Flags().StringP("workspace", "w", "", "The name of the workspace to run this command for.")
 	checkErr(cmd.RegisterFlagCompletionFunc("workspace", completeWorkspaces))

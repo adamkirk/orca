@@ -57,7 +57,7 @@ Then, from inside any project's directory, commands apply to just that project:
 ```sh
 $ cd ~/code/acme/api
 $ orca logs              # follow this project's logs
-$ orca exec -s app sh    # open a shell in its "app" service
+$ orca exec app sh       # open a shell in its "app" service
 $ orca restart           # restart just this project
 ```
 

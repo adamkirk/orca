@@ -40,7 +40,7 @@ For a whole workspace, `up` starts projects in dependency order (projects before
 
 ```sh
 $ orca logs               # every service in this project
-$ orca logs -s app        # just the "app" service
+$ orca logs app           # just the "app" service
 ```
 
 [`orca logs`](../CLI/orca_logs.md) follows a single project's logs (`docker compose logs -f`). Press Ctrl-C to stop.
@@ -48,8 +48,9 @@ $ orca logs -s app        # just the "app" service
 ## Running commands in a service
 
 ```sh
-$ orca exec -s app sh
-$ orca exec -s app -- ls -la /app
+$ orca exec app sh
+$ orca exec app ls -la /app
+$ orca exec -p web app sh     # orca's flags go before the service
 ```
 
 [`orca exec`](../CLI/orca_exec.md) runs a command in one of a project's services:
@@ -57,6 +58,8 @@ $ orca exec -s app -- ls -la /app
 - If the service is running, it uses `docker compose exec`.
 - If it isn't, it uses `docker compose run --rm`, starting a throwaway container.
 
-Either way you get an interactive terminal. Put `--` before the command if it has flags of its own, so orca doesn't try to parse them.
+Either way you get an interactive terminal. Everything after the service is passed to the container as it is, flags included, so orca's own flags, like `-p`, must come before the service. This is how `docker compose exec` works too.
+
+Earlier versions took the service with `-s`, e.g. `orca exec -s app sh`. Drop the `-s`: `orca exec app sh`.
 
 For commands you run often, define an [extension](./extensions_and_provisioners.md#extensions) instead.
