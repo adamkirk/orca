@@ -6,11 +6,12 @@ import (
 )
 
 var logsCmd = &cobra.Command{
-	Use:   "logs [service]",
-	Short: `Tails logs from docker compose project.`,
-	Long:  `Basically a 'docker compose logs -f', you may supply a service to tail specifically.`,
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  handleErrors(handleLogs),
+	Use:               "logs [service]",
+	Short:             `Tails logs from docker compose project.`,
+	Long:              `Basically a 'docker compose logs -f', you may supply a service to tail specifically.`,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: firstArgOnly(completeServices),
+	RunE:              handleErrors(handleLogs),
 }
 
 func init() {

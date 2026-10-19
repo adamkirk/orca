@@ -104,6 +104,7 @@ orca completion powershell | Out-String | Invoke-Expression
 | `-w <tab>`, on any command with it | Your registered workspaces. |
 | `-p <tab>`, on any command with it | The projects in the workspace, worked out as the command would: from `-w`, if you've typed it, otherwise from your current directory, or your current workspace. See [Choosing a workspace and project](../getting_started/context.md). |
 | `orca ws switch <tab>` | Your registered workspaces. |
+| `orca exec <tab>`, `orca logs <tab>` | The services in the project's compose file (`composeFiles.primary`). Docker isn't needed, so this works when it isn't running. |
 
 Anything that can't be worked out, such as projects outside any workspace, or with an invalid config, offers nothing. File names are never offered, as orca's arguments are always names.
 

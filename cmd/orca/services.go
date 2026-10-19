@@ -248,6 +248,7 @@ func (s *services) GetCompose() *docker.Compose {
 		s.GetExecutor(),
 		s.GetTui(),
 		s.GetComposeOverlayGenerator(),
+		s.GetComposeParser(),
 	)
 
 	return s.compose
@@ -325,6 +326,7 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
+	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
@@ -386,6 +388,9 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
 	ec.Target(func(query stack.ShowComposeCommandQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(query stack.ServiceChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
 	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {

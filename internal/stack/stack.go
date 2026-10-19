@@ -14,6 +14,7 @@ type compose interface {
 	DoesSvcExist(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
 	IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
 	Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
+	ServiceNames(p *workspace.Project) ([]string, error)
 }
 
 // Manager handles the commands that run a workspace or project's compose stack.

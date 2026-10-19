@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/adamkirk/orca/internal/stack"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -86,6 +87,15 @@ func completeProjects(cmd *cobra.Command, _ []string, toComplete string) ([]cobr
 
 	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectChoicesQuery{
 		Workspace: ws,
+	})
+
+	return toCompletions(choices, err, toComplete)
+}
+
+func completeServices(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), stack.ServiceChoicesQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+		Project:   mustGetString(cmd, "project"),
 	})
 
 	return toCompletions(choices, err, toComplete)

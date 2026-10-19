@@ -16,7 +16,8 @@ running, or 'docker compose run --rm' if it isn't.
 
 Everything after the service is passed to the container as it is, so orca's own flags
 must come before it, e.g. 'orca exec -p api app ls -la'.`,
-	RunE: handleErrors(handleExec),
+	ValidArgsFunction: firstArgOnly(completeServices),
+	RunE:              handleErrors(handleExec),
 }
 
 func init() {
