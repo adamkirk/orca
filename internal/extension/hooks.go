@@ -75,3 +75,46 @@ func (m *Manager) runPlanned(runs []planned) error {
 
 	return nil
 }
+
+// SetUp runs the clone.post hook of each of the projects, then the workspace's
+// init.post, if asked for. Everything they'll run is asked about first, in one
+// go, and it all stops at the first extension that fails.
+func (m *Manager) SetUp(ws *workspace.Workspace, opts workspace.SetUpOpts) error {
+	runs := []planned{}
+
+	for _, name := range opts.Projects {
+		project, err := ws.GetProject(name)
+
+		if err != nil {
+			return err
+		}
+
+		projectRuns, err := planHook(ws, project, workspace.HookClonePost)
+
+		if err != nil {
+			return err
+		}
+
+		runs = append(runs, projectRuns...)
+	}
+
+	if opts.Initialise {
+		wsRuns, err := planHook(ws, nil, workspace.HookInitPost)
+
+		if err != nil {
+			return err
+		}
+
+		runs = append(runs, wsRuns...)
+	}
+
+	if len(runs) == 0 {
+		return nil
+	}
+
+	if err := m.confirm(runs, opts.Yes); err != nil {
+		return err
+	}
+
+	return m.runPlanned(runs)
+}

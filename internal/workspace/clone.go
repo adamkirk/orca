@@ -21,6 +21,13 @@ type CloneCommand struct {
 	WorkspaceName string
 	Project       string
 	To            string
+
+	// Clone without running the projects' clone.post hooks
+	SkipHooks bool
+
+	// Run every extension the hooks run without asking, and without recording
+	// them as trusted
+	Yes bool
 }
 
 func (CloneCommand) MessageName() string {
@@ -348,7 +355,31 @@ func (m *Manager) Clone(ctx context.Context, cmd CloneCommand) error {
 		return err
 	}
 
-	return m.clone(execCtx.Workspace.Name, cmd.Project, cmd.To, false)
+	_, err = m.clone(execCtx.Workspace.Name, cloneOpts{
+		project:   cmd.Project,
+		to:        cmd.To,
+		skipHooks: cmd.SkipHooks,
+		yes:       cmd.Yes,
+	})
+
+	return err
+}
+
+type cloneOpts struct {
+	// Only clone this project, rather than all of them
+	project string
+
+	// The directory to clone into, rather than next to the workspace's repo
+	to string
+
+	// Skip checking the projects' branches exist, when the caller has already
+	branchesChecked bool
+
+	skipHooks bool
+	yes       bool
+
+	// Run the workspace's init.post, after the projects' clone.post
+	initialise bool
 }
 
 // branchSuffix describes the branch in progress messages, it's empty for the
@@ -370,44 +401,45 @@ func typeSuffix(project Project) string {
 	return ""
 }
 
-// clone clones the given project, or all projects when it's empty, for the
-// workspace into the given directory. branchesChecked skips checking the
-// projects' branches exist, when the caller has already done so.
-func (m *Manager) clone(wsName string, project string, to string, branchesChecked bool) error {
+// clone clones the project, or all of them, that aren't cloned yet, then runs
+// the clone.post hook of every one it was asked for, cloned now or before, as
+// re-running the hooks is how a setup that failed part-way is finished. It
+// returns the workspace, loaded again so it has the projects that were cloned.
+func (m *Manager) clone(wsName string, opts cloneOpts) (*Workspace, error) {
 	wsMeta, err := m.configManager.GetWorkspaceMeta(wsName)
 
 	if err != nil {
 		if errors.Is(err, ErrUnknownWorkspace) {
-			return usererr.Wrap(err, fmt.Sprintf("Unknown workspace: %s", wsName))
+			return nil, usererr.Wrap(err, fmt.Sprintf("Unknown workspace: %s", wsName))
 		}
 
-		return err
+		return nil, err
 	}
 
 	cfg, err := m.workspaceRepo.Load(wsMeta.Name)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	targetDir, err := m.getCloneTargetDir(wsMeta.Path, to)
+	targetDir, err := m.getCloneTargetDir(wsMeta.Path, opts.to)
 
 	if err != nil {
-		return usererr.Wrap(err, "Failed to determine target directory!")
+		return nil, usererr.Wrap(err, "Failed to determine target directory!")
 	}
 
 	var targets []cloneTarget
 
-	if project != "" {
-		project, err := cfg.GetProject(project)
+	if opts.project != "" {
+		project, err := cfg.GetProject(opts.project)
 
 		if err != nil {
-			return usererr.Wrap(err, "Failed to clone specified project!")
+			return nil, usererr.Wrap(err, "Failed to clone specified project!")
 		}
 
 		into := targetDir
 
-		if to == "" {
+		if opts.to == "" {
 			into = cloneDir(targetDir, *project)
 		}
 
@@ -420,13 +452,13 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 		targets, err = cloneOrder(targets)
 
 		if err != nil {
-			return usererr.Wrap(err, "Failed to work out the order to clone projects in!")
+			return nil, usererr.Wrap(err, "Failed to work out the order to clone projects in!")
 		}
 	}
 
-	if !branchesChecked {
+	if !opts.branchesChecked {
 		if err := m.checkBranches(targets); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -439,16 +471,16 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 	}
 
 	if err := m.checkEnclosingCloned(targets, all); err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, t := range targets {
 		if err := m.cloneSingleProject(cfg, t.project, t.into); err != nil {
 			if errors.Is(err, ErrDirectoryAlreadyExists) {
-				return usererr.Wrap(err, "Cannot clone into the given directory, it already exists!")
+				return nil, usererr.Wrap(err, "Cannot clone into the given directory, it already exists!")
 			}
 
-			return err
+			return nil, err
 		}
 
 		if !t.project.RepositoryConfig.Self {
@@ -456,5 +488,22 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 		}
 	}
 
-	return nil
+	// Again, so the projects just cloned have their own config, and so hooks
+	ws, err := m.workspaceRepo.Load(wsMeta.Name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.skipHooks {
+		return ws, nil
+	}
+
+	names := make([]string, len(targets))
+
+	for i, t := range targets {
+		names[i] = t.project.Name
+	}
+
+	return ws, m.hooks.SetUp(ws, SetUpOpts{Projects: names, Initialise: opts.initialise, Yes: opts.yes})
 }

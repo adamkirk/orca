@@ -97,7 +97,7 @@ func TestDisable(t *testing.T) {
 			stack := &stubStack{running: tt.running, err: tt.stackErr}
 			ctx := WithExecutionContext(context.Background(), ExecutionContext{Workspace: newWorkspace()})
 
-			err := NewManager(fs, tui, nil, nil, nil, nil, stack).Disable(ctx, tt.cmd)
+			err := NewManager(fs, tui, nil, nil, nil, nil, stack, nil).Disable(ctx, tt.cmd)
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantStopped, stack.stopped)
@@ -117,7 +117,7 @@ func TestDisable(t *testing.T) {
 		stack := &stubStack{running: map[string]bool{"web": true}}
 		ctx := WithExecutionContext(context.Background(), ExecutionContext{Workspace: newWorkspace()})
 
-		err := NewManager(fs, &recordingTUI{}, nil, nil, nil, nil, stack).Disable(ctx, DisableCommand{Projects: []string{"web", "typo"}})
+		err := NewManager(fs, &recordingTUI{}, nil, nil, nil, nil, stack, nil).Disable(ctx, DisableCommand{Projects: []string{"web", "typo"}})
 
 		assert.ErrorIs(t, err, ErrUnknownProject)
 		assert.Empty(t, stack.stopped)

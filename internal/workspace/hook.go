@@ -75,6 +75,18 @@ type HookEntry struct {
 	Scope HookScope
 }
 
+// SetUpOpts are the hooks to run once projects are cloned.
+type SetUpOpts struct {
+	// Each project's clone.post runs, in this order
+	Projects []string
+
+	// Then the workspace's init.post
+	Initialise bool
+
+	// Run every extension without asking, and without recording them as trusted
+	Yes bool
+}
+
 // hooksConfig is what a config's hooks can reference, for checking them.
 type hooksConfig struct {
 	// What the config is, for messages, e.g. "a library project"

@@ -4,8 +4,10 @@ A hook runs [extensions](./extensions.md) around an operation, such as after a p
 
 A hook only lists extensions by name. What each one does is defined in `extensions`, so every step can also be run on its own with [`orca ext`](../CLI/orca_ext.md), and a step used by several hooks is defined once.
 
+`clone.post` and `init.post` run automatically, from [`orca ws init`](./workspaces.md#from-a-local-directory) and [`orca ws clone`](./workspaces.md#cloning-projects), and any hook can be [run by hand](#running-a-hook-by-hand).
+
 !!! note "Not implemented yet"
-    So far, hooks only run when you run them with [`orca hooks run`](#running-a-hook-by-hand). Running them automatically, from `ws init`, `ws clone`, `up` and `down`, is coming soon.
+    `up` and `down` hooks can be defined, and run by hand, but `orca up` and `orca down` don't run them yet.
 
 ## Defining hooks
 
@@ -60,8 +62,8 @@ An entry can't define an extension itself. Define it in `extensions`, and refere
 
 | Hook | Defined in | Runs |
 | ---- | ---------- | ---- |
-| `clone.post` | project | After the project is cloned, in its directory. |
-| `init.post` | workspace | After every project is cloned, and their `clone.post` hooks have run. |
+| `clone.post` | project | After the project is cloned, in its directory, by `ws init` and `ws clone`. Again whenever they're re-run. |
+| `init.post` | workspace | At the end of `ws init`, after every project is cloned, and their `clone.post` hooks have run. |
 | `up.pre`, `up.post` | workspace, project | Before and after the stack, or the project, is started. |
 | `down.pre`, `down.post` | workspace, project | Before and after it's stopped. |
 
@@ -98,7 +100,7 @@ To run one step of a hook on its own, run its extension with `orca ext`, e.g. `o
 
 ## When a step fails
 
-A hook stops at the first extension that fails, and the command exits non-zero. Nothing after it runs, but nothing that's already been done is undone. The error says which step it was, and how to run it again:
+A hook stops at the first extension that fails, and the command exits non-zero. Nothing after it runs, not even the other projects' hooks during `ws init`, but nothing that's already been done is undone: every project stays cloned. The error says which step it was, and how to run it again:
 
 ```
 api clone.post: install-deps
@@ -111,7 +113,7 @@ Once it's fixed, re-run it with 'orca ext -w acme -p api install-deps', or the w
 
 ## Write extensions that are safe to run again
 
-Orca doesn't record which hooks have run. Running a hook again runs every step in it again, and that's the way to finish a setup that failed part-way. So every extension a hook runs must be safe to run more than once:
+Orca doesn't record which hooks have run. Running `ws init` or `ws clone` again runs every project's hooks again, and that's the way to finish a setup that failed part-way. So every extension a hook runs must be safe to run more than once:
 
 - `syncFile` and `symlink` already are: they leave an existing file, or a link that's already right, alone.
 - For a `command`, orca can't tell, so it's up to you. Prefer commands that are naturally safe to repeat (`npm ci`, `composer install`, `make`), and make scripts check whether their work is already done, e.g. a seed script that skips a database that's already seeded.

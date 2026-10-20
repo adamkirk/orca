@@ -26,6 +26,10 @@ type ran struct {
 	dir     string
 	service string
 	exec    bool
+
+	// Whether a service command's output was captured, rather than it using the
+	// terminal
+	captured bool
 }
 
 type stubExecutor struct {
@@ -79,13 +83,13 @@ func (c stubCompose) IsSvcRunning(*workspace.Workspace, *workspace.Project, stri
 	return c.running, nil
 }
 
-func (c stubCompose) Run(_ *workspace.Workspace, p *workspace.Project, service string, args []string) error {
-	*c.ran = append(*c.ran, ran{name: args[0], args: args[1:], dir: p.ProjectDir, service: service})
+func (c stubCompose) Run(_ *workspace.Workspace, p *workspace.Project, service string, args []string, output io.Writer) error {
+	*c.ran = append(*c.ran, ran{name: args[0], args: args[1:], dir: p.ProjectDir, service: service, captured: output != nil})
 	return nil
 }
 
-func (c stubCompose) Exec(_ *workspace.Workspace, p *workspace.Project, service string, args []string) error {
-	*c.ran = append(*c.ran, ran{name: args[0], args: args[1:], dir: p.ProjectDir, service: service, exec: true})
+func (c stubCompose) Exec(_ *workspace.Workspace, p *workspace.Project, service string, args []string, output io.Writer) error {
+	*c.ran = append(*c.ran, ran{name: args[0], args: args[1:], dir: p.ProjectDir, service: service, exec: true, captured: output != nil})
 	return nil
 }
 

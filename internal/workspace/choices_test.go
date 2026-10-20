@@ -42,7 +42,7 @@ func TestWorkspaceChoices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewManager(afero.NewMemMapFs(), stubTUI{}, stubConfig{workspaces: tt.workspaces}, nil, nil, nil, nil)
+			m := NewManager(afero.NewMemMapFs(), stubTUI{}, stubConfig{workspaces: tt.workspaces}, nil, nil, nil, nil, nil)
 
 			got, err := m.WorkspaceChoices(context.Background(), WorkspaceChoicesQuery{})
 
@@ -53,7 +53,7 @@ func TestWorkspaceChoices(t *testing.T) {
 }
 
 func TestProjectChoices(t *testing.T) {
-	m := NewManager(afero.NewMemMapFs(), stubTUI{}, nil, nil, nil, nil, nil)
+	m := NewManager(afero.NewMemMapFs(), stubTUI{}, nil, nil, nil, nil, nil, nil)
 
 	t.Run("the projects in the context's workspace", func(t *testing.T) {
 		ws := &Workspace{Projects: []Project{{Name: "api"}, {Name: "web"}}}

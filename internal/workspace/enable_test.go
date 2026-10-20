@@ -25,7 +25,7 @@ func TestEnable(t *testing.T) {
 		require.NoError(t, afero.WriteFile(fs, prefsPath, []byte("projects:\n  web:\n    enabled: false\n  admin:\n    enabled: false\n"), 0644))
 		tui := &recordingTUI{}
 
-		err := NewManager(fs, tui, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{Projects: []string{"web", "admin", "web"}})
+		err := NewManager(fs, tui, nil, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{Projects: []string{"web", "admin", "web"}})
 
 		require.NoError(t, err)
 		assert.Equal(t, []string{"Enabled web and admin."}, tui.lines)
@@ -39,7 +39,7 @@ func TestEnable(t *testing.T) {
 	t.Run("unknown projects change nothing", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 
-		err := NewManager(fs, &recordingTUI{}, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{Projects: []string{"web", "typo", "other"}})
+		err := NewManager(fs, &recordingTUI{}, nil, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{Projects: []string{"web", "typo", "other"}})
 
 		assert.ErrorIs(t, err, ErrUnknownProject)
 		assert.EqualError(t, err, "Workspace 'acme' has no project typo or other!: unknown project: typo, other")
@@ -49,7 +49,7 @@ func TestEnable(t *testing.T) {
 	})
 
 	t.Run("no projects", func(t *testing.T) {
-		err := NewManager(afero.NewMemMapFs(), &recordingTUI{}, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{})
+		err := NewManager(afero.NewMemMapFs(), &recordingTUI{}, nil, nil, nil, nil, nil, nil).Enable(newCtx(), EnableCommand{})
 
 		assert.ErrorIs(t, err, ErrInvalidInput)
 	})

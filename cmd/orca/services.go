@@ -188,6 +188,7 @@ func (s *services) GetWorkspaceManager() *workspace.Manager {
 		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
 		s.GetCompose(),
+		s.GetExtension(),
 	)
 
 	return s.workspaceManager

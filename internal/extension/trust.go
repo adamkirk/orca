@@ -186,9 +186,9 @@ func (m *Manager) showUntrusted(pending []untrusted) {
 	}
 
 	if allChanged {
-		m.tui.Info("These extensions have changed since you trusted them:", "")
+		m.tui.Info("", "These extensions have changed since you trusted them:", "")
 	} else {
-		m.tui.Info("This workspace wants to run the following on your machine:", "")
+		m.tui.Info("", "This workspace wants to run the following on your machine:", "")
 	}
 
 	m.tui.Table([]string{"Defined in", "Hook", "Extension", "Type", "Runs"}, rows)

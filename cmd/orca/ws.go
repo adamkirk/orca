@@ -27,7 +27,13 @@ var wsInitCmd = &cobra.Command{
 When using a local directory, will locate an orca workspace config and clone the relevant projects.
 When using a GitHub repository (--repo owner/repo), will check the workspace config on its default branch (or --branch) is valid, clone the repository over SSH into the target, and then clone any other required repositories based on that workspace config.
 Projects with a 'repository.branch' in the workspace config are cloned on that branch. Every branch is checked before anything is cloned.
-Set GH_TOKEN or GITHUB_TOKEN to use a private repository.`,
+Set GH_TOKEN or GITHUB_TOKEN to use a private repository.
+
+Once everything is cloned, each project's clone.post hook runs, then the workspace's init.post. Any extension
+they run that you haven't trusted yet is listed first, and you're asked to trust it.
+
+It's safe to run again, in the same place: it clones whatever's missing, and runs every hook again. That's
+how to finish a setup that failed part-way, once the problem is fixed.`,
 	RunE: handleErrors(handleWsInit),
 }
 
@@ -54,7 +60,9 @@ var wsCloneCmd = &cobra.Command{
 	Short: "Clones all the projects required for this workspace.",
 	Long: `Based on the workspace config will clone each repository required by the workspace.
 This can be run at any time to clone any projects that have not already been cloned.
-The project option allows you to clone only a specific project.`,
+The project option allows you to clone only a specific project.
+
+Then the clone.post hook of every project it was asked for runs, whether it was cloned now or before.`,
 	RunE: handleErrors(handleWsClone),
 }
 
@@ -103,6 +111,7 @@ func init() {
 	wsInitCmd.Flags().StringP("repo", "r", "", "The github repository to clone the workspace from, in the format 'owner/repo'.")
 	wsInitCmd.Flags().StringP("config", "c", workspace.DefaultWorkspaceFileName, "The name of the workspace config file within the source.")
 	wsInitCmd.Flags().StringP("branch", "b", "", "The branch of the --repo repository to read the workspace config from, and to clone. Defaults to the repository's default branch. Each project's branch comes from its 'repository.branch'.")
+	addHookFlags(wsInitCmd)
 	wsInitCmd.MarkFlagsMutuallyExclusive("repo", "source")
 	wsInitCmd.MarkFlagsMutuallyExclusive("branch", "source")
 	wsCmd.AddCommand(wsInitCmd)
@@ -114,6 +123,7 @@ func init() {
 	wsCloneCmd.Flags().StringP("target", "t", "", `The directory in which to clone the project(s). 
 If multiple projects are being cloned, then it will place them in {target}/{repo name}.
 If a single project is being clone then it will be cloned into {target}.`)
+	addHookFlags(wsCloneCmd)
 	addWorkspaceOption(wsCloneCmd, false)
 	addProjectOption(wsCloneCmd)
 	wsCmd.AddCommand(wsCloneCmd)
@@ -152,6 +162,8 @@ func handleWsInit(cmd *cobra.Command, args []string) error {
 		SourceDirectory:   source,
 		WorkspaceFileName: configFile,
 		Into:              target,
+		SkipHooks:         mustGetBool(cmd, "skip-hooks"),
+		Yes:               mustGetBool(cmd, "yes"),
 	})
 
 	return err
@@ -184,6 +196,8 @@ func handleWsClone(cmd *cobra.Command, args []string) error {
 		WorkspaceName: name,
 		Project:       projectName,
 		To:            to,
+		SkipHooks:     mustGetBool(cmd, "skip-hooks"),
+		Yes:           mustGetBool(cmd, "yes"),
 	})
 
 	return err
@@ -222,4 +236,10 @@ func handleWsDisable(cmd *cobra.Command, args []string) error {
 	})
 
 	return err
+}
+
+// addHookFlags adds the flags for commands that run hooks after cloning.
+func addHookFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("skip-hooks", false, "Clone without running any hooks.")
+	cmd.Flags().BoolP("yes", "y", false, "Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted.")
 }

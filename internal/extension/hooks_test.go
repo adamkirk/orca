@@ -55,7 +55,7 @@ func Test_RunHook(t *testing.T) {
 				{name: "npm", args: []string{"ci"}, dir: "/code/acme/api"},
 			},
 			wantLines: []string{
-				"This workspace wants to run the following on your machine:", "",
+				"", "This workspace wants to run the following on your machine:", "",
 				"api clone.post: migrate",
 				"api clone.post: install-deps",
 			},
@@ -77,7 +77,7 @@ func Test_RunHook(t *testing.T) {
 			answer:    true,
 			wantAsked: 1,
 			want:      []ran{{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"}},
-			wantLines: []string{"This workspace wants to run the following on your machine:", "", "init.post: seed"},
+			wantLines: []string{"", "This workspace wants to run the following on your machine:", "", "init.post: seed"},
 		},
 		{
 			name:      "a hook with nothing in it",
@@ -223,5 +223,73 @@ func Test_HookChoices(t *testing.T) {
 			{Value: "init.post", Description: "Runs seed"},
 			{Value: "up.pre", Description: "Runs install-deps"},
 		}, got)
+	})
+}
+
+func Test_SetUp(t *testing.T) {
+	newManager := func(out *stubTui, got *[]ran) *Manager {
+		return NewManager(afero.NewMemMapFs(), stubCompose{ran: got, services: []string{"app"}}, stubExecutor{ran: got}, out, newTrustStore())
+	}
+
+	t.Run("each project's clone.post, then init.post, asked about together", func(t *testing.T) {
+		ws := hooksWorkspace()
+		ws.Projects[1].Config.Hooks = map[workspace.Hook][]workspace.HookEntry{
+			workspace.HookClonePost: {{Extension: "install-deps", Scope: workspace.HookScopeWorkspace}},
+		}
+		got := []ran{}
+		out := &stubTui{answer: true}
+
+		require.NoError(t, newManager(out, &got).SetUp(ws, workspace.SetUpOpts{Projects: []string{"web", "api"}, Initialise: true}))
+
+		assert.Equal(t, 1, out.asked)
+		assert.Equal(t, []ran{
+			{name: "npm", args: []string{"ci"}, dir: "/code/acme/web"},
+			{name: "./bin/migrate", args: []string{}, dir: "/code/acme/api"},
+			{name: "npm", args: []string{"ci"}, dir: "/code/acme/api"},
+			{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"},
+		}, got)
+		assert.Equal(t, [][][]string{{
+			{"workspace", "clone.post", "install-deps", "command", "npm ci"},
+			{"api", "clone.post", "migrate", "command", "./bin/migrate"},
+			{"workspace", "init.post", "seed", "command", "./scripts/seed.sh"},
+		}}, out.tables)
+	})
+
+	t.Run("without init.post", func(t *testing.T) {
+		got := []ran{}
+
+		require.NoError(t, newManager(&stubTui{}, &got).SetUp(hooksWorkspace(), workspace.SetUpOpts{Projects: []string{"api"}, Yes: true}))
+
+		assert.Len(t, got, 2)
+	})
+
+	t.Run("nothing to run asks nothing", func(t *testing.T) {
+		got := []ran{}
+		out := &stubTui{}
+
+		require.NoError(t, newManager(out, &got).SetUp(hooksWorkspace(), workspace.SetUpOpts{Projects: []string{"web"}}))
+
+		assert.Zero(t, out.asked)
+		assert.Empty(t, got)
+	})
+
+	t.Run("declining runs nothing", func(t *testing.T) {
+		got := []ran{}
+
+		err := newManager(&stubTui{}, &got).SetUp(hooksWorkspace(), workspace.SetUpOpts{Projects: []string{"api"}, Initialise: true})
+
+		assert.ErrorIs(t, err, ErrTrustDeclined)
+		assert.Empty(t, got)
+	})
+
+	t.Run("a service command from a hook doesn't use the terminal", func(t *testing.T) {
+		ws := hooksWorkspace()
+		ws.Projects[0].Config.Extensions = append(ws.Projects[0].Config.Extensions, command("composer", workspace.CommandSpec{Command: "composer install", Service: "app"}))
+		ws.Projects[0].Config.Hooks[workspace.HookClonePost] = []workspace.HookEntry{{Extension: "composer", Scope: workspace.HookScopeProject}}
+		got := []ran{}
+
+		require.NoError(t, newManager(&stubTui{}, &got).SetUp(ws, workspace.SetUpOpts{Projects: []string{"api"}, Yes: true}))
+
+		assert.Equal(t, []ran{{name: "composer", args: []string{"install"}, dir: "/code/acme/api", service: "app", captured: true}}, got)
 	})
 }

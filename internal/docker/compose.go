@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/adamkirk/orca/internal/process"
@@ -78,4 +79,24 @@ func NewCompose(cli cli, tui tui, overlayGenerator composeOverlayGenerator, pars
 		overlayGenerator: overlayGenerator,
 		parser:           parser,
 	}
+}
+
+// attachArgs starts a run or exec command, attached to the host's terminal, or
+// not when its output goes elsewhere.
+func attachArgs(verb string, output io.Writer) []string {
+	if output != nil {
+		return []string{verb, "-T"}
+	}
+
+	return []string{verb, "-it"}
+}
+
+// outputOpt sends a command's output to output, or uses the host's terminal
+// when there's none.
+func outputOpt(output io.Writer) process.ExecOpt {
+	if output != nil {
+		return process.WithOutput(output)
+	}
+
+	return process.WithHostIO()
 }

@@ -3,6 +3,7 @@ package extension
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -123,11 +124,19 @@ func (m *Manager) executeCommand(t target, spec workspace.CommandSpec, args []st
 		return err
 	}
 
-	if !running {
-		return m.compose.Run(t.ws, t.project, spec.Service, cmdArgs)
+	// Run by hand, it's interactive. From a hook, it's shown under the hook,
+	// and doesn't need a terminal.
+	var output io.Writer
+
+	if indent != "" {
+		output = m.tui.Indented(indent)
 	}
 
-	return m.compose.Exec(t.ws, t.project, spec.Service, cmdArgs)
+	if !running {
+		return m.compose.Run(t.ws, t.project, spec.Service, cmdArgs, output)
+	}
+
+	return m.compose.Exec(t.ws, t.project, spec.Service, cmdArgs, output)
 }
 
 // inDir resolves path against dir, unless it's already absolute.

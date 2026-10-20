@@ -64,7 +64,7 @@ func TestProjects(t *testing.T) {
 		require.NoError(t, fs.MkdirAll("/acme/api/packages/sdk", 0755))
 		tui := &recordingTUI{}
 
-		return NewManager(fs, tui, nil, nil, nil, nil, stack), tui
+		return NewManager(fs, tui, nil, nil, nil, nil, stack, nil), tui
 	}
 
 	t.Run("lists each project", func(t *testing.T) {

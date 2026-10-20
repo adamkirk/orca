@@ -12,8 +12,8 @@ import (
 type compose interface {
 	DoesSvcExist(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
 	IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
-	Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
-	Exec(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
+	Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string, output io.Writer) error
+	Exec(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string, output io.Writer) error
 }
 
 // executor runs commands on the host.
