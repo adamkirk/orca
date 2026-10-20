@@ -1,10 +1,8 @@
-# Extensions & provisioners
+# Extensions
 
-Both are defined in a project's [`orca.project.yaml`](../configuration/project_config.md), so the whole team gets the same shortcuts and setup steps.
+An extension is a named step that orca can run, defined in a project's [`orca.project.yaml`](../configuration/project_config.md) or the [`orca.workspace.yaml`](../configuration/workspace_config.md), so the whole team gets the same shortcuts and setup steps. This page covers running them. For every type of extension, and its properties, see the [extensions reference](../configuration/extensions.md).
 
-## Extensions
-
-An extension is a named command that runs in one of the project's services. It saves everyone remembering the service name and the exact command.
+The most common is a command that runs in one of the project's services. It saves everyone remembering the service name and the exact command.
 
 ```yaml
 extensions:
@@ -37,30 +35,4 @@ $ orca ext artisan migrate --force  # php artisan migrate --force
 - With [shell completion](./shell_completion.md) installed, `orca ext <tab>` lists the project's extensions, with their `description`s.
 
 !!! note
-    `service` is required: extensions that run on your machine rather than in a container aren't supported yet. Extensions also accept a `chdir` property, but it isn't used yet.
-
-## Provisioners
-
-Provisioners handle the one-off setup a fresh clone of a project needs. Run them with [`orca provision`](../CLI/orca_provision.md), from inside the project's directory:
-
-```sh
-$ cd ~/code/acme/api
-$ orca provision
-```
-
-They're safe to run more than once: each provisioner skips work that's already been done.
-
-### `exampleFile`
-
-```yaml
-provisioners:
-  - exampleFile:
-      src: .env.example
-      target: .env
-      type: dotenv
-```
-
-Copies `src` to `target`, unless `target` already exists. This is the usual way to give each developer their own, uncommitted `.env` based on a committed example. Paths are relative to the project directory, and `type` is currently always `dotenv`.
-
-!!! note
-    `orca provision` doesn't accept `-w` or `-p` yet, so run it from inside the project's directory.
+    So far, `orca ext` only runs `command` extensions with a `service`. Commands on your machine, [`syncFile`](../configuration/extensions.md#syncfile) and [`symlink`](../configuration/extensions.md#symlink) can already be defined, but running them is coming soon.

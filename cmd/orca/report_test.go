@@ -56,6 +56,17 @@ func Test_ReportError(t *testing.T) {
 			},
 		},
 		{
+			name: "shows the problems with an invalid project config",
+			err: workspace.InvalidProjectConfigError{
+				Path:     "/code/api/orca.project.yaml",
+				Problems: []string{"extension 'env': 'target' is required for type 'syncFile'"},
+			},
+			expect: []string{
+				"Project config '/code/api/orca.project.yaml' is invalid:",
+				"  - extension 'env': 'target' is required for type 'syncFile'",
+			},
+		},
+		{
 			name: "shows the problems with an invalid preferences file",
 			err: workspace.InvalidPreferencesError{
 				Path:     "/code/orca.preferences.yaml",

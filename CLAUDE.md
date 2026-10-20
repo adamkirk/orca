@@ -33,7 +33,7 @@ cmd/orca/            the only package that knows about cobra, flags and wiring
 internal/
   workspace/         domain: model, config loading (Repository), Resolver, ExecutionContext
                      and its middleware, and the `ws` commands (Manager)
-  stack/ hosts/ provision/ git/ tls/ sys/
+  stack/ hosts/ git/ tls/ sys/
                      features: command handlers, one package per CLI command group
   bus/ usererr/ process/ docker/ github/ config/ tui/ logging/ plugins/ dag/
                      adapters and infrastructure

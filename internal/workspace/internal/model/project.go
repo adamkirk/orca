@@ -1,5 +1,7 @@
 package model
 
+import "gopkg.in/yaml.v3"
+
 type LoaderPropertyCondition struct {
 	Name  string
 	Value any
@@ -27,26 +29,57 @@ type Property struct {
 	Default any
 }
 
+// Extension is an extension's shared fields. The rest depend on its type, so
+// the whole mapping is kept in Spec, to be decoded into the type's own struct
+// (CommandSpec, SyncFileSpec...) once the type is known.
 type Extension struct {
 	Name        string
-	Chdir       string
-	Command     string
-	Service     string
-	DefaultArgs []string `yaml:"defaultArgs"`
+	Type        string
 	Description string
+	Spec        yaml.Node `yaml:"-"`
+}
+
+func (e *Extension) UnmarshalYAML(node *yaml.Node) error {
+	var shared struct {
+		Name        string
+		Type        string
+		Description string
+	}
+
+	if err := node.Decode(&shared); err != nil {
+		return err
+	}
+
+	e.Name = shared.Name
+	e.Type = shared.Type
+	e.Description = shared.Description
+	e.Spec = *node
+
+	return nil
+}
+
+// The fields of each extension type. Every field needs a yaml tag, as the tags
+// are the keys allowed for the type, and `required:"true"` if it must be set.
+
+type CommandSpec struct {
+	Command     string   `yaml:"command" required:"true"`
+	Service     string   `yaml:"service"`
+	DefaultArgs []string `yaml:"defaultArgs"`
+	Chdir       string   `yaml:"chdir"`
+}
+
+type SyncFileSpec struct {
+	Source string `yaml:"source" required:"true"`
+	Target string `yaml:"target" required:"true"`
+}
+
+type SymlinkSpec struct {
+	Source string `yaml:"source" required:"true"`
+	Target string `yaml:"target" required:"true"`
 }
 
 type EnvFile struct {
 	Path string
-}
-type ExampleFileProvisioner struct {
-	Src    string
-	Target string
-	Type   string
-}
-
-type Provisioner struct {
-	ExampleFile *ExampleFileProvisioner `yaml:"exampleFile"`
 }
 
 type ProjectConfig struct {
@@ -56,5 +89,4 @@ type ProjectConfig struct {
 	Hosts           []string
 	TLSCertificates []string `yaml:"tlsCerts"`
 	Extensions      []Extension
-	Provisioners    []Provisioner `yaml:"provisioners"`
 }

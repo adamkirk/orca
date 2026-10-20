@@ -48,4 +48,5 @@ type WorkspaceConfig struct {
 	Projects    []WorkspaceProjectConfig
 	Overlays    Overlays
 	Preferences PreferencesConfig
+	Extensions  []Extension
 }

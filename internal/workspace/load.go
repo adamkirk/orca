@@ -79,27 +79,6 @@ func convertProperties(cfgProps []model.Property) []Property {
 	return props
 }
 
-func convertExtension(e model.Extension) Extension {
-	return Extension{
-		Name:        e.Name,
-		Chdir:       e.Chdir,
-		Command:     e.Command,
-		Service:     e.Service,
-		DefaultArgs: e.DefaultArgs,
-		Description: e.Description,
-	}
-}
-
-func convertExtensions(cfgExts []model.Extension) []Extension {
-	exts := make([]Extension, len(cfgExts))
-
-	for i, e := range cfgExts {
-		exts[i] = convertExtension(e)
-	}
-
-	return exts
-}
-
 func convertEnvFile(e model.EnvFile) EnvFile {
 	return EnvFile{
 		Path: e.Path,
@@ -114,25 +93,6 @@ func convertEnvFiles(cfgEnvFiles []model.EnvFile) []EnvFile {
 	}
 
 	return envFiles
-}
-
-func convertProvisioner(e model.Provisioner) Provisioner {
-	return Provisioner{
-		ExampleFile: &ExampleFileProvisioner{
-			Src:    e.ExampleFile.Src,
-			Target: e.ExampleFile.Target,
-			Type:   ExampleFileProvisionerType(e.ExampleFile.Type),
-		},
-	}
-}
-
-func convertProvisioners(cfgProvisioners []model.Provisioner) []Provisioner {
-	provisioners := make([]Provisioner, len(cfgProvisioners))
-	for i, p := range cfgProvisioners {
-		provisioners[i] = convertProvisioner(p)
-	}
-
-	return provisioners
 }
 
 func convertRepository(r model.WorkspaceProjectRepository) ProjectRepositoryConfig {
@@ -153,7 +113,7 @@ func projectType(cfg model.WorkspaceProjectConfig) ProjectType {
 	return ProjectType(cfg.Type)
 }
 
-func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig) Project {
+func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig, exts []Extension) Project {
 	return Project{
 		Name:             wsPCfg.Name,
 		Type:             projectType(wsPCfg),
@@ -168,9 +128,8 @@ func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg mo
 			Properties:      convertProperties(pCfg.Properties),
 			Hosts:           pCfg.Hosts,
 			TLSCertificates: pCfg.TLSCertificates,
-			Extensions:      convertExtensions(pCfg.Extensions),
+			Extensions:      exts,
 			EnvFiles:        convertEnvFiles(pCfg.EnvFiles),
-			Provisioners:    convertProvisioners(pCfg.Provisioners),
 		},
 	}
 }
@@ -247,7 +206,7 @@ func parseWorkspaceConfig(contents []byte, path string) (*model.WorkspaceConfig,
 }
 
 // validateWorkspaceConfig checks the required fields of a workspace config are
-// present.
+// present, and its extensions are valid.
 func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	problems := []string{}
 
@@ -286,6 +245,9 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		}
 	}
 
+	_, extProblems := buildExtensions(cfg.Extensions)
+	problems = append(problems, extProblems...)
+
 	if len(problems) > 0 {
 		return InvalidWorkspaceConfigError{
 			Path:     path,
@@ -296,9 +258,29 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	return nil
 }
 
-// validateLibraryConfig checks a library's project config only has what applies
-// to a project with no compose stack.
-func validateLibraryConfig(cfg *model.ProjectConfig, meta ProjectMeta) error {
+// buildProjectExtensions decodes a project's extensions, and checks its config
+// as a whole: a library can only have what applies to a project with no compose
+// stack.
+func buildProjectExtensions(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType) ([]Extension, error) {
+	exts, problems := buildExtensions(cfg.Extensions)
+
+	if projectType == ProjectTypeLibrary {
+		problems = append(problems, libraryProblems(cfg, exts)...)
+	}
+
+	if len(problems) > 0 {
+		return nil, InvalidProjectConfigError{
+			Path:     projectConfigPath(meta),
+			Problems: problems,
+		}
+	}
+
+	return exts, nil
+}
+
+// libraryProblems lists what's in a library's project config that only applies
+// to a project with a compose stack.
+func libraryProblems(cfg *model.ProjectConfig, exts []Extension) []string {
 	problems := []string{}
 
 	for _, key := range []struct {
@@ -315,20 +297,13 @@ func validateLibraryConfig(cfg *model.ProjectConfig, meta ProjectMeta) error {
 		}
 	}
 
-	for _, ext := range cfg.Extensions {
-		if ext.Service != "" {
+	for _, ext := range exts {
+		if cmd, ok := ext.Spec.(CommandSpec); ok && cmd.Service != "" {
 			problems = append(problems, fmt.Sprintf("extension '%s': 'service' can't be used in a library project, as it has no services", ext.Name))
 		}
 	}
 
-	if len(problems) > 0 {
-		return InvalidProjectConfigError{
-			Path:     projectConfigPath(meta),
-			Problems: problems,
-		}
-	}
-
-	return nil
+	return problems
 }
 
 func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *UnconfiguredWorkspace {
@@ -385,10 +360,14 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		return nil, err
 	}
 
+	// They were checked when the config was parsed
+	exts, _ := buildExtensions(cfg.Extensions)
+
 	ws := &Workspace{
 		Name:       cfg.Name,
 		ConfigPath: wsMeta.Path,
 		Projects:   make([]Project, len(cfg.Projects)),
+		Extensions: exts,
 		OverlayConfig: OverlayConfig{
 			Network: NetworkOverlayConfig{
 				Enabled:        cfg.Overlays.Network.Enabled,
@@ -432,13 +411,13 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 			return nil, err
 		}
 
-		if projectType(pCfg) == ProjectTypeLibrary {
-			if err := validateLibraryConfig(p, projectMeta); err != nil {
-				return nil, err
-			}
+		exts, err := buildProjectExtensions(p, projectMeta, projectType(pCfg))
+
+		if err != nil {
+			return nil, err
 		}
 
-		ws.Projects[i] = buildProject(pCfg, projectMeta, *p)
+		ws.Projects[i] = buildProject(pCfg, projectMeta, *p, exts)
 	}
 
 	ws.PreferencesPath = preferencesPath(wsMeta.Path, cfg.Preferences.Path)

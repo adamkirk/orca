@@ -72,6 +72,12 @@ func reportError(out errorPrinter, err error) {
 		return
 	}
 
+	if invalidProject, ok := errors.AsType[workspace.InvalidProjectConfigError](err); ok {
+		reportProblems(out, fmt.Sprintf("Project config '%s' is invalid:", invalidProject.Path), invalidProject.Problems)
+
+		return
+	}
+
 	if invalidPrefs, ok := errors.AsType[workspace.InvalidPreferencesError](err); ok {
 		reportProblems(out, fmt.Sprintf("Preferences file '%s' is invalid:", invalidPrefs.Path), invalidPrefs.Problems)
 

@@ -2,7 +2,7 @@
 
 Every service project needs an `orca.project.yaml` in the root of its directory, next to its compose file. It tells orca how to run the project. All paths in it are relative to the project's directory.
 
-A [library project](../usage/workspaces.md#library-projects) doesn't need one. It can have one, for extensions, but it can't contain `composeFiles`, `envFiles`, `hosts` or `tlsCerts`, or extensions with a `service`, as a library has no compose stack. Orca lists any it finds as invalid.
+A [library project](../usage/workspaces.md#library-projects) doesn't need one. It can have one, for extensions, but it can't contain `composeFiles`, `envFiles`, `hosts` or `tlsCerts`, or `command` extensions with a `service`, as a library has no compose stack. Orca lists any it finds as invalid.
 
 ## Example
 
@@ -13,12 +13,6 @@ composeFiles:
 envFiles:
   - path: .env
 
-provisioners:
-  - exampleFile:
-      src: .env.example
-      target: .env
-      type: dotenv
-
 hosts:
   - api.acme.test
 
@@ -26,6 +20,10 @@ tlsCerts:
   - "*.acme.test"
 
 extensions:
+  - name: env
+    type: syncFile
+    source: .env.example
+    target: .env
   - name: artisan
     service: app
     command: php artisan
@@ -42,10 +40,9 @@ extensions:
 | -------- | ----------- |
 | [`composeFiles`](#compose-files) | The compose file for the project. |
 | [`envFiles`](#env-files) | Env files passed to docker compose. |
-| [`provisioners`](#provisioners) | One-off setup steps, run with [`orca provision`](../CLI/orca_provision.md). |
 | [`hosts`](#hosts) | Hostnames this project serves, added to `/etc/hosts` by [`orca hosts`](../CLI/orca_hosts.md). |
 | [`tlsCerts`](#tls-certificates) | Domains to generate TLS certificates for with [`orca tls gen`](../CLI/orca_tls_gen.md). |
-| [`extensions`](#extensions) | Named commands that run in one of the project's services, with [`orca ext`](../CLI/orca_ext.md). |
+| [`extensions`](#extensions) | Named steps, such as commands and files to set up, run with [`orca ext`](../CLI/orca_ext.md). |
 
 ### Compose files
 
@@ -71,20 +68,6 @@ Each file is passed to docker compose with `--env-file`, in order. Compose uses 
 
 !!! warning
     When any `--env-file` is given, docker compose no longer loads the project's `.env` file automatically. If you rely on `.env`, list it here.
-
-### Provisioners
-
-```yaml
-provisioners:
-  - exampleFile:
-      src: .env.example
-      target: .env
-      type: dotenv
-```
-
-Provisioners do one-off setup that a fresh clone needs. They run with [`orca provision`](../CLI/orca_provision.md). The only provisioner so far is `exampleFile`, which copies `src` to `target` if `target` doesn't exist yet, keeping the file's permissions. An existing `target` is never overwritten, so it's safe to run repeatedly. `type` is currently always `dotenv`.
-
-See [Extensions & provisioners](../usage/extensions_and_provisioners.md#provisioners).
 
 ### Hosts
 
@@ -116,14 +99,12 @@ extensions:
     defaultArgs:
       - list
     description: Run an artisan command
+  - name: env
+    type: syncFile
+    source: .env.example
+    target: .env
 ```
 
-| Property | Description |
-| -------- | ----------- |
-| `name` | What you type after `orca ext`, e.g. `orca ext artisan`. |
-| `service` | The compose service to run the command in. Required. |
-| `command` | The command to run. It's split on spaces, so quoting isn't supported. |
-| `defaultArgs` | Arguments added when you don't give any. Any arguments you do give replace these entirely. |
-| `description` | Optional. Shown next to the name when you [complete](../usage/shell_completion.md) `orca ext <tab>`, in shells that show descriptions. |
+Named steps, each of a `type`: a `command` (in a service, or on your machine), a `syncFile` or a `symlink`. Paths are relative to the project's directory. Each type takes its own properties, and the config is invalid if an extension has one its type doesn't take.
 
-See [Extensions & provisioners](../usage/extensions_and_provisioners.md#extensions).
+See the [extensions reference](./extensions.md) for every type and property, and [Extensions](../usage/extensions.md) for running them.

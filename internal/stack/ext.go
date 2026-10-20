@@ -25,26 +25,26 @@ func (ExecuteExtensionCommand) MessageName() string {
 }
 
 // TODO: de-dupe this by reusing the ExecOrRun method
-func (m *Manager) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx workspace.ExecutionContext, ext workspace.Extension) error {
-	cmdArgs := strings.Split(ext.Command, " ")
+func (m *Manager) executeExtensionInService(cmd ExecuteExtensionCommand, execCtx workspace.ExecutionContext, spec workspace.CommandSpec) error {
+	cmdArgs := strings.Split(spec.Command, " ")
 
 	if len(cmd.Args) > 0 {
 		cmdArgs = append(cmdArgs, cmd.Args...)
 	} else {
-		cmdArgs = append(cmdArgs, ext.DefaultArgs...)
+		cmdArgs = append(cmdArgs, spec.DefaultArgs...)
 	}
 
-	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, ext.Service)
+	isRunning, err := m.compose.IsSvcRunning(execCtx.Workspace, execCtx.Project, spec.Service)
 
 	if err != nil {
 		return err
 	}
 
 	if !isRunning {
-		return m.compose.Run(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
+		return m.compose.Run(execCtx.Workspace, execCtx.Project, spec.Service, cmdArgs)
 	}
 
-	return m.compose.Exec(execCtx.Workspace, execCtx.Project, ext.Service, cmdArgs)
+	return m.compose.Exec(execCtx.Workspace, execCtx.Project, spec.Service, cmdArgs)
 }
 
 func (m *Manager) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionCommand) error {
@@ -64,9 +64,9 @@ func (m *Manager) ExecuteExtension(ctx context.Context, cmd ExecuteExtensionComm
 		return usererr.Wrap(err, "Extension does not exist in project context.")
 	}
 
-	if ext.Service != "" {
-		return m.executeExtensionInService(cmd, execCtx, ext)
+	if spec, ok := ext.Spec.(workspace.CommandSpec); ok && spec.Service != "" {
+		return m.executeExtensionInService(cmd, execCtx, spec)
 	}
 
-	return usererr.Wrap(errors.New("alternative is not yet implemented"), "Extension must have a service defined")
+	return usererr.Wrap(errors.New("alternative is not yet implemented"), "Only command extensions with a service can be run yet!")
 }

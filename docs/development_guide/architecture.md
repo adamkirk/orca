@@ -39,7 +39,6 @@ Feature packages hold the commands' handlers, and mirror the CLI's command group
 | ------- | -------- |
 | `internal/stack` | `up`, `down`, `exec`, `ext`, `logs`, `debug` (`restart` dispatches `down` then `up`) |
 | `internal/hosts` | `hosts`, with the `/etc/hosts` manager it uses |
-| `internal/provision` | `provision`, with the provisioner runner |
 | `internal/git` | `g`. It's also the wrapper around the git CLI that `workspace` uses to clone projects. |
 | `internal/tls` | `tls gen` |
 | `internal/sys` | `sys check`, `sys self-update` |
@@ -130,6 +129,19 @@ Two tests in `cmd/orca/services_test.go` catch wiring mistakes that would otherw
 
 - `Test_AllDispatchedMessagesHaveHandlers` checks every dispatched message has a handler.
 - `Test_ExecutionContextHandlersHaveTargets` checks every handler that reads the `ExecutionContext` has a target.
+
+## Extension types
+
+An extension's properties depend on its `type`. In `internal/workspace/extension.go`, each type is its own spec (`CommandSpec`, `SyncFileSpec`, `SymlinkSpec`) behind the sealed `ExtensionSpec` interface, so code can only read the fields of the type it's handling. Switch on the concrete type, and panic in the `default` case, as the set is closed.
+
+The config is decoded in two passes. `model.Extension` reads the shared fields (`name`, `type`, `description`) and keeps the whole YAML node. `buildExtensions` then looks the type up in `extensionKinds`, rejects any key that's missing from the `yaml` tags of the type's model struct, checks the fields tagged `required:"true"`, and decodes the node into that struct. Every problem is collected, rather than stopping at the first.
+
+To add a type:
+
+1. Add its model struct to `internal/workspace/internal/model/project.go`, with a `yaml` tag on every field.
+2. Add its spec, and an entry in `extensionKinds`, to `extension.go`.
+3. Add a case wherever extensions are switched on.
+4. Add a section for it to `docs/configuration/extensions.md`. `Test_ExtensionTypesAreDocumented` fails until that section lists every property.
 
 ## Shell completion
 

@@ -49,6 +49,7 @@ projects:
 | `projects` | The projects in this workspace, see [below](#projects). |
 | `overlays` | Workspace-wide [overlays](../compose_files/overlays/index.md). Currently only [`network`](../compose_files/overlays/network.md) is available. |
 | `preferences.path` | Where each developer's [preferences file](./preferences.md) lives, relative to this file. Defaults to `orca.preferences.yaml`, next to it. |
+| `extensions` | Optional. [Extensions](./extensions.md) for the whole workspace, which run in the directory of this file, e.g. a script that seeds every project's database. They're defined exactly as in a project config. |
 
 ### Projects
 
@@ -83,6 +84,7 @@ Orca checks the workspace config whenever it loads it, so every command fails if
 - No project has both `repository.self` and `repository.branch`.
 - Every `type` is `service` or `library`.
 - No `path` is absolute, or escapes the directory projects are cloned into with `..`, and none is combined with `repository.self`.
+- Every extension is valid, as described in [the extensions reference](./extensions.md#validation).
 
 Every problem found is listed, e.g.:
 

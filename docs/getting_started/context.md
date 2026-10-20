@@ -37,13 +37,9 @@ Some commands only make sense for one project. They fail if the context resolves
 - [`orca exec`](../CLI/orca_exec.md)
 - [`orca logs`](../CLI/orca_logs.md)
 - [`orca ext`](../CLI/orca_ext.md)
-- [`orca provision`](../CLI/orca_provision.md)
 - [`orca debug show-compose-command`](../CLI/orca_debug_show-compose-command.md) and [`show-compose-config`](../CLI/orca_debug_show-compose-config.md)
 
 Run them from inside the project's directory, or pass `-p`.
-
-!!! note
-    `orca provision` doesn't accept `-w` or `-p` yet, so it must be run from inside the project's directory.
 
 ## Commands that always use the whole workspace
 

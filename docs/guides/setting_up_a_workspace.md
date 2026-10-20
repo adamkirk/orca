@@ -125,17 +125,15 @@ Each application repository gets its own `orca.project.yaml`.
     envFiles:
       - path: .env
 
-    provisioners:
-      # Fresh clones get a .env based on the committed example
-      - exampleFile:
-          src: .env.example
-          target: .env
-          type: dotenv
-
     hosts:
       - api.acme.test
 
     extensions:
+      # Each developer gets a .env based on the committed example
+      - name: env
+        type: syncFile
+        source: .env.example
+        target: .env
       - name: migrate
         service: app
         command: ./bin/migrate
@@ -249,7 +247,7 @@ $ orca ws ls
 Create each project's `.env` from its example:
 
 ```sh
-$ (cd ~/code/acme/api && orca provision)
+$ cp ~/code/acme/api/.env.example ~/code/acme/api/.env
 ```
 
 Generate TLS certificates, and add the hosts to `/etc/hosts`:

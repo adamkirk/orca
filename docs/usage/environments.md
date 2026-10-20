@@ -62,4 +62,4 @@ Either way you get an interactive terminal. Everything after the service is pass
 
 Earlier versions took the service with `-s`, and needed `--` before a command with flags, e.g. `orca exec -s app -- ls -la`. Drop both: `orca exec app ls -la`. A `--` straight after the service is an error, rather than being passed to the container.
 
-For commands you run often, define an [extension](./extensions_and_provisioners.md#extensions) instead.
+For commands you run often, define an [extension](./extensions.md) instead.

@@ -13,7 +13,6 @@ import (
 	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/adamkirk/orca/internal/process"
-	"github.com/adamkirk/orca/internal/provision"
 	"github.com/adamkirk/orca/internal/stack"
 	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
@@ -53,8 +52,6 @@ type services struct {
 	compose                 *docker.Compose
 	composeParser           *docker.ComposeParser
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
-
-	provision *provision.Manager
 
 	pluginManager      *plugins.Manager
 	pluginCommandCache *plugins.CommandCache
@@ -283,19 +280,6 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 	return s.composeOverlayGenerator
 }
 
-func (s *services) GetProvision() *provision.Manager {
-	if s.provision != nil {
-		return s.provision
-	}
-
-	s.provision = provision.NewManager(
-		s.GetFs(),
-		s.GetTui(),
-	)
-
-	return s.provision
-}
-
 func (s *services) GetPluginManager() *plugins.Manager {
 	if s.pluginManager != nil {
 		return s.pluginManager
@@ -335,7 +319,6 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
 	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
-	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
@@ -397,9 +380,6 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	})
 	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
-	})
-	ec.Target(func(cmd provision.RunCommand) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.ShowComposeConfigQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}

@@ -2,12 +2,9 @@ package workspace
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 )
-
-type ExampleFileProvisionerType string
-
-const ExampleFileProvisionerTypeDotenv ExampleFileProvisionerType = "dotenv"
 
 type LoaderPropertyCondition struct {
 	Name  string
@@ -36,33 +33,12 @@ type Property struct {
 	Default any
 }
 
-type Extension struct {
-	Name        string
-	Chdir       string
-	Command     string
-	Service     string
-	DefaultArgs []string
-	// Shown next to the name when completing it
-	Description string
-}
-
 type EnvFile struct {
 	Path string
 }
 
-type ExampleFileProvisioner struct {
-	Src    string
-	Target string
-	Type   ExampleFileProvisionerType
-}
-
-type Provisioner struct {
-	ExampleFile *ExampleFileProvisioner
-}
-
 type ProjectConfig struct {
 	ComposeFiles    ComposeFiles
-	Provisioners    []Provisioner
 	EnvFiles        []EnvFile
 	Properties      []Property
 	Hosts           []string
@@ -165,6 +141,16 @@ type Workspace struct {
 	// UnknownPreferenceProjects are listed in the preferences file, but aren't
 	// in the workspace, so are ignored
 	UnknownPreferenceProjects []string
+
+	// Extensions defined in the workspace config, which run in the workspace's
+	// directory (see Dir), or any project's that references them
+	Extensions []Extension
+}
+
+// Dir is the directory the workspace config is in, where workspace extensions
+// run.
+func (ws *Workspace) Dir() string {
+	return filepath.Dir(ws.ConfigPath)
 }
 
 func (ws *Workspace) GetProject(name string) (*Project, error) {
