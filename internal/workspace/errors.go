@@ -31,3 +31,12 @@ type InvalidWorkspaceConfigError struct {
 func (err InvalidWorkspaceConfigError) Error() string {
 	return fmt.Sprintf("workspace config at '%s' is invalid: %s", err.Path, strings.Join(err.Problems, "; "))
 }
+
+type InvalidPreferencesError struct {
+	Path     string
+	Problems []string
+}
+
+func (err InvalidPreferencesError) Error() string {
+	return fmt.Sprintf("preferences at '%s' are invalid: %s", err.Path, strings.Join(err.Problems, "; "))
+}

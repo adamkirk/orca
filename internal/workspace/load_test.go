@@ -28,8 +28,9 @@ projects:
 
 		assert.NoError(t, err)
 		assert.Equal(t, &UnconfiguredWorkspace{
-			Name:       "acme",
-			ConfigPath: "orca.workspace.yaml",
+			Name:            "acme",
+			ConfigPath:      "orca.workspace.yaml",
+			PreferencesPath: "orca.preferences.yaml",
 			Projects: []UnconfiguredProject{
 				{Name: "root", RepositoryConfig: ProjectRepositoryConfig{Self: true}},
 				{Name: "svc-a", RepositoryConfig: ProjectRepositoryConfig{SSH: "git@github.com:acme/svc-a.git", Branch: "orca-adoption"}},
@@ -213,4 +214,134 @@ extensions:
 		{Name: "artisan", Service: "app", Command: "php artisan", Description: "Run an artisan command"},
 		{Name: "test", Service: "app", Command: "vendor/bin/phpunit"},
 	}, ws.Projects[0].Config.Extensions)
+}
+
+func TestLoadPreferences_AppliesToProjects(t *testing.T) {
+	newRepo := func(t *testing.T, wsConfig string, prefsPath string, prefs string) *Repository {
+		fs := afero.NewMemMapFs()
+		path := "/acme/root/orca.workspace.yaml"
+
+		assert.NoError(t, afero.WriteFile(fs, path, []byte(wsConfig), 0644))
+
+		if prefs != "" {
+			assert.NoError(t, afero.WriteFile(fs, prefsPath, []byte(prefs), 0644))
+		}
+
+		return NewRepository(fs, stubUserConfig{
+			workspaces: map[string]WorkspaceMeta{"acme": {Name: "acme", Path: path}},
+		})
+	}
+
+	wsConfig := `
+name: acme
+projects:
+  - name: api
+    repository:
+      ssh: git@github.com:acme/api.git
+  - name: web
+    repository:
+      ssh: git@github.com:acme/web.git
+  - name: admin
+    repository:
+      ssh: git@github.com:acme/admin.git
+`
+
+	t.Run("disables projects, ignoring unknown ones", func(t *testing.T) {
+		repo := newRepo(t, wsConfig, "/acme/root/orca.preferences.yaml", `
+projects:
+  api:
+    enabled: true
+  web:
+    enabled: false
+  removed:
+    enabled: false
+  gone:
+`)
+
+		ws, err := repo.Load("acme")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "/acme/root/orca.preferences.yaml", ws.PreferencesPath)
+		assert.False(t, ws.Projects[0].Disabled)
+		assert.True(t, ws.Projects[1].Disabled)
+		assert.False(t, ws.Projects[2].Disabled, "projects that aren't listed are enabled")
+		assert.Equal(t, []string{"gone", "removed"}, ws.UnknownPreferenceProjects)
+	})
+
+	t.Run("a missing file enables every project", func(t *testing.T) {
+		ws, err := newRepo(t, wsConfig, "", "").Load("acme")
+
+		assert.NoError(t, err)
+		assert.Empty(t, ws.UnknownPreferenceProjects)
+
+		for _, p := range ws.Projects {
+			assert.False(t, p.Disabled)
+		}
+	})
+
+	t.Run("the workspace config can move the file", func(t *testing.T) {
+		repo := newRepo(t, wsConfig+"preferences:\n  path: config/prefs.yaml\n", "/acme/root/config/prefs.yaml", "projects:\n  admin:\n    enabled: false\n")
+
+		ws, err := repo.Load("acme")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "/acme/root/config/prefs.yaml", ws.PreferencesPath)
+		assert.True(t, ws.Projects[2].Disabled)
+	})
+
+	t.Run("the workspace config sets the default, and preferences override it", func(t *testing.T) {
+		defaults := `
+name: acme
+projects:
+  - name: api
+    repository:
+      ssh: git@github.com:acme/api.git
+    enabled: false
+  - name: web
+    repository:
+      ssh: git@github.com:acme/web.git
+    enabled: false
+  - name: admin
+    repository:
+      ssh: git@github.com:acme/admin.git
+    enabled: true
+  - name: docs
+    repository:
+      ssh: git@github.com:acme/docs.git
+`
+		repo := newRepo(t, defaults, "/acme/root/orca.preferences.yaml", `
+projects:
+  api:
+    enabled: true
+  web:
+  admin:
+    enabled: false
+`)
+
+		ws, err := repo.Load("acme")
+
+		assert.NoError(t, err)
+		assert.False(t, ws.Projects[0].Disabled, "enabled by the preferences")
+		assert.True(t, ws.Projects[1].Disabled, "listed without 'enabled', so the default applies")
+		assert.True(t, ws.Projects[2].Disabled, "disabled by the preferences")
+		assert.False(t, ws.Projects[3].Disabled, "enabled when neither says")
+	})
+
+	t.Run("without preferences, the workspace config's default applies", func(t *testing.T) {
+		ws, err := newRepo(t, wsConfig+"    enabled: false\n", "", "").Load("acme")
+
+		assert.NoError(t, err)
+		assert.True(t, ws.Projects[2].Disabled)
+	})
+
+	t.Run("an invalid file fails with its problems", func(t *testing.T) {
+		repo := newRepo(t, wsConfig, "/acme/root/orca.preferences.yaml", "projects:\n  api:\n    enabled: nope\n")
+
+		_, err := repo.Load("acme")
+
+		assert.Equal(t, InvalidPreferencesError{
+			Path:     "/acme/root/orca.preferences.yaml",
+			Problems: []string{"project 'api': 'enabled' must be true or false"},
+		}, err)
+	})
 }

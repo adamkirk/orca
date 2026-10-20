@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseGithubRepo(t *testing.T) {
@@ -102,7 +103,7 @@ projects:
 			},
 		}
 
-		return NewManager(fs, stubTUI{}, nil, git, github, NewRepository(fs, nil)), git, github
+		return NewManager(fs, stubTUI{}, nil, git, github, NewRepository(fs, nil), nil), git, github
 	}
 
 	t.Run("missing workspace branch", func(t *testing.T) {
@@ -172,5 +173,58 @@ projects:
 
 		assert.ErrorIs(t, err, ErrInvalidInput)
 		assert.Empty(t, git.cloned)
+	})
+}
+
+func TestCreatePreferences(t *testing.T) {
+	cfg := &UnconfiguredWorkspace{
+		Name:            "acme",
+		PreferencesPath: "/acme/root/orca.preferences.yaml",
+		Projects:        []UnconfiguredProject{{Name: "api"}, {Name: "web"}},
+	}
+
+	t.Run("lists every project", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		tui := &recordingTUI{}
+
+		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil).createPreferences(cfg))
+
+		prefs, err := loadPreferences(fs, cfg.PreferencesPath)
+		require.NoError(t, err)
+		assert.Contains(t, prefs.Projects, "api")
+		assert.Contains(t, prefs.Projects, "web")
+		assert.Nil(t, prefs.Projects["api"].Enabled, "the workspace config decides")
+		assert.Equal(t, []string{"Created /acme/root/orca.preferences.yaml, where you can enable and disable projects."}, tui.lines)
+	})
+
+	t.Run("keeps an existing file", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		require.NoError(t, afero.WriteFile(fs, cfg.PreferencesPath, []byte("projects:\n  web:\n    enabled: false\n"), 0644))
+		tui := &recordingTUI{}
+
+		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil).createPreferences(cfg))
+
+		prefs, err := loadPreferences(fs, cfg.PreferencesPath)
+		require.NoError(t, err)
+		assert.False(t, *prefs.Projects["web"].Enabled)
+		assert.Empty(t, tui.lines)
+	})
+}
+
+func TestSuggestIgnoringPreferences(t *testing.T) {
+	t.Run("suggests ignoring it", func(t *testing.T) {
+		tui := &recordingTUI{}
+
+		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{}, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
+
+		assert.Contains(t, tui.lines, "Next steps:")
+	})
+
+	t.Run("not when it's already ignored", func(t *testing.T) {
+		tui := &recordingTUI{}
+
+		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{ignored: true}, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
+
+		assert.Empty(t, tui.lines)
 	})
 }

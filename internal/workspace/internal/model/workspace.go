@@ -17,6 +17,10 @@ type WorkspaceProjectConfig struct {
 	Repository WorkspaceProjectRepository
 	Path       string
 	Requires   []string
+
+	// Whether the project is enabled by default, nil means it is. Each
+	// developer's preferences file can override it.
+	Enabled *bool
 }
 
 type NetworkOverlay struct {
@@ -30,8 +34,14 @@ type Overlays struct {
 	Network NetworkOverlay
 }
 
+type PreferencesConfig struct {
+	// Where the preferences file is, relative to the workspace config
+	Path string
+}
+
 type WorkspaceConfig struct {
-	Name     string
-	Projects []WorkspaceProjectConfig
-	Overlays Overlays
+	Name        string
+	Projects    []WorkspaceProjectConfig
+	Overlays    Overlays
+	Preferences PreferencesConfig
 }

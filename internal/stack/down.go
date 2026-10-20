@@ -2,9 +2,12 @@ package stack
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/dag"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
@@ -19,14 +22,36 @@ func (DownCommand) MessageName() string {
 	return "down"
 }
 
-func determineShutdownOrder(execCtx workspace.ExecutionContext) ([]string, error) {
+// shutdownOrder orders the projects to stop: the one asked for, or those a
+// workspace-wide up starts, plus any disabled project that's still running.
+// Projects are stopped before the projects they require.
+func (m *Manager) shutdownOrder(execCtx workspace.ExecutionContext) ([]string, error) {
 	if execCtx.Project != nil {
 		return []string{
 			execCtx.Project.Name,
 		}, nil
 	}
 
-	g, err := dag.NewGraph(execCtx.Workspace.Projects)
+	ws := execCtx.Workspace
+	projects, _ := ws.RunSet()
+
+	for _, p := range ws.Projects {
+		if slices.ContainsFunc(projects, func(r workspace.Project) bool { return r.Name == p.Name }) {
+			continue
+		}
+
+		running, err := m.compose.IsProjectRunning(ws, &p)
+
+		if err != nil {
+			return nil, usererr.Wrap(err, fmt.Sprintf("Failed to check whether %s is running!", p.Name))
+		}
+
+		if running {
+			projects = append(projects, p)
+		}
+	}
+
+	g, err := dag.NewGraph(workspace.TrimRequires(projects))
 
 	if err != nil {
 		return nil, err
@@ -36,7 +61,7 @@ func determineShutdownOrder(execCtx workspace.ExecutionContext) ([]string, error
 }
 
 func (m *Manager) stopServices(execCtx workspace.ExecutionContext) error {
-	ordered, err := determineShutdownOrder(execCtx)
+	ordered, err := m.shutdownOrder(execCtx)
 
 	if err != nil {
 		return err

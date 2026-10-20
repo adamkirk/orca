@@ -86,6 +86,10 @@ type Project struct {
 	Requires         []string
 	Config           ProjectConfig
 	IsRegistered     bool
+
+	// Disabled projects are left out of workspace-wide commands, unless an
+	// enabled project requires them. Set from the preferences file.
+	Disabled bool
 }
 
 func (p Project) GetKey() string {
@@ -135,6 +139,13 @@ type Workspace struct {
 	ConfigPath    string
 	Projects      []Project
 	OverlayConfig OverlayConfig `yaml:"overlays"`
+
+	// PreferencesPath is the developer's preferences file, which may not exist
+	PreferencesPath string
+
+	// UnknownPreferenceProjects are listed in the preferences file, but aren't
+	// in the workspace, so are ignored
+	UnknownPreferenceProjects []string
 }
 
 func (ws *Workspace) GetProject(name string) (*Project, error) {
@@ -147,6 +158,85 @@ func (ws *Workspace) GetProject(name string) (*Project, error) {
 	}
 
 	return &ws.Projects[i], nil
+}
+
+// EnabledProjects returns the projects that aren't disabled, in the order
+// they're configured.
+func (ws *Workspace) EnabledProjects() []Project {
+	return slices.DeleteFunc(slices.Clone(ws.Projects), func(p Project) bool {
+		return p.Disabled
+	})
+}
+
+// PulledInProject is a disabled project that runs anyway, as RequiredBy
+// requires it.
+type PulledInProject struct {
+	Name       string
+	RequiredBy string
+}
+
+// RunSet returns the projects that workspace-wide commands run: the enabled
+// ones, and every project they require, directly or not, even if it's disabled.
+// The disabled projects that were pulled in are returned too, so they can be
+// warned about.
+func (ws *Workspace) RunSet() ([]Project, []PulledInProject) {
+	included := map[string]bool{}
+	pulledIn := []PulledInProject{}
+	queue := []Project{}
+
+	for _, p := range ws.EnabledProjects() {
+		included[p.Name] = true
+		queue = append(queue, p)
+	}
+
+	for len(queue) > 0 {
+		p := queue[0]
+		queue = queue[1:]
+
+		for _, name := range p.Requires {
+			if included[name] {
+				continue
+			}
+
+			required, err := ws.GetProject(name)
+
+			// An unknown requirement is reported when the projects are ordered
+			if err != nil {
+				continue
+			}
+
+			included[name] = true
+			queue = append(queue, *required)
+			pulledIn = append(pulledIn, PulledInProject{Name: name, RequiredBy: p.Name})
+		}
+	}
+
+	projects := slices.DeleteFunc(slices.Clone(ws.Projects), func(p Project) bool {
+		return !included[p.Name]
+	})
+
+	return projects, pulledIn
+}
+
+// TrimRequires returns copies of projects that only require each other, so a
+// subset of a workspace's projects can be ordered on its own.
+func TrimRequires(projects []Project) []Project {
+	names := make([]string, len(projects))
+
+	for i, p := range projects {
+		names[i] = p.Name
+	}
+
+	trimmed := make([]Project, len(projects))
+
+	for i, p := range projects {
+		p.Requires = slices.DeleteFunc(slices.Clone(p.Requires), func(name string) bool {
+			return !slices.Contains(names, name)
+		})
+		trimmed[i] = p
+	}
+
+	return trimmed
 }
 
 func (ws *Workspace) GetUniqueTLSCertificates() []string {
@@ -185,7 +275,8 @@ type UnconfiguredProject struct {
 }
 
 type UnconfiguredWorkspace struct {
-	Name       string
-	ConfigPath string
-	Projects   []UnconfiguredProject
+	Name            string
+	ConfigPath      string
+	PreferencesPath string
+	Projects        []UnconfiguredProject
 }

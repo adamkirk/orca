@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/workspace/internal/model"
@@ -148,6 +149,7 @@ func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg mo
 		IsRegistered:     true,
 		ProjectDir:       meta.Path,
 		Requires:         wsPCfg.Requires,
+		Disabled:         disabledByDefault(wsPCfg),
 		Config: ProjectConfig{
 			ComposeFiles:    convertComposeFiles(pCfg.ComposeFiles),
 			Properties:      convertProperties(pCfg.Properties),
@@ -276,9 +278,10 @@ func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *Unconfi
 	}
 
 	return &UnconfiguredWorkspace{
-		Name:       ws.Name,
-		ConfigPath: path,
-		Projects:   projects,
+		Name:            ws.Name,
+		ConfigPath:      path,
+		PreferencesPath: preferencesPath(path, ws.Preferences.Path),
+		Projects:        projects,
 	}
 }
 
@@ -341,6 +344,7 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 					IsRegistered:     false,
 					ProjectDir:       "",
 					Requires:         pCfg.Requires,
+					Disabled:         disabledByDefault(pCfg),
 					Config:           ProjectConfig{},
 				}
 				continue
@@ -358,7 +362,43 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		ws.Projects[i] = buildProject(pCfg, projectMeta, *p)
 	}
 
+	ws.PreferencesPath = preferencesPath(wsMeta.Path, cfg.Preferences.Path)
+
+	prefs, err := loadPreferences(wcr.fs, ws.PreferencesPath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	applyPreferences(ws, prefs)
+
 	return ws, nil
+}
+
+// disabledByDefault reports whether the workspace config disables the project,
+// before the developer's preferences are applied.
+func disabledByDefault(cfg model.WorkspaceProjectConfig) bool {
+	return cfg.Enabled != nil && !*cfg.Enabled
+}
+
+// applyPreferences enables or disables the projects the preferences set,
+// overriding the workspace config, and records any it lists that aren't in the
+// workspace.
+func applyPreferences(ws *Workspace, prefs *model.Preferences) {
+	for name, pp := range prefs.Projects {
+		p, err := ws.GetProject(name)
+
+		if err != nil {
+			ws.UnknownPreferenceProjects = append(ws.UnknownPreferenceProjects, name)
+			continue
+		}
+
+		if pp.Enabled != nil {
+			p.Disabled = !*pp.Enabled
+		}
+	}
+
+	slices.Sort(ws.UnknownPreferenceProjects)
 }
 
 func NewRepository(fs afero.Fs, userConfig userConfig) *Repository {

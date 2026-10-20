@@ -214,6 +214,14 @@ $ orca ws init --repo acme/local-env
 
 Repositories you've already cloned in those locations are detected (by their git remote) and registered, rather than cloned again.
 
+It also creates your [preferences file](../configuration/preferences.md), `orca.preferences.yaml`, next to the workspace config, listing every project. It's yours, rather than the team's, so `local-env`'s `.gitignore` should list it:
+
+```gitignore
+orca.preferences.yaml
+```
+
+If it isn't ignored, `orca ws init` reminds you.
+
 If the repository is private, set `GH_TOKEN` or `GITHUB_TOKEN` first, so orca can read the workspace config through the GitHub API. See [Initialising a workspace](../usage/workspaces.md#from-github).
 
 ??? tip "Already cloned the workspace repository?"
@@ -282,6 +290,15 @@ $ orca g pull --all         # pull the current branch in every project
 
 $ orca down -w acme         # stop everything
 ```
+
+If you only work on the API, disable `web`, and `orca up -w acme` won't start it. It's still cloned, and `orca up -p web` still starts it:
+
+```sh
+$ orca ws disable web
+$ orca ws projects          # what's enabled, cloned and running
+```
+
+See [Enabling and disabling projects](../usage/workspaces.md#enabling-and-disabling-projects).
 
 See [Using orca](../usage/index.md) for everything else you can do.
 

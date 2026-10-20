@@ -82,6 +82,7 @@ nav:
       - User config: configuration/user_config.md
       - Workspace config: configuration/workspace_config.md
       - Project config: configuration/project_config.md
+      - Preferences: configuration/preferences.md
   - Compose files:
       - compose_files/index.md
       - Overlays:

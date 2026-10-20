@@ -67,11 +67,13 @@ func reportError(out errorPrinter, err error) {
 	// Config problems can surface from anywhere a workspace is loaded, so
 	// they're shown here, in full, rather than in each handler
 	if invalidCfg, ok := errors.AsType[workspace.InvalidWorkspaceConfigError](err); ok {
-		out.Error(fmt.Sprintf("Workspace config '%s' is invalid:", invalidCfg.Path))
+		reportProblems(out, fmt.Sprintf("Workspace config '%s' is invalid:", invalidCfg.Path), invalidCfg.Problems)
 
-		for _, problem := range invalidCfg.Problems {
-			out.Error(fmt.Sprintf("  - %s", problem))
-		}
+		return
+	}
+
+	if invalidPrefs, ok := errors.AsType[workspace.InvalidPreferencesError](err); ok {
+		reportProblems(out, fmt.Sprintf("Preferences file '%s' is invalid:", invalidPrefs.Path), invalidPrefs.Problems)
 
 		return
 	}
@@ -82,6 +84,14 @@ func reportError(out errorPrinter, err error) {
 	}
 
 	out.Error(fmt.Sprintf("  %s", cause))
+}
+
+func reportProblems(out errorPrinter, title string, problems []string) {
+	out.Error(title)
+
+	for _, problem := range problems {
+		out.Error(fmt.Sprintf("  - %s", problem))
+	}
 }
 
 // exit stops any running plugins and then exits with the given code.

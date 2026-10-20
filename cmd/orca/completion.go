@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/git"
@@ -91,6 +92,34 @@ func completeProjects(cmd *cobra.Command, _ []string, toComplete string) ([]cobr
 	})
 
 	return toCompletions(choices, err, toComplete)
+}
+
+// completeEnabledProjects offers the enabled projects not already given.
+func completeEnabledProjects(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectChoicesQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+		Filter:    workspace.EnabledProjects,
+	})
+
+	return toCompletions(withoutGiven(choices, args), err, toComplete)
+}
+
+// completeDisabledProjects offers the disabled projects not already given.
+func completeDisabledProjects(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectChoicesQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+		Filter:    workspace.DisabledProjects,
+	})
+
+	return toCompletions(withoutGiven(choices, args), err, toComplete)
+}
+
+// withoutGiven leaves out the choices already given as arguments, for
+// commands that take several.
+func withoutGiven(choices []workspace.Choice, args []string) []workspace.Choice {
+	return slices.DeleteFunc(choices, func(c workspace.Choice) bool {
+		return slices.Contains(args, c.Value)
+	})
 }
 
 func completeServices(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {

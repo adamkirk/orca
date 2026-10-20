@@ -1,8 +1,10 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -93,6 +95,23 @@ func (m *Manager) DirectoryHasOrigin(dir string, origin string) (bool, error) {
 	}
 
 	return strings.TrimSpace(stdout.String()) == origin, nil
+}
+
+// IsIgnored reports whether git ignores the file at path, in the repository
+// that contains it.
+func (m *Manager) IsIgnored(path string) (bool, error) {
+	err := m.exec.Exec("git", []string{"check-ignore", "-q", filepath.Base(path)}, process.ChdirOpt(filepath.Dir(path)))
+
+	if err == nil {
+		return true, nil
+	}
+
+	// check-ignore exits with 1 when the file isn't ignored, and 128 for errors
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() == 1 {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("checking whether git ignores %s: %w", path, err)
 }
 
 func NewManager(exec executor, tui tui) *Manager {

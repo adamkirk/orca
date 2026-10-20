@@ -27,7 +27,7 @@ func (m *Manager) pullInContext(execCtx workspace.ExecutionContext, allProjects 
 		return m.PullBranch(PullBranchOpts{Dir: execCtx.Dir(), Rebase: rebase})
 	}
 
-	for _, p := range execCtx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.EnabledProjects() {
 		if err := m.PullBranch(PullBranchOpts{Dir: p.ProjectDir, Rebase: rebase}); err != nil {
 			return err
 		}
