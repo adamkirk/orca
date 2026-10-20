@@ -16,7 +16,7 @@ A disabled project given with --project is still started.`,
 
 func init() {
 	addWorkspaceOption(upCmd, false)
-	addProjectOption(upCmd)
+	addServiceProjectOption(upCmd)
 
 	rootCmd.AddCommand(upCmd)
 }

@@ -278,9 +278,11 @@ func (m *Manager) checkWorkspaceBranches(cfg *UnconfiguredWorkspace, into string
 	targets := make([]cloneTarget, len(cfg.Projects))
 
 	for i, p := range cfg.Projects {
+		project := Project{Name: p.Name, Type: p.Type, RepositoryConfig: p.RepositoryConfig, Path: p.Path}
+
 		targets[i] = cloneTarget{
-			project: Project{Name: p.Name, RepositoryConfig: p.RepositoryConfig},
-			into:    fmt.Sprintf("%s/%s", targetDir, p.Name),
+			project: project,
+			into:    cloneDir(targetDir, project),
 		}
 	}
 

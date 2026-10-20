@@ -1,6 +1,8 @@
 # Project config (`orca.project.yaml`)
 
-Every project needs an `orca.project.yaml` in the root of its directory, next to its compose file. It tells orca how to run the project. All paths in it are relative to the project's directory.
+Every service project needs an `orca.project.yaml` in the root of its directory, next to its compose file. It tells orca how to run the project. All paths in it are relative to the project's directory.
+
+A [library project](../usage/workspaces.md#library-projects) doesn't need one. It can have one, for extensions, but it can't contain `composeFiles`, `envFiles`, `hosts` or `tlsCerts`, or extensions with a `service`, as a library has no compose stack. Orca lists any it finds as invalid.
 
 ## Example
 

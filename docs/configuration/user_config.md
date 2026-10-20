@@ -16,10 +16,16 @@ workspaces:
       projects:
         - name: local-env
           path: /Users/me/code/acme/local-env
+          type: service
         - name: api
           path: /Users/me/code/acme/api
+          type: service
         - name: web
           path: /Users/me/code/acme/web
+          type: service
+        - name: sdk
+          path: /Users/me/code/acme/api/packages/sdk
+          type: library
 currentWorkspace: acme
 plugins:
     dirs:
@@ -36,6 +42,7 @@ plugins:
 | `workspaces[].path` | Absolute path to the workspace's `orca.workspace.yaml`. | |
 | `workspaces[].projects[].name` | A project's name, matching its entry in the workspace config. | |
 | `workspaces[].projects[].path` | Absolute path to the directory the project is cloned in. Orca uses these paths to work out [which project you're in](../getting_started/context.md). | |
+| `workspaces[].projects[].type` | The project's [type](./workspace_config.md#projects) when it was registered, `service` or `library`, so it's known without loading the workspace config. Projects registered before types existed don't have one, and are services. The workspace config's `type` is what orca acts on. | |
 | `currentWorkspace` | The workspace used when you're not inside a project directory and don't pass `-w`. Set with [`orca ws switch`](../CLI/orca_ws_switch.md), cleared with [`orca ws clear-current`](../CLI/orca_ws_clear-current.md). | `""` |
 | `plugins.dirs` | Extra directories to load [plugins](../plugins/index.md) from, in addition to `~/.orca/plugins`. | `[]` |
 

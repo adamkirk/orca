@@ -156,6 +156,67 @@ func Test_ExecutionContextMiddleware_Resolve(t *testing.T) {
 	}
 }
 
+type servicesOnlyCommand struct {
+	bus.Returns[bus.Void]
+}
+
+func (servicesOnlyCommand) MessageName() string { return "services-only" }
+
+func Test_ExecutionContextMiddleware_ServicesOnly(t *testing.T) {
+	ws := &workspace.Workspace{
+		Name: "acme",
+		Projects: []workspace.Project{
+			{Name: "api", Type: workspace.ProjectTypeService},
+			{Name: "sdk", Type: workspace.ProjectTypeLibrary},
+		},
+	}
+
+	tests := []struct {
+		name      string
+		project   *workspace.Project
+		expectErr bool
+	}{
+		{name: "a service is handled", project: &ws.Projects[0]},
+		{name: "the whole workspace is handled"},
+		{name: "a library fails", project: &ws.Projects[1], expectErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ec := workspace.NewExecutionContextMiddleware(&stubResolver{
+				execCtx: workspace.ExecutionContext{Workspace: ws, Project: tt.project},
+			})
+			ec.Target(func(servicesOnlyCommand) workspace.ExecutionTarget {
+				return workspace.ExecutionTarget{ServicesOnly: true}
+			})
+
+			b := bus.New()
+			b.Use(ec.Handle)
+
+			handled := false
+
+			b.HandleVoid(func(context.Context, servicesOnlyCommand) error {
+				handled = true
+
+				return nil
+			})
+
+			_, err := b.Dispatch(context.Background(), servicesOnlyCommand{})
+
+			if !tt.expectErr {
+				require.NoError(t, err)
+				assert.True(t, handled)
+				return
+			}
+
+			assert.ErrorIs(t, err, workspace.ErrLibraryProject)
+			msg, _, _ := usererr.Message(err)
+			assert.Equal(t, "sdk is a library project, so it has no compose stack for this command to act on!", msg)
+			assert.False(t, handled)
+		})
+	}
+}
+
 func Test_ExecutionContextMiddleware_UntargetedPassesThrough(t *testing.T) {
 	resolver := &stubResolver{}
 

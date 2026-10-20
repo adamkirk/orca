@@ -94,6 +94,19 @@ func completeProjects(cmd *cobra.Command, _ []string, toComplete string) ([]cobr
 	return toCompletions(choices, err, toComplete)
 }
 
+// completeServiceProjects offers the projects with a compose stack, leaving
+// out libraries, for commands that only apply to those.
+func completeServiceProjects(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	ws, _ := cmd.Flags().GetString("workspace")
+
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectChoicesQuery{
+		Workspace:    ws,
+		ServicesOnly: true,
+	})
+
+	return toCompletions(choices, err, toComplete)
+}
+
 // completeEnabledProjects offers the enabled projects not already given.
 func completeEnabledProjects(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectChoicesQuery{

@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -142,10 +143,22 @@ func convertRepository(r model.WorkspaceProjectRepository) ProjectRepositoryConf
 	}
 }
 
+// projectType is the project's type, which is a service unless it says
+// otherwise.
+func projectType(cfg model.WorkspaceProjectConfig) ProjectType {
+	if cfg.Type == "" {
+		return ProjectTypeService
+	}
+
+	return ProjectType(cfg.Type)
+}
+
 func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig) Project {
 	return Project{
 		Name:             wsPCfg.Name,
+		Type:             projectType(wsPCfg),
 		RepositoryConfig: convertRepository(wsPCfg.Repository),
+		Path:             wsPCfg.Path,
 		IsRegistered:     true,
 		ProjectDir:       meta.Path,
 		Requires:         wsPCfg.Requires,
@@ -167,8 +180,12 @@ type Repository struct {
 	userConfig userConfig
 }
 
+func projectConfigPath(projectMeta ProjectMeta) string {
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(projectMeta.Path, "/"), DefaultProjectFileName)
+}
+
 func (wcr *Repository) loadProject(projectMeta ProjectMeta) (*model.ProjectConfig, error) {
-	path := fmt.Sprintf("%s/%s", strings.TrimSuffix(projectMeta.Path, "/"), DefaultProjectFileName)
+	path := projectConfigPath(projectMeta)
 
 	found, err := afero.Exists(wcr.fs, path)
 
@@ -255,11 +272,58 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		if p.Repository.Self && p.Repository.Branch != "" {
 			problems = append(problems, fmt.Sprintf("%s: 'repository.branch' can't be combined with 'repository.self'", label))
 		}
+
+		if t := ProjectType(p.Type); p.Type != "" && t != ProjectTypeService && t != ProjectTypeLibrary {
+			problems = append(problems, fmt.Sprintf("%s: 'type' must be '%s' or '%s', not '%s'", label, ProjectTypeService, ProjectTypeLibrary, p.Type))
+		}
+
+		if p.Path != "" {
+			if p.Repository.Self {
+				problems = append(problems, fmt.Sprintf("%s: 'path' can't be combined with 'repository.self'", label))
+			} else if !filepath.IsLocal(p.Path) {
+				problems = append(problems, fmt.Sprintf("%s: 'path' must be relative, and stay inside the directory projects are cloned into, not '%s'", label, p.Path))
+			}
+		}
 	}
 
 	if len(problems) > 0 {
 		return InvalidWorkspaceConfigError{
 			Path:     path,
+			Problems: problems,
+		}
+	}
+
+	return nil
+}
+
+// validateLibraryConfig checks a library's project config only has what applies
+// to a project with no compose stack.
+func validateLibraryConfig(cfg *model.ProjectConfig, meta ProjectMeta) error {
+	problems := []string{}
+
+	for _, key := range []struct {
+		name string
+		set  bool
+	}{
+		{"composeFiles", cfg.ComposeFiles.Primary != "" || len(cfg.ComposeFiles.Extras) > 0},
+		{"envFiles", len(cfg.EnvFiles) > 0},
+		{"hosts", len(cfg.Hosts) > 0},
+		{"tlsCerts", len(cfg.TLSCertificates) > 0},
+	} {
+		if key.set {
+			problems = append(problems, fmt.Sprintf("'%s' can't be used in a library project", key.name))
+		}
+	}
+
+	for _, ext := range cfg.Extensions {
+		if ext.Service != "" {
+			problems = append(problems, fmt.Sprintf("extension '%s': 'service' can't be used in a library project, as it has no services", ext.Name))
+		}
+	}
+
+	if len(problems) > 0 {
+		return InvalidProjectConfigError{
+			Path:     projectConfigPath(meta),
 			Problems: problems,
 		}
 	}
@@ -273,7 +337,9 @@ func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *Unconfi
 	for i, p := range ws.Projects {
 		projects[i] = UnconfiguredProject{
 			Name:             p.Name,
+			Type:             projectType(p),
 			RepositoryConfig: convertRepository(p.Repository),
+			Path:             p.Path,
 		}
 	}
 
@@ -340,7 +406,9 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 			if errors.Is(err, ErrUnknownProject) {
 				ws.Projects[i] = Project{
 					Name:             pCfg.Name,
+					Type:             projectType(pCfg),
 					RepositoryConfig: convertRepository(pCfg.Repository),
+					Path:             pCfg.Path,
 					IsRegistered:     false,
 					ProjectDir:       "",
 					Requires:         pCfg.Requires,
@@ -355,8 +423,19 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 
 		p, err := wcr.loadProject(projectMeta)
 
+		// A library doesn't need any project config
+		if errors.Is(err, ErrProjectConfigNotFound) && projectType(pCfg) == ProjectTypeLibrary {
+			p, err = &model.ProjectConfig{}, nil
+		}
+
 		if err != nil {
 			return nil, err
+		}
+
+		if projectType(pCfg) == ProjectTypeLibrary {
+			if err := validateLibraryConfig(p, projectMeta); err != nil {
+				return nil, err
+			}
 		}
 
 		ws.Projects[i] = buildProject(pCfg, projectMeta, *p)

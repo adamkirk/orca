@@ -185,6 +185,13 @@ func addProjectOption(cmd *cobra.Command) {
 	checkErr(cmd.RegisterFlagCompletionFunc("project", completeProjects))
 }
 
+// addServiceProjectOption is addProjectOption, for commands that only apply to
+// projects with a compose stack, so libraries aren't offered.
+func addServiceProjectOption(cmd *cobra.Command) {
+	cmd.Flags().StringP("project", "p", "", "The name of the project within the workspace to run this command for.")
+	checkErr(cmd.RegisterFlagCompletionFunc("project", completeServiceProjects))
+}
+
 // rejectDashesAfterName fails if args[0], the name of what the rest of args are
 // passed to (e.g. exec's service), is followed by '--'. Everything after the
 // name is passed through as it is, including a '--', which used to be needed

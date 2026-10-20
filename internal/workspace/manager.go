@@ -16,7 +16,7 @@ type config interface {
 	GetAllWorkspaceMeta() []WorkspaceMeta
 	GetCurrentWorkspace() string
 	GetWorkspaceMeta(name string) (WorkspaceMeta, error)
-	SetProjectPath(wsName string, name string, into string) error
+	RegisterProject(wsName string, meta ProjectMeta) error
 	ProjectExists(wsName string, name string) (bool, error)
 	ClearCurrentWorkspace() error
 	SwitchWorkspace(workspaceName string) error

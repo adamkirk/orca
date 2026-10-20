@@ -14,7 +14,7 @@ var downCmd = &cobra.Command{
 
 func init() {
 	addWorkspaceOption(downCmd, false)
-	addProjectOption(downCmd)
+	addServiceProjectOption(downCmd)
 
 	rootCmd.AddCommand(downCmd)
 }

@@ -86,6 +86,12 @@ func (m *Manager) stopDisabled(ws *Workspace, names []string, orphan bool) error
 
 	for _, name := range names {
 		p, _ := ws.GetProject(name)
+
+		// A library has nothing running to stop
+		if p.IsLibrary() {
+			continue
+		}
+
 		r, err := check(p)
 
 		if err != nil {

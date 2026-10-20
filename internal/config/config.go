@@ -99,6 +99,7 @@ func (c *Config) GetAllProjectMeta() []workspace.ProjectMeta {
 				Name:          p.Name,
 				WorkspaceName: ws.Name,
 				Path:          p.Path,
+				Type:          workspace.ProjectType(p.Type),
 			})
 		}
 	}
@@ -123,6 +124,7 @@ func (c *Config) GetProjectMeta(wsName string, projectName string) (workspace.Pr
 		WorkspaceName: ws.Name,
 		Name:          ws.Projects[i].Name,
 		Path:          ws.Projects[i].Path,
+		Type:          workspace.ProjectType(ws.Projects[i].Type),
 	}, nil
 }
 
@@ -159,13 +161,15 @@ func (c *Config) ProjectExists(wsName string, name string) (bool, error) {
 	return c.runtimeConfig.projectExists(wsName, name)
 }
 
-func (c *Config) SetProjectPath(wsName string, name string, path string) error {
+// RegisterProject records where a project of the workspace is, and its type,
+// replacing anything recorded for it before.
+func (c *Config) RegisterProject(wsName string, meta workspace.ProjectMeta) error {
 	ws, err := c.persisted.getWorkspace(wsName)
 	if err != nil {
 		return err
 	}
 
-	project, err := c.persisted.getProject(wsName, name)
+	project, err := c.persisted.getProject(wsName, meta.Name)
 
 	if err != nil {
 		if !errors.Is(err, workspace.ErrUnknownProject) {
@@ -173,11 +177,12 @@ func (c *Config) SetProjectPath(wsName string, name string, path string) error {
 		}
 
 		project = configProject{
-			Name: name,
+			Name: meta.Name,
 		}
 	}
 
-	project.Path = path
+	project.Path = meta.Path
+	project.Type = string(meta.Type)
 
 	ws.Projects = upsert(ws.Projects, ws.projectIndex(project.Name), project)
 	c.persisted.Workspaces = upsert(c.persisted.Workspaces, c.persisted.workspaceIndex(ws.Name), ws)

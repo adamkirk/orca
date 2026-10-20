@@ -23,6 +23,10 @@ type ExecutionTarget struct {
 	// directory, instead of failing. Used by commands that are still useful
 	// outside of orca, like the git commands in any repository.
 	WorkspaceOptional bool
+
+	// The command only applies to projects with a compose stack, so fails for a
+	// library project, whether it's given or worked out from the directory.
+	ServicesOnly bool
 }
 
 type resolver interface {
@@ -83,10 +87,20 @@ func (m *ExecutionContextMiddleware) Handle(ctx context.Context, msg bus.Named, 
 		return next(ctx)
 	}
 
-	execCtx, err := m.resolve(targetFn(msg))
+	target := targetFn(msg)
+	execCtx, err := m.resolve(target)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if target.ServicesOnly && execCtx.Project != nil && execCtx.Project.IsLibrary() {
+		name := execCtx.Project.Name
+
+		return nil, usererr.Wrap(
+			fmt.Errorf("%w: %s", ErrLibraryProject, name),
+			fmt.Sprintf("%s is a library project, so it has no compose stack for this command to act on!", name),
+		)
 	}
 
 	return next(WithExecutionContext(ctx, execCtx))

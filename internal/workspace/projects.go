@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"log/slog"
@@ -54,7 +55,9 @@ func (m *Manager) Projects(ctx context.Context, _ ProjectsQuery) error {
 	for i, p := range ws.Projects {
 		running := "?"
 
-		if dockerAvailable {
+		if p.IsLibrary() {
+			running = "-"
+		} else if dockerAvailable {
 			isRunning, err := m.stack.IsProjectRunning(ws, &p)
 
 			if err != nil {
@@ -65,7 +68,7 @@ func (m *Manager) Projects(ctx context.Context, _ ProjectsQuery) error {
 			}
 		}
 
-		rows[i] = []string{p.Name, "service", yesNo(!p.Disabled), yesNo(m.isCloned(p)), running}
+		rows[i] = []string{p.Name, string(cmp.Or(p.Type, ProjectTypeService)), yesNo(!p.Disabled), yesNo(m.isCloned(p)), running}
 	}
 
 	m.tui.Table([]string{"Project", "Type", "Enabled", "Cloned", "Running"}, rows)

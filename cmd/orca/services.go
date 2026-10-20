@@ -384,31 +384,31 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec := workspace.NewExecutionContextMiddleware(s.GetContextResolver())
 
 	ec.Target(func(cmd stack.UpCommand) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, ServicesOnly: true}
 	})
 	ec.Target(func(cmd stack.DownCommand) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, ServicesOnly: true}
 	})
 	ec.Target(func(cmd stack.ExecCommand) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, ServicesOnly: true}
 	})
 	ec.Target(func(cmd stack.ExecuteExtensionCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
 	ec.Target(func(cmd provision.RunCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.ShowComposeConfigQuery) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
 	ec.Target(func(query stack.ShowComposeCommandQuery) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
 	ec.Target(func(query stack.ServiceChoicesQuery) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
 	ec.Target(func(query stack.ExtensionChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}

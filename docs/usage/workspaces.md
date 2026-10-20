@@ -66,7 +66,9 @@ $ orca ws clone -p payments     # just one project
 
 Before cloning anything, orca checks that the `repository.branch` of every project it's about to clone exists on its remote, and lists every missing one. The branch is only used for the first clone: projects that are already cloned are never switched to another branch.
 
-Projects are cloned into `{target}/{project name}`. `--target` defaults to the parent of the workspace config's repository, so projects end up next to it. With `-p` and `--target`, the project is cloned into `--target` itself.
+Projects are cloned into `{target}/{project name}`, or `{target}/{path}` for a project with a [`path`](../configuration/workspace_config.md#projects). `--target` defaults to the parent of the workspace config's repository, so projects end up next to it. With `-p` and `--target`, the project is cloned into `--target` itself.
+
+Projects are cloned in the order they're configured, except that a project is cloned after the projects it [`requires`](../configuration/workspace_config.md#dependencies-between-projects), and after any project whose directory its `path` is inside.
 
 [Disabled](#enabling-and-disabling-projects) projects are cloned too: being disabled only means they don't run.
 
@@ -126,6 +128,50 @@ web:acme[/Users/me/code/acme/web] stopping...
 
 - With `--orphan`, they're left running, and orca tells you how to stop them later.
 - A project that another running project still requires is left running, with a warning, as requirements win. Disabling both at once stops both.
+
+## Library projects
+
+Some repositories don't have anything to run: shared packages, SDKs or config repositories that only need cloning into the right place. Give them `type: library` in the [workspace config](../configuration/workspace_config.md#projects), and orca clones and keeps them up to date with everything else, but never tries to run them:
+
+```yaml
+projects:
+  - name: sdk
+    type: library
+    repository:
+      ssh: git@github.com:acme/sdk.git
+    path: api/packages/sdk
+```
+
+```
+$ orca ws clone
+Cloning 'git@github.com:acme/api.git' into /Users/me/code/acme/api...
+Cloning 'git@github.com:acme/sdk.git' (library) into /Users/me/code/acme/api/packages/sdk...
+
+$ orca up -p sdk
+Error: sdk is a library project, so it has no compose stack for this command to act on!
+```
+
+- **Included:** `ws init`, `ws clone`, `ws projects`, `ws enable`/`disable`, and the [`g` commands](./git.md) (with and without `--all`).
+- **Not included:** `up`, `down`, `restart`, `logs`, `exec`, `debug`, `hosts` and `tls gen`. Workspace-wide, they skip libraries. With `-p <library>`, or run inside a library's directory, they fail with the error above. `-p <tab>` doesn't offer libraries for them.
+- **Inside a library's directory**, orca acts on the library, even when it's cloned inside another project, so `orca g status` there shows the library's status.
+- **Project config is optional.** See [Project config](../configuration/project_config.md) for what a library's can contain.
+- **Required libraries that aren't cloned:** if `orca up` starts a project that requires a library that isn't cloned yet, e.g. one added to the workspace config since you last cloned, it warns, and starts the project anyway:
+
+    ```
+    Warning: web requires sdk, which isn't cloned; clone it with 'orca ws clone -p sdk'.
+    ```
+
+- **Disabling** a library only leaves it out of `g --all`, as there's nothing to run.
+
+### Cloning inside another project
+
+A `path` inside another project puts the library inside that project's git repository. Unless that repository ignores it, the library shows up there as untracked files, so `orca ws clone` warns about it:
+
+```
+Warning: sdk is inside api, whose repository doesn't ignore packages/sdk, so it shows up there as untracked files. Add it to api's .gitignore.
+```
+
+The project it's inside is always cloned first. `orca ws clone -p sdk` fails if that project isn't cloned yet, and tells you to clone it first, as cloning the library would create its directory, which couldn't then be cloned into.
 
 ## Switching workspaces
 

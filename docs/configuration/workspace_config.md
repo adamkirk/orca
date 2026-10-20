@@ -25,11 +25,18 @@ projects:
     requires:
       - local-env
 
+  - name: sdk
+    type: library
+    repository:
+      ssh: git@github.com:acme/sdk.git
+    path: api/packages/sdk
+
   - name: web
     repository:
       ssh: git@github.com:acme/web.git
     requires:
       - api
+      - sdk
 ```
 
 ## Reference
@@ -47,8 +54,10 @@ projects:
 
 | Property | Description |
 | -------- | ----------- |
-| `name` | The project's name, unique within the workspace. When cloning, it's also the name of the directory the project is cloned into. |
+| `name` | The project's name, unique within the workspace. When cloning, it's also the name of the directory the project is cloned into, unless `path` is set. |
+| `type` | Optional. `service`, a project with a compose stack to run, or `library`, a repository that's only cloned and set up, never run. Defaults to `service`. See [Library projects](../usage/workspaces.md#library-projects). |
 | `repository` | Where the project's code comes from, see [below](#repository). |
+| `path` | Optional. Where to clone the project, relative to the directory projects are cloned into, e.g. `api/packages/sdk`. It can be inside another project, but must stay inside that directory, so a workspace's layout is the same on every machine. Defaults to the project's `name`. Can't be combined with `repository.self`. |
 | `requires` | Names of other projects in this workspace that must be started before this one. |
 | `enabled` | Optional. Whether the project runs in workspace-wide commands by default, `true` or `false`. Defaults to `true`. Each developer can override it in their [preferences file](./preferences.md). |
 
@@ -72,6 +81,8 @@ Orca checks the workspace config whenever it loads it, so every command fails if
 - Every project has a `name`.
 - Every project has exactly one of `repository.ssh` or `repository.self`.
 - No project has both `repository.self` and `repository.branch`.
+- Every `type` is `service` or `library`.
+- No `path` is absolute, or escapes the directory projects are cloned into with `..`, and none is combined with `repository.self`.
 
 Every problem found is listed, e.g.:
 
@@ -91,6 +102,8 @@ Workspace config '/Users/me/code/acme/local-env/orca.workspace.yaml' is invalid:
 In the example above, `up` starts `local-env`, then `api`, then `web`, and `down` stops them in the opposite order.
 
 `requires` must not contain cycles. It isn't used when you run a command against a single project: `orca up -p web` starts only `web`, not `api` or `local-env`.
+
+A project can require a [library](../usage/workspaces.md#library-projects). Libraries are never started, but [`orca ws clone`](../CLI/orca_ws_clone.md) clones them before the projects that require them. If a required library isn't cloned, `orca up` warns, and starts the project anyway.
 
 `requires` also wins over your [preferences](./preferences.md): if an enabled project requires a disabled one, `orca up` starts the disabled one too, with a warning. See [Enabling and disabling projects](../usage/workspaces.md#enabling-and-disabling-projects).
 

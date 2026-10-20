@@ -75,6 +75,49 @@ func TestUp(t *testing.T) {
 	})
 }
 
+func newLibraryWorkspace() *workspace.Workspace {
+	return &workspace.Workspace{Projects: []workspace.Project{
+		{Name: "sdk", Type: workspace.ProjectTypeLibrary, IsRegistered: true},
+		{Name: "tools", Type: workspace.ProjectTypeLibrary},
+		{Name: "api"},
+		{Name: "web", Requires: []string{"sdk", "tools", "api"}},
+	}}
+}
+
+func TestUpLibraries(t *testing.T) {
+	t.Run("skips libraries, and warns about required ones that aren't cloned", func(t *testing.T) {
+		compose := &recordingCompose{}
+		tui := &recordingTUI{}
+		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: newLibraryWorkspace()})
+
+		require.NoError(t, NewManager(compose, tui).Up(ctx, UpCommand{}))
+
+		assert.Equal(t, []string{"api", "web"}, compose.started)
+		assert.Equal(t, []string{"Warning: web requires tools, which isn't cloned; clone it with 'orca ws clone -p tools'."}, tui.lines)
+	})
+
+	t.Run("warns when starting one project", func(t *testing.T) {
+		compose := &recordingCompose{}
+		tui := &recordingTUI{}
+		ws := newLibraryWorkspace()
+		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[3]})
+
+		require.NoError(t, NewManager(compose, tui).Up(ctx, UpCommand{}))
+
+		assert.Equal(t, []string{"web"}, compose.started)
+		assert.Equal(t, []string{"Warning: web requires tools, which isn't cloned; clone it with 'orca ws clone -p tools'."}, tui.lines)
+	})
+
+	t.Run("down skips libraries", func(t *testing.T) {
+		compose := &recordingCompose{running: map[string]bool{"sdk": true}}
+		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: newLibraryWorkspace()})
+
+		require.NoError(t, NewManager(compose, &recordingTUI{}).Down(ctx, DownCommand{}))
+
+		assert.Equal(t, []string{"web", "api"}, compose.stopped)
+	})
+}
+
 func TestDown(t *testing.T) {
 	t.Run("stops what up starts, and disabled projects still running", func(t *testing.T) {
 		compose := &recordingCompose{running: map[string]bool{"web": true}}

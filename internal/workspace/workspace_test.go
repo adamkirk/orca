@@ -57,6 +57,16 @@ func TestRunSet(t *testing.T) {
 			},
 		},
 		{
+			name: "libraries are never run, even when required",
+			projects: []Project{
+				{Name: "sdk", Type: ProjectTypeLibrary},
+				{Name: "tools", Type: ProjectTypeLibrary, Disabled: true},
+				{Name: "web", Requires: []string{"sdk", "tools"}},
+			},
+			wantNames:    []string{"web"},
+			wantPulledIn: []PulledInProject{},
+		},
+		{
 			name: "everything disabled",
 			projects: []Project{
 				{Name: "api", Disabled: true},

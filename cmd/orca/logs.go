@@ -16,7 +16,7 @@ var logsCmd = &cobra.Command{
 
 func init() {
 	addWorkspaceOption(logsCmd, false)
-	addProjectOption(logsCmd)
+	addServiceProjectOption(logsCmd)
 	rootCmd.AddCommand(logsCmd)
 }
 

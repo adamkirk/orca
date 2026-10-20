@@ -50,6 +50,10 @@ type ProjectChoicesQuery struct {
 
 	Workspace string
 	Filter    ProjectFilter
+
+	// Leaves out libraries, for commands that only apply to projects with a
+	// compose stack
+	ServicesOnly bool
 }
 
 func (ProjectChoicesQuery) MessageName() string {
@@ -67,6 +71,10 @@ func (m *Manager) ProjectChoices(ctx context.Context, query ProjectChoicesQuery)
 
 	for _, p := range execCtx.Workspace.Projects {
 		if (query.Filter == EnabledProjects && p.Disabled) || (query.Filter == DisabledProjects && !p.Disabled) {
+			continue
+		}
+
+		if query.ServicesOnly && p.IsLibrary() {
 			continue
 		}
 

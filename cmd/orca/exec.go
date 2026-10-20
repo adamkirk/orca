@@ -22,7 +22,7 @@ must come before it, e.g. 'orca exec -p api app ls -la'.`,
 
 func init() {
 	addWorkspaceOption(execCmd, false)
-	addProjectOption(execCmd)
+	addServiceProjectOption(execCmd)
 	// Leave flags after the service for the command in the container
 	execCmd.Flags().SetInterspersed(false)
 	rootCmd.AddCommand(execCmd)
