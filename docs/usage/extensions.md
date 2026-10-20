@@ -85,3 +85,27 @@ extensions:
 - **A project can override** one of the workspace's extensions, by defining its own with the same name. `orca ext` says when it's running the project's own instead of the workspace's.
 
 A workspace extension with a `service` can only run in a project with that service. Outside of a project, or in a library, it fails.
+
+## Trusting extensions
+
+An extension runs on your machine, from config that someone else wrote, so orca asks before running one that you haven't asked for yourself:
+
+```
+This workspace wants to run the following on your machine:
+
+┌────────────┬────────────┬───────────┬──────────┬─────────────────────┐
+│ Defined in │    Hook    │ Extension │   Type   │        Runs         │
+├────────────┼────────────┼───────────┼──────────┼─────────────────────┤
+│ api        │ clone.post │ env       │ syncFile │ .env.example → .env │
+│ workspace  │ init.post  │ seed      │ command  │ ./scripts/seed.sh   │
+└────────────┴────────────┴───────────┴──────────┴─────────────────────┘
+
+Trust these and continue? [y/N]
+```
+
+- **Each extension is asked about once.** Your answer is kept in `~/.orca/trust.yaml`, so orca only asks again when the extension's config changes, and then only about that extension, showing what it was before. Changing only its `description` doesn't count.
+- **A workspace extension is trusted once,** however many projects use it.
+- **Running one yourself, with `orca ext`, counts as trusting it,** so you're never asked about it afterwards.
+- **Answering no runs nothing,** and the command fails.
+- **`--yes` runs everything without asking,** for that run only: it doesn't record anything. Without a terminal to ask in, e.g. in a script, orca fails rather than waiting, and suggests `--yes`.
+

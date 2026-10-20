@@ -32,20 +32,26 @@ func (m *Manager) Run(ctx context.Context, cmd RunCommand) error {
 		return err
 	}
 
-	ext, err := m.find(execCtx, cmd.Name)
+	run, err := m.find(execCtx, cmd.Name)
 
 	if err != nil {
 		return err
 	}
 
-	t := target{ws: execCtx.Workspace, project: execCtx.Project}
+	// Asking for it by name is trusting it, so it isn't asked about when a hook
+	// runs it
+	if err := m.trust.Trust(map[TrustKey]Trusted{run.trustKey(): trusted(run.ext)}); err != nil {
+		return usererr.Wrap(err, "Failed to record the extension as trusted!")
+	}
 
-	return usererr.Wrap(m.execute(t, ext, cmd.Args), fmt.Sprintf("Extension '%s' failed!", cmd.Name))
+	return usererr.Wrap(m.execute(run.target, run.ext, cmd.Args), fmt.Sprintf("Extension '%s' failed!", cmd.Name))
 }
 
 // find looks for the extension in the project first, then the workspace, so a
-// project can override one of the workspace's.
-func (m *Manager) find(execCtx workspace.ExecutionContext, name string) (workspace.Extension, error) {
+// project can override one of the workspace's. Either way, it runs in the
+// project, if there is one.
+func (m *Manager) find(execCtx workspace.ExecutionContext, name string) (planned, error) {
+	t := target{ws: execCtx.Workspace, project: execCtx.Project}
 	wsExt, wsErr := execCtx.Workspace.FindExtension(name)
 
 	if execCtx.Project != nil {
@@ -56,11 +62,11 @@ func (m *Manager) find(execCtx workspace.ExecutionContext, name string) (workspa
 				m.tui.Info(fmt.Sprintf("Note: running %s's own '%s', rather than the workspace's.", execCtx.Project.Name, name))
 			}
 
-			return ext, nil
+			return planned{owner: execCtx.Project, target: t, ext: ext}, nil
 		}
 
 		if !errors.Is(err, workspace.ErrUnknownExtension) {
-			return workspace.Extension{}, err
+			return planned{}, err
 		}
 	}
 
@@ -71,8 +77,8 @@ func (m *Manager) find(execCtx workspace.ExecutionContext, name string) (workspa
 			where = fmt.Sprintf("%s or the workspace", execCtx.Project.Name)
 		}
 
-		return workspace.Extension{}, usererr.Wrap(wsErr, fmt.Sprintf("There's no extension '%s' in %s!", name, where))
+		return planned{}, usererr.Wrap(wsErr, fmt.Sprintf("There's no extension '%s' in %s!", name, where))
 	}
 
-	return wsExt, nil
+	return planned{target: t, ext: wsExt}, nil
 }

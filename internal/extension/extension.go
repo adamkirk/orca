@@ -21,6 +21,14 @@ type executor interface {
 
 type tui interface {
 	Info(msg ...string)
+	Table(header []string, rows [][]string)
+	Confirm(question string) (bool, error)
+}
+
+// trustStore records which extensions the developer has trusted to run.
+type trustStore interface {
+	Get(key TrustKey) (Trusted, bool, error)
+	Trust(trusted map[TrustKey]Trusted) error
 }
 
 // Manager runs extensions, the named steps defined in workspace and project
@@ -30,13 +38,15 @@ type Manager struct {
 	compose  compose
 	executor executor
 	tui      tui
+	trust    trustStore
 }
 
-func NewManager(fs afero.Fs, compose compose, executor executor, tui tui) *Manager {
+func NewManager(fs afero.Fs, compose compose, executor executor, tui tui, trust trustStore) *Manager {
 	return &Manager{
 		fs:       fs,
 		compose:  compose,
 		executor: executor,
 		tui:      tui,
+		trust:    trust,
 	}
 }

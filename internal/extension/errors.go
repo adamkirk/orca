@@ -10,4 +10,6 @@ var (
 	ErrSourceNotFound       = errors.New("source not found")
 	ErrTargetExists         = errors.New("target already exists, and isn't the expected symlink")
 	ErrSymlinksNotSupported = errors.New("the filesystem doesn't support symlinks")
+	ErrTrustDeclined        = errors.New("the extensions weren't trusted")
+	ErrTrustNeeded          = errors.New("the extensions need trusting")
 )

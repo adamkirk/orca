@@ -1,11 +1,15 @@
 package tui
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"golang.org/x/term"
 )
 
 const (
@@ -14,8 +18,12 @@ const (
 )
 
 type Tui struct {
+	in  *bufio.Reader
 	std io.Writer
 	err io.Writer
+
+	// Whether in is a terminal, so questions can be asked
+	interactive bool
 
 	errStyle     lipgloss.Style
 	successStyle lipgloss.Style
@@ -39,6 +47,30 @@ func (t *Tui) Info(msgs ...string) {
 	}
 }
 
+// Confirm asks a yes or no question, which is no unless the answer is y or yes.
+// It fails with ErrNotInteractive when there's no terminal to ask in, rather
+// than waiting for an answer that will never come.
+func (t *Tui) Confirm(question string) (bool, error) {
+	if !t.interactive {
+		return false, ErrNotInteractive
+	}
+
+	fmt.Fprintf(t.std, "%s [y/N] ", question)
+
+	answer, err := t.in.ReadString('\n')
+
+	if err != nil && err != io.EOF {
+		return false, fmt.Errorf("reading the answer: %w", err)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(answer)) {
+	case "y", "yes":
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
 func (t *Tui) Table(header []string, rows [][]string) {
 	var (
 		headerStyle = lipgloss.NewStyle().Bold(true).Align(lipgloss.Center)
@@ -59,11 +91,20 @@ func (t *Tui) Table(header []string, rows [][]string) {
 	fmt.Fprintln(t.std, tbl.Render())
 }
 
-func NewTui(std io.Writer, err io.Writer) *Tui {
+// NewTui writes to std and err, and asks questions on in, if it's a terminal.
+func NewTui(in io.Reader, std io.Writer, err io.Writer) *Tui {
 	return &Tui{
+		in:           bufio.NewReader(in),
+		interactive:  isTerminal(in),
 		std:          std,
 		err:          err,
 		errStyle:     lipgloss.NewStyle().Foreground(lipgloss.Color(colourRed)),
 		successStyle: lipgloss.NewStyle().Foreground(lipgloss.Color(colourGreen)),
 	}
+}
+
+func isTerminal(r io.Reader) bool {
+	f, ok := r.(*os.File)
+
+	return ok && term.IsTerminal(int(f.Fd()))
 }

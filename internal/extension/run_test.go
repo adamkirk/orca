@@ -73,11 +73,31 @@ func (c stubCompose) Exec(_ *workspace.Workspace, p *workspace.Project, service 
 }
 
 type stubTui struct {
-	lines []string
+	lines  []string
+	tables [][][]string
+
+	// The answer to every question, or the error asking it
+	answer    bool
+	answerErr error
+	asked     int
 }
 
 func (t *stubTui) Info(msg ...string) {
 	t.lines = append(t.lines, msg...)
+}
+
+func (t *stubTui) Table(_ []string, rows [][]string) {
+	t.tables = append(t.tables, rows)
+}
+
+func (t *stubTui) Confirm(string) (bool, error) {
+	t.asked++
+
+	return t.answer, t.answerErr
+}
+
+func newTrustStore() *TrustStore {
+	return NewTrustStore(afero.NewMemMapFs(), "/home/me/.orca/trust.yaml")
 }
 
 func command(name string, spec workspace.CommandSpec) workspace.Extension {
@@ -200,7 +220,7 @@ func Test_Run(t *testing.T) {
 
 			got := []ran{}
 			out := &stubTui{}
-			m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got, services: []string{"app"}, running: tt.running}, stubExecutor{ran: &got}, out)
+			m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got, services: []string{"app"}, running: tt.running}, stubExecutor{ran: &got}, out, newTrustStore())
 
 			err := m.Run(workspace.WithExecutionContext(context.Background(), execCtx), tt.cmd)
 
@@ -220,7 +240,7 @@ func Test_Run(t *testing.T) {
 func Test_Run_UnknownService(t *testing.T) {
 	ws := testWorkspace()
 	got := []ran{}
-	m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got}, stubExecutor{ran: &got}, &stubTui{})
+	m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got}, stubExecutor{ran: &got}, &stubTui{}, newTrustStore())
 	ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
 
 	err := m.Run(ctx, RunCommand{Name: "artisan"})
@@ -233,7 +253,7 @@ func Test_Run_CommandFails(t *testing.T) {
 	ws := testWorkspace()
 	failure := errors.New("exit status 1")
 	got := []ran{}
-	m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got}, stubExecutor{ran: &got, err: failure}, &stubTui{})
+	m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got}, stubExecutor{ran: &got, err: failure}, &stubTui{}, newTrustStore())
 	ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws})
 
 	err := m.Run(ctx, RunCommand{Name: "seed"})
@@ -258,7 +278,7 @@ func Test_SyncFile(t *testing.T) {
 		ws.Projects[0].Config.Extensions = []workspace.Extension{{Name: "env", Spec: spec}}
 		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
 
-		return out, NewManager(fs, nil, nil, out).Run(ctx, RunCommand{Name: "env", Args: args})
+		return out, NewManager(fs, nil, nil, out, newTrustStore()).Run(ctx, RunCommand{Name: "env", Args: args})
 	}
 
 	t.Run("creates the target, keeping the source's permissions", func(t *testing.T) {
@@ -327,7 +347,7 @@ func Test_Symlink(t *testing.T) {
 		ws.Projects[0].Config.Extensions = []workspace.Extension{{Name: "link", Spec: spec}}
 		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
 
-		return NewManager(fs, nil, nil, &stubTui{}).Run(ctx, RunCommand{Name: "link"})
+		return NewManager(fs, nil, nil, &stubTui{}, newTrustStore()).Run(ctx, RunCommand{Name: "link"})
 	}
 
 	linkTo := func(t *testing.T, path string) string {

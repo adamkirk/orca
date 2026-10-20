@@ -44,7 +44,8 @@ type services struct {
 
 	stack *stack.Manager
 
-	extension *extension.Manager
+	extension  *extension.Manager
+	trustStore *extension.TrustStore
 
 	hosts *hosts.Manager
 
@@ -93,6 +94,7 @@ func (s *services) GetTui() *tui.Tui {
 	}
 
 	s.tui = tui.NewTui(
+		os.Stdin,
 		os.Stdout,
 		os.Stderr,
 	)
@@ -206,9 +208,19 @@ func (s *services) GetExtension() *extension.Manager {
 		return s.extension
 	}
 
-	s.extension = extension.NewManager(s.GetFs(), s.GetCompose(), s.GetExecutor(), s.GetTui())
+	s.extension = extension.NewManager(s.GetFs(), s.GetCompose(), s.GetExecutor(), s.GetTui(), s.GetTrustStore())
 
 	return s.extension
+}
+
+func (s *services) GetTrustStore() *extension.TrustStore {
+	if s.trustStore != nil {
+		return s.trustStore
+	}
+
+	s.trustStore = extension.NewTrustStore(s.GetFs(), getTrustFilePath())
+
+	return s.trustStore
 }
 
 func (s *services) GetHosts() *hosts.Manager {

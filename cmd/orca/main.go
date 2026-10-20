@@ -103,6 +103,13 @@ func getPluginCommandCachePath() string {
 	return fmt.Sprintf("%s/.orca/cache/plugin-commands.json", homeDir)
 }
 
+func getTrustFilePath() string {
+	homeDir, err := os.UserHomeDir()
+	checkErr(err)
+
+	return fmt.Sprintf("%s/.orca/trust.yaml", homeDir)
+}
+
 func getTLSDir() string {
 	homeDir, err := os.UserHomeDir()
 	checkErr(err)

@@ -56,7 +56,7 @@ func Test_Choices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewManager(nil, nil, nil, nil).Choices(tt.ctx, ChoicesQuery{})
+			got, err := NewManager(nil, nil, nil, nil, nil).Choices(tt.ctx, ChoicesQuery{})
 
 			if tt.wantErr != nil {
 				assert.ErrorIs(t, err, tt.wantErr)
