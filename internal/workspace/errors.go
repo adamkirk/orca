@@ -21,6 +21,9 @@ var (
 	ErrConfigIsNotValidYAML        = errors.New("config is not valid yaml")
 	ErrUnknownExtension            = errors.New("unknown extension")
 	ErrBranchNotFound              = errors.New("branch not found")
+	ErrLibraryProject              = errors.New("library project")
+	ErrCircularCloneOrder          = errors.New("projects require, or are inside, each other in a circle")
+	ErrEnclosingProjectNotCloned   = errors.New("the project it's inside isn't cloned")
 )
 
 type InvalidWorkspaceConfigError struct {
@@ -30,6 +33,15 @@ type InvalidWorkspaceConfigError struct {
 
 func (err InvalidWorkspaceConfigError) Error() string {
 	return fmt.Sprintf("workspace config at '%s' is invalid: %s", err.Path, strings.Join(err.Problems, "; "))
+}
+
+type InvalidProjectConfigError struct {
+	Path     string
+	Problems []string
+}
+
+func (err InvalidProjectConfigError) Error() string {
+	return fmt.Sprintf("project config at '%s' is invalid: %s", err.Path, strings.Join(err.Problems, "; "))
 }
 
 type InvalidPreferencesError struct {

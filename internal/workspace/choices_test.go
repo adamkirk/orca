@@ -78,6 +78,19 @@ func TestProjectChoices(t *testing.T) {
 		assert.Equal(t, []Choice{{Value: "web"}}, disabled)
 	})
 
+	t.Run("libraries left out for commands that only apply to services", func(t *testing.T) {
+		ws := &Workspace{Projects: []Project{{Name: "api"}, {Name: "sdk", Type: ProjectTypeLibrary}}}
+		ctx := WithExecutionContext(context.Background(), ExecutionContext{Workspace: ws})
+
+		all, err := m.ProjectChoices(ctx, ProjectChoicesQuery{})
+		require.NoError(t, err)
+		assert.Equal(t, []Choice{{Value: "api"}, {Value: "sdk"}}, all)
+
+		services, err := m.ProjectChoices(ctx, ProjectChoicesQuery{ServicesOnly: true})
+		require.NoError(t, err)
+		assert.Equal(t, []Choice{{Value: "api"}}, services)
+	})
+
 	t.Run("without an execution context", func(t *testing.T) {
 		_, err := m.ProjectChoices(context.Background(), ProjectChoicesQuery{})
 

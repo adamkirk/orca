@@ -29,11 +29,11 @@ var debugShowComposeCommandCmd = &cobra.Command{
 
 func init() {
 	addWorkspaceOption(debugShowComposeConfigCmd, false)
-	addProjectOption(debugShowComposeConfigCmd)
+	addServiceProjectOption(debugShowComposeConfigCmd)
 	debugCmd.AddCommand(debugShowComposeConfigCmd)
 
 	addWorkspaceOption(debugShowComposeCommandCmd, false)
-	addProjectOption(debugShowComposeCommandCmd)
+	addServiceProjectOption(debugShowComposeCommandCmd)
 	debugCmd.AddCommand(debugShowComposeCommandCmd)
 	rootCmd.AddCommand(debugCmd)
 }

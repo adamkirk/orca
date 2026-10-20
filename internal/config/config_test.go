@@ -368,13 +368,14 @@ func Test_GetAllProjectMeta(t *testing.T) {
 	}, res)
 }
 
-func Test_SetProjectPath(t *testing.T) {
+func Test_RegisterProject(t *testing.T) {
 	tests := []struct {
 		name             string
 		initialFile      string
 		wsName           string
 		projectName      string
 		projectPath      string
+		projectType      workspace.ProjectType
 		expect           *config
 		expectErr        error
 		expectFileOnDisk string
@@ -418,6 +419,55 @@ workspaces:
       projects:
         - name: meh1
           path: /path/meh/1
+    - name: blah
+      path: /path/blah
+      projects: []
+currentWorkspace: blah
+`,
+		},
+
+		{
+			name:        "a library records its type",
+			initialFile: existingWithMultipleWorkspaces,
+			wsName:      "meh",
+			projectName: "sdk",
+			projectPath: "/path/meh/1/packages/sdk",
+			projectType: workspace.ProjectTypeLibrary,
+			expect: &config{
+				Logging: configLogging{
+					Level:  "debug",
+					Format: "json",
+				},
+				Workspaces: []configWorkspace{
+					{
+						Name: "meh",
+						Path: "/path/meh",
+						Projects: []configProject{
+							{
+								Name: "sdk",
+								Path: "/path/meh/1/packages/sdk",
+								Type: "library",
+							},
+						},
+					},
+					{
+						Name: "blah",
+						Path: "/path/blah",
+					},
+				},
+				CurrentWorkspace: "blah",
+			},
+			expectErr: nil,
+			expectFileOnDisk: `logging:
+    level: debug
+    format: json
+workspaces:
+    - name: meh
+      path: /path/meh
+      projects:
+        - name: sdk
+          path: /path/meh/1/packages/sdk
+          type: library
     - name: blah
       path: /path/blah
       projects: []
@@ -562,7 +612,11 @@ currentWorkspace: blah
 			err = cfg.LoadOrCreate()
 			require.Nil(tt, err)
 
-			err = cfg.SetProjectPath(test.wsName, test.projectName, test.projectPath)
+			err = cfg.RegisterProject(test.wsName, workspace.ProjectMeta{
+				Name: test.projectName,
+				Path: test.projectPath,
+				Type: test.projectType,
+			})
 
 			require.Equal(tt, test.expectErr, err)
 

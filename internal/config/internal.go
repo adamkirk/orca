@@ -15,6 +15,7 @@ type configLogging struct {
 type configProject struct {
 	Name string
 	Path string
+	Type string `yaml:"type,omitempty"`
 }
 
 type configWorkspace struct {

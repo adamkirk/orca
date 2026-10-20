@@ -1,10 +1,13 @@
 package workspace
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
@@ -28,6 +31,156 @@ func (CloneCommand) MessageName() string {
 type cloneTarget struct {
 	project Project
 	into    string
+}
+
+// cloneDir is the directory a project is cloned into, within targetDir: its
+// path if it has one, otherwise its name.
+func cloneDir(targetDir string, p Project) string {
+	return filepath.Join(targetDir, cmp.Or(p.Path, p.Name))
+}
+
+// cloneOrder orders targets so each project is cloned after the projects it
+// requires, so their hooks can rely on them, and after any project whose
+// directory it's inside, which couldn't be cloned into a directory that
+// already exists. Otherwise, the configured order is kept.
+func cloneOrder(targets []cloneTarget) ([]cloneTarget, error) {
+	after := map[string][]string{}
+
+	for _, t := range targets {
+		for _, other := range targets {
+			if other.project.Name == t.project.Name {
+				continue
+			}
+
+			if slices.Contains(t.project.Requires, other.project.Name) || encloses(other, t) {
+				after[t.project.Name] = append(after[t.project.Name], other.project.Name)
+			}
+		}
+	}
+
+	ordered := make([]cloneTarget, 0, len(targets))
+	done := map[string]bool{}
+
+	for len(ordered) < len(targets) {
+		i := slices.IndexFunc(targets, func(t cloneTarget) bool {
+			return !done[t.project.Name] && !slices.ContainsFunc(after[t.project.Name], func(name string) bool {
+				return !done[name]
+			})
+		})
+
+		if i == -1 {
+			remaining := []string{}
+
+			for _, t := range targets {
+				if !done[t.project.Name] {
+					remaining = append(remaining, t.project.Name)
+				}
+			}
+
+			return nil, fmt.Errorf("%w: %s", ErrCircularCloneOrder, strings.Join(remaining, ", "))
+		}
+
+		ordered = append(ordered, targets[i])
+		done[targets[i].project.Name] = true
+	}
+
+	return ordered, nil
+}
+
+// encloses reports whether t is cloned somewhere inside outer's directory. The
+// workspace's own repository isn't cloned, so it never encloses anything.
+func encloses(outer cloneTarget, t cloneTarget) bool {
+	if outer.project.RepositoryConfig.Self {
+		return false
+	}
+
+	inner, dir := filepath.Clean(t.into), filepath.Clean(outer.into)
+
+	return inner != dir && isWithinDir(inner, dir)
+}
+
+// enclosing returns the project whose repository t is cloned inside, the
+// deepest one if there are several, or nil.
+func enclosing(t cloneTarget, targets []cloneTarget) *cloneTarget {
+	var outer *cloneTarget
+
+	for i := range targets {
+		if encloses(targets[i], t) && (outer == nil || encloses(*outer, targets[i])) {
+			outer = &targets[i]
+		}
+	}
+
+	return outer
+}
+
+// warnIfNotIgnored warns when t is cloned inside another project's repository,
+// which doesn't ignore it, so it would show up there as untracked files.
+func (m *Manager) warnIfNotIgnored(t cloneTarget, targets []cloneTarget) {
+	outer := enclosing(t, targets)
+
+	if outer == nil {
+		return
+	}
+
+	ignored, err := m.git.IsIgnored(t.into)
+
+	if err != nil {
+		slog.Debug("couldn't check whether a nested project is ignored", "project", t.project.Name, "err", err)
+		return
+	}
+
+	if ignored {
+		return
+	}
+
+	rel, err := filepath.Rel(outer.into, t.into)
+
+	if err != nil {
+		rel = t.into
+	}
+
+	m.tui.Info(fmt.Sprintf(
+		"Warning: %s is inside %s, whose repository doesn't ignore %s, so it shows up there as untracked files. Add it to %s's .gitignore.",
+		t.project.Name, outer.project.Name, rel, outer.project.Name,
+	))
+}
+
+// checkEnclosingCloned fails if a project would be cloned inside another that
+// isn't cloned, and isn't being cloned first. Cloning it would create the
+// other's directory, which then couldn't be cloned into.
+func (m *Manager) checkEnclosingCloned(targets []cloneTarget, all []cloneTarget) error {
+	for _, t := range targets {
+		outer := enclosing(t, all)
+
+		if outer == nil || slices.ContainsFunc(targets, func(o cloneTarget) bool { return o.project.Name == outer.project.Name }) {
+			continue
+		}
+
+		exists, err := afero.DirExists(m.fs, outer.into)
+
+		if err != nil {
+			return err
+		}
+
+		if !exists {
+			return usererr.Wrap(
+				fmt.Errorf("%w: %s is inside %s", ErrEnclosingProjectNotCloned, t.project.Name, outer.project.Name),
+				fmt.Sprintf("%s is cloned inside %s, which isn't cloned yet; clone it first with 'orca ws clone -p %s'.", t.project.Name, outer.project.Name, outer.project.Name),
+			)
+		}
+	}
+
+	return nil
+}
+
+// register records where the project is, and its type, in the user config.
+func (m *Manager) register(ws *Workspace, project Project, path string) error {
+	return m.configManager.RegisterProject(ws.Name, ProjectMeta{
+		Name:          project.Name,
+		WorkspaceName: ws.Name,
+		Path:          path,
+		Type:          project.Type,
+	})
 }
 
 // checkBranches checks that the branch of every project that is about to be
@@ -88,7 +241,7 @@ func (m *Manager) registerWorkspaceProject(ws *Workspace, project Project) error
 		return err
 	}
 
-	return m.configManager.SetProjectPath(ws.Name, project.Name, root)
+	return m.register(ws, project, root)
 }
 
 func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string) error {
@@ -132,7 +285,7 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 			m.tui.Info(fmt.Sprintf("Skipping '%s' already cloned at '%s'!", project.Name, into))
 
 			return usererr.Wrap(
-				m.configManager.SetProjectPath(ws.Name, project.Name, into),
+				m.register(ws, project, into),
 				"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
 			)
 		}
@@ -146,7 +299,7 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 		return err
 	}
 
-	m.tui.Info(fmt.Sprintf("Cloning '%s'%s into %s...", project.RepositoryConfig.SSH, branchSuffix(project.RepositoryConfig.Branch), into))
+	m.tui.Info(fmt.Sprintf("Cloning '%s'%s%s into %s...", project.RepositoryConfig.SSH, typeSuffix(project), branchSuffix(project.RepositoryConfig.Branch), into))
 
 	err = m.git.Clone(project.RepositoryConfig.SSH, into, project.RepositoryConfig.Branch)
 
@@ -155,7 +308,7 @@ func (m *Manager) cloneSingleProject(ws *Workspace, project Project, into string
 	}
 
 	return usererr.Wrap(
-		m.configManager.SetProjectPath(ws.Name, project.Name, into),
+		m.register(ws, project, into),
 		"Failed to save config, you will have to edit this manually but adding the path into your orca config!",
 	)
 }
@@ -208,6 +361,15 @@ func branchSuffix(branch string) string {
 	return fmt.Sprintf(" (branch '%s')", branch)
 }
 
+// typeSuffix labels libraries in progress messages, as they're never run.
+func typeSuffix(project Project) string {
+	if project.IsLibrary() {
+		return " (library)"
+	}
+
+	return ""
+}
+
 // clone clones the given project, or all projects when it's empty, for the
 // workspace into the given directory. branchesChecked skips checking the
 // projects' branches exist, when the caller has already done so.
@@ -243,16 +405,22 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 			return usererr.Wrap(err, "Failed to clone specified project!")
 		}
 
-		targetDir := targetDir
+		into := targetDir
 
 		if to == "" {
-			targetDir = fmt.Sprintf("%s/%s", targetDir, project.Name)
+			into = cloneDir(targetDir, *project)
 		}
 
-		targets = append(targets, cloneTarget{project: *project, into: targetDir})
+		targets = append(targets, cloneTarget{project: *project, into: into})
 	} else {
 		for _, p := range cfg.Projects {
-			targets = append(targets, cloneTarget{project: p, into: fmt.Sprintf("%s/%s", targetDir, p.Name)})
+			targets = append(targets, cloneTarget{project: p, into: cloneDir(targetDir, p)})
+		}
+
+		targets, err = cloneOrder(targets)
+
+		if err != nil {
+			return usererr.Wrap(err, "Failed to work out the order to clone projects in!")
 		}
 	}
 
@@ -262,6 +430,18 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 		}
 	}
 
+	// Other projects are found from all of them, so a project cloned on its
+	// own is still checked against the one it's inside
+	all := make([]cloneTarget, len(cfg.Projects))
+
+	for i, p := range cfg.Projects {
+		all[i] = cloneTarget{project: p, into: cloneDir(targetDir, p)}
+	}
+
+	if err := m.checkEnclosingCloned(targets, all); err != nil {
+		return err
+	}
+
 	for _, t := range targets {
 		if err := m.cloneSingleProject(cfg, t.project, t.into); err != nil {
 			if errors.Is(err, ErrDirectoryAlreadyExists) {
@@ -269,6 +449,10 @@ func (m *Manager) clone(wsName string, project string, to string, branchesChecke
 			}
 
 			return err
+		}
+
+		if !t.project.RepositoryConfig.Self {
+			m.warnIfNotIgnored(t, all)
 		}
 	}
 

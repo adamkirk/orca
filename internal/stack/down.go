@@ -36,7 +36,7 @@ func (m *Manager) shutdownOrder(execCtx workspace.ExecutionContext) ([]string, e
 	projects, _ := ws.RunSet()
 
 	for _, p := range ws.Projects {
-		if slices.ContainsFunc(projects, func(r workspace.Project) bool { return r.Name == p.Name }) {
+		if p.IsLibrary() || slices.ContainsFunc(projects, func(r workspace.Project) bool { return r.Name == p.Name }) {
 			continue
 		}
 

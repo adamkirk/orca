@@ -79,17 +79,36 @@ type ProjectRepositoryConfig struct {
 	Branch string
 }
 
+// ProjectType is what a project is for: running a compose stack, or only being
+// cloned and set up.
+type ProjectType string
+
+const (
+	ProjectTypeService ProjectType = "service"
+	ProjectTypeLibrary ProjectType = "library"
+)
+
 type Project struct {
 	Name             string
+	Type             ProjectType
 	RepositoryConfig ProjectRepositoryConfig
-	ProjectDir       string
-	Requires         []string
-	Config           ProjectConfig
-	IsRegistered     bool
+
+	// Path is where the project is cloned, relative to the directory projects
+	// are cloned into. Empty means the project's name.
+	Path         string
+	ProjectDir   string
+	Requires     []string
+	Config       ProjectConfig
+	IsRegistered bool
 
 	// Disabled projects are left out of workspace-wide commands, unless an
 	// enabled project requires them. Set from the preferences file.
 	Disabled bool
+}
+
+// IsLibrary reports whether the project has no compose stack, so is never run.
+func (p Project) IsLibrary() bool {
+	return p.Type == ProjectTypeLibrary
 }
 
 func (p Project) GetKey() string {
@@ -178,13 +197,18 @@ type PulledInProject struct {
 // RunSet returns the projects that workspace-wide commands run: the enabled
 // ones, and every project they require, directly or not, even if it's disabled.
 // The disabled projects that were pulled in are returned too, so they can be
-// warned about.
+// warned about. Libraries are never run, so they're left out, and requirements
+// on them are kept, to be trimmed or checked by the caller.
 func (ws *Workspace) RunSet() ([]Project, []PulledInProject) {
 	included := map[string]bool{}
 	pulledIn := []PulledInProject{}
 	queue := []Project{}
 
 	for _, p := range ws.EnabledProjects() {
+		if p.IsLibrary() {
+			continue
+		}
+
 		included[p.Name] = true
 		queue = append(queue, p)
 	}
@@ -201,7 +225,7 @@ func (ws *Workspace) RunSet() ([]Project, []PulledInProject) {
 			required, err := ws.GetProject(name)
 
 			// An unknown requirement is reported when the projects are ordered
-			if err != nil {
+			if err != nil || required.IsLibrary() {
 				continue
 			}
 
@@ -271,7 +295,9 @@ func (ws *Workspace) GetUniqueHosts() []string {
 
 type UnconfiguredProject struct {
 	Name             string
+	Type             ProjectType
 	RepositoryConfig ProjectRepositoryConfig
+	Path             string
 }
 
 type UnconfiguredWorkspace struct {

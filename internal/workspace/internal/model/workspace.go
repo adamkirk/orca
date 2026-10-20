@@ -14,9 +14,13 @@ type WorkspaceProjectRepository struct {
 
 type WorkspaceProjectConfig struct {
 	Name       string
+	Type       string
 	Repository WorkspaceProjectRepository
-	Path       string
-	Requires   []string
+
+	// Where to clone the project, relative to the directory projects are
+	// cloned into
+	Path     string
+	Requires []string
 
 	// Whether the project is enabled by default, nil means it is. Each
 	// developer's preferences file can override it.

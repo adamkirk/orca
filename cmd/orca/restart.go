@@ -14,7 +14,7 @@ var restartCmd = &cobra.Command{
 
 func init() {
 	addWorkspaceOption(restartCmd, false)
-	addProjectOption(restartCmd)
+	addServiceProjectOption(restartCmd)
 
 	rootCmd.AddCommand(restartCmd)
 }

@@ -100,7 +100,7 @@ orca completion powershell | Out-String | Invoke-Expression
 | `orca up --<tab>` | The command's flags. |
 | `orca <tab>`, for [plugin](../plugins/index.md) commands | Plugin commands, with `(plugin: <name>)` after their description, and their subcommands and flags. See below. |
 | `-w <tab>`, on any command with it | Your registered workspaces. |
-| `-p <tab>`, on any command with it | The projects in the workspace, worked out as the command would: from `-w`, if you've typed it, otherwise from your current directory, or your current workspace. See [Choosing a workspace and project](../getting_started/context.md). |
+| `-p <tab>`, on any command with it | The projects in the workspace, worked out as the command would: from `-w`, if you've typed it, otherwise from your current directory, or your current workspace. See [Choosing a workspace and project](../getting_started/context.md). For `up`, `down`, `restart`, `logs`, `exec` and `debug`, [library projects](./workspaces.md#library-projects) are left out, as those commands don't apply to them. |
 | `orca ws switch <tab>` | Your registered workspaces. |
 | `orca ws enable <tab>` | The workspace's [disabled](./workspaces.md#enabling-and-disabling-projects) projects, leaving out any you've already typed. |
 | `orca ws disable <tab>` | The workspace's enabled projects, leaving out any you've already typed. |

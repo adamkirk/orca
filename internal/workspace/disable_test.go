@@ -22,6 +22,7 @@ func TestDisable(t *testing.T) {
 				{Name: "api", Requires: []string{"local-env"}},
 				{Name: "web", Requires: []string{"api"}},
 				{Name: "admin"},
+				{Name: "sdk", Type: ProjectTypeLibrary},
 			},
 		}
 	}
@@ -71,6 +72,12 @@ func TestDisable(t *testing.T) {
 			running:     map[string]bool{"local-env": true, "api": true},
 			wantStopped: []string{"api", "local-env"},
 			wantLines:   []string{"Disabled local-env and api."},
+		},
+		{
+			name:      "a library has nothing to stop, so docker isn't asked",
+			cmd:       DisableCommand{Projects: []string{"sdk"}},
+			stackErr:  errors.New("docker: command not found"),
+			wantLines: []string{"Disabled sdk."},
 		},
 		{
 			name:     "without docker, they're only disabled",

@@ -22,6 +22,11 @@ projects:
     repository:
       ssh: git@github.com:acme/svc-a.git
       branch: orca-adoption
+  - name: sdk
+    type: library
+    path: svc-a/packages/sdk
+    repository:
+      ssh: git@github.com:acme/sdk.git
 `)
 
 		ws, err := repo.ParseUnconfiguredWorkspace(contents, "orca.workspace.yaml")
@@ -32,8 +37,9 @@ projects:
 			ConfigPath:      "orca.workspace.yaml",
 			PreferencesPath: "orca.preferences.yaml",
 			Projects: []UnconfiguredProject{
-				{Name: "root", RepositoryConfig: ProjectRepositoryConfig{Self: true}},
-				{Name: "svc-a", RepositoryConfig: ProjectRepositoryConfig{SSH: "git@github.com:acme/svc-a.git", Branch: "orca-adoption"}},
+				{Name: "root", Type: ProjectTypeService, RepositoryConfig: ProjectRepositoryConfig{Self: true}},
+				{Name: "svc-a", Type: ProjectTypeService, RepositoryConfig: ProjectRepositoryConfig{SSH: "git@github.com:acme/svc-a.git", Branch: "orca-adoption"}},
+				{Name: "sdk", Type: ProjectTypeLibrary, RepositoryConfig: ProjectRepositoryConfig{SSH: "git@github.com:acme/sdk.git"}, Path: "svc-a/packages/sdk"},
 			},
 		}, ws)
 	})
@@ -64,6 +70,22 @@ projects:
     repository:
       self: true
       branch: orca-adoption
+  - name: svc-e
+    type: worker
+    repository:
+      ssh: git@github.com:acme/svc-e.git
+  - name: absolute
+    path: /code/absolute
+    repository:
+      ssh: git@github.com:acme/absolute.git
+  - name: escapes
+    path: api/../../escapes
+    repository:
+      ssh: git@github.com:acme/escapes.git
+  - name: self-path
+    path: root
+    repository:
+      self: true
 `)
 
 		_, err := repo.ParseUnconfiguredWorkspace(contents, "orca.workspace.yaml")
@@ -76,6 +98,10 @@ projects:
 				"project 'svc-b': exactly one of 'repository.ssh' or 'repository.self' is required",
 				"project 'svc-c': exactly one of 'repository.ssh' or 'repository.self' is required",
 				"project 'svc-d': 'repository.branch' can't be combined with 'repository.self'",
+				"project 'svc-e': 'type' must be 'service' or 'library', not 'worker'",
+				"project 'absolute': 'path' must be relative, and stay inside the directory projects are cloned into, not '/code/absolute'",
+				"project 'escapes': 'path' must be relative, and stay inside the directory projects are cloned into, not 'api/../../escapes'",
+				"project 'self-path': 'path' can't be combined with 'repository.self'",
 			},
 		}, err)
 	})
@@ -214,6 +240,85 @@ extensions:
 		{Name: "artisan", Service: "app", Command: "php artisan", Description: "Run an artisan command"},
 		{Name: "test", Service: "app", Command: "vendor/bin/phpunit"},
 	}, ws.Projects[0].Config.Extensions)
+}
+
+func TestLoadLibrary(t *testing.T) {
+	newRepo := func(t *testing.T, projectConfig string) *Repository {
+		fs := afero.NewMemMapFs()
+		path := "/acme/root/orca.workspace.yaml"
+
+		assert.NoError(t, afero.WriteFile(fs, path, []byte(`
+name: acme
+projects:
+  - name: sdk
+    type: library
+    path: api/packages/sdk
+    repository:
+      ssh: git@github.com:acme/sdk.git
+`), 0644))
+
+		if projectConfig != "" {
+			assert.NoError(t, afero.WriteFile(fs, "/acme/api/packages/sdk/"+DefaultProjectFileName, []byte(projectConfig), 0644))
+		}
+
+		return NewRepository(fs, stubUserConfig{
+			workspaces: map[string]WorkspaceMeta{"acme": {Name: "acme", Path: path}},
+			projects: map[string]ProjectMeta{
+				"sdk": {Name: "sdk", Path: "/acme/api/packages/sdk", WorkspaceName: "acme", Type: ProjectTypeLibrary},
+			},
+		})
+	}
+
+	t.Run("doesn't need project config", func(t *testing.T) {
+		ws, err := newRepo(t, "").Load("acme")
+
+		assert.NoError(t, err)
+		assert.Equal(t, ProjectTypeLibrary, ws.Projects[0].Type)
+		assert.Equal(t, "api/packages/sdk", ws.Projects[0].Path)
+		assert.True(t, ws.Projects[0].IsLibrary())
+		assert.Equal(t, ProjectConfig{
+			ComposeFiles: ComposeFiles{Extras: []ExtraComposeFile{}},
+			Provisioners: []Provisioner{},
+			EnvFiles:     []EnvFile{},
+			Properties:   []Property{},
+			Extensions:   []Extension{},
+		}, ws.Projects[0].Config)
+	})
+
+	t.Run("loads its extensions", func(t *testing.T) {
+		ws, err := newRepo(t, "extensions:\n  - name: build\n    command: make build\n").Load("acme")
+
+		assert.NoError(t, err)
+		assert.Equal(t, []Extension{{Name: "build", Command: "make build"}}, ws.Projects[0].Config.Extensions)
+	})
+
+	t.Run("lists everything that doesn't apply to a library", func(t *testing.T) {
+		_, err := newRepo(t, `
+composeFiles:
+  primary: docker-compose.yml
+envFiles:
+  - path: .env
+hosts:
+  - sdk.acme.test
+tlsCerts:
+  - sdk.acme.test
+extensions:
+  - name: test
+    service: app
+    command: npm test
+`).Load("acme")
+
+		assert.Equal(t, InvalidProjectConfigError{
+			Path: "/acme/api/packages/sdk/" + DefaultProjectFileName,
+			Problems: []string{
+				"'composeFiles' can't be used in a library project",
+				"'envFiles' can't be used in a library project",
+				"'hosts' can't be used in a library project",
+				"'tlsCerts' can't be used in a library project",
+				"extension 'test': 'service' can't be used in a library project, as it has no services",
+			},
+		}, err)
+	})
 }
 
 func TestLoadPreferences_AppliesToProjects(t *testing.T) {

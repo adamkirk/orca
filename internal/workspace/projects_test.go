@@ -52,6 +52,7 @@ func TestProjects(t *testing.T) {
 				{Name: "api", IsRegistered: true, ProjectDir: "/acme/api"},
 				{Name: "web", IsRegistered: true, ProjectDir: "/acme/web", Disabled: true},
 				{Name: "admin"},
+				{Name: "sdk", Type: ProjectTypeLibrary, IsRegistered: true, ProjectDir: "/acme/api/packages/sdk"},
 			},
 		}
 	}
@@ -60,13 +61,15 @@ func TestProjects(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		require.NoError(t, fs.MkdirAll("/acme/api", 0755))
 		require.NoError(t, fs.MkdirAll("/acme/web", 0755))
+		require.NoError(t, fs.MkdirAll("/acme/api/packages/sdk", 0755))
 		tui := &recordingTUI{}
 
 		return NewManager(fs, tui, nil, nil, nil, nil, stack), tui
 	}
 
 	t.Run("lists each project", func(t *testing.T) {
-		m, tui := newManager(t, &stubStack{running: map[string]bool{"api": true}})
+		// A library is never asked about, as it has nothing to run
+		m, tui := newManager(t, &stubStack{running: map[string]bool{"api": true, "sdk": true}})
 		ctx := WithExecutionContext(context.Background(), ExecutionContext{Workspace: newWorkspace()})
 
 		require.NoError(t, m.Projects(ctx, ProjectsQuery{}))
@@ -76,6 +79,7 @@ func TestProjects(t *testing.T) {
 			{"api", "service", "yes", "yes", "yes"},
 			{"web", "service", "no", "yes", "no"},
 			{"admin", "service", "yes", "no", "no"},
+			{"sdk", "library", "yes", "yes", "-"},
 		}, tui.rows)
 		assert.Empty(t, tui.lines)
 	})
@@ -86,9 +90,11 @@ func TestProjects(t *testing.T) {
 
 		require.NoError(t, m.Projects(ctx, ProjectsQuery{}))
 
-		for _, row := range tui.rows {
+		for _, row := range tui.rows[:3] {
 			assert.Equal(t, "?", row[4])
 		}
+
+		assert.Equal(t, "-", tui.rows[3][4])
 	})
 
 	t.Run("warns about unknown projects in the preferences", func(t *testing.T) {
