@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -174,6 +176,41 @@ projects:
 		assert.ErrorIs(t, err, ErrInvalidInput)
 		assert.Empty(t, git.cloned)
 	})
+}
+
+// registeringConfig records the workspaces added, then stops the init by
+// saying they already exist.
+type registeringConfig struct {
+	config
+
+	added []string
+}
+
+func (c *registeringConfig) AddWorkspace(path string, _ string) error {
+	c.added = append(c.added, path)
+
+	return ErrWorkspaceAlreadyExists
+}
+
+func TestInitialiseFromLocalDirectory_RegistersAnAbsolutePath(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	fs := afero.NewMemMapFs()
+	path := filepath.Join(wd, "local-env", DefaultWorkspaceFileName)
+	require.NoError(t, afero.WriteFile(fs, path, []byte("name: acme\nprojects: []\n"), 0644))
+
+	cfg := &registeringConfig{}
+	m := NewManager(fs, stubTUI{}, cfg, &stubGit{}, nil, NewRepository(fs, nil), nil)
+
+	err = m.Initialise(context.Background(), InitialiseCommand{
+		SourceDirectory:   "./local-env",
+		WorkspaceFileName: DefaultWorkspaceFileName,
+		Into:              "..",
+	})
+
+	assert.ErrorIs(t, err, ErrWorkspaceAlreadyExists)
+	assert.Equal(t, []string{path}, cfg.added)
 }
 
 func TestCreatePreferences(t *testing.T) {

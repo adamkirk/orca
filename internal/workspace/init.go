@@ -57,7 +57,15 @@ func (m *Manager) Initialise(ctx context.Context, cmd InitialiseCommand) error {
 // The branches are checked before the workspace is registered, so a missing
 // branch leaves nothing behind.
 func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, workspaceFile string, into string, branchesChecked bool) error {
-	workspaceConfigPath := fmt.Sprintf("%s/%s", dir, workspaceFile)
+	// The path is registered, and every command loads the config from it,
+	// wherever it's run, so it has to be absolute
+	dir, err := filepath.Abs(dir)
+
+	if err != nil {
+		return usererr.Wrap(err, "Failed to determine the workspace's directory!")
+	}
+
+	workspaceConfigPath := filepath.Join(dir, workspaceFile)
 	exists, err := afero.Exists(m.fs, workspaceConfigPath)
 
 	if err != nil {
