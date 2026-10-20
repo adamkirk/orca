@@ -24,15 +24,23 @@ type tui interface {
 	Info(msg ...string)
 }
 
+// hooks runs the hooks around starting and stopping projects.
+type hooks interface {
+	ConfirmHooks(ws *workspace.Workspace, runs []workspace.HookRun, yes bool) error
+	RunConfirmedHook(ws *workspace.Workspace, run workspace.HookRun) error
+}
+
 // Manager handles the commands that run a workspace or project's compose stack.
 type Manager struct {
 	compose compose
 	tui     tui
+	hooks   hooks
 }
 
-func NewManager(compose compose, tui tui) *Manager {
+func NewManager(compose compose, tui tui, hooks hooks) *Manager {
 	return &Manager{
 		compose: compose,
 		tui:     tui,
+		hooks:   hooks,
 	}
 }

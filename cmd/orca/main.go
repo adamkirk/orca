@@ -187,6 +187,11 @@ func addWorkspaceOption(cmd *cobra.Command, required bool) {
 	}
 }
 
+// addYesFlag adds --yes, for commands that run hooks.
+func addYesFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolP("yes", "y", false, "Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted.")
+}
+
 func addProjectOption(cmd *cobra.Command) {
 	cmd.Flags().StringP("project", "p", "", "The name of the project within the workspace to run this command for.")
 	checkErr(cmd.RegisterFlagCompletionFunc("project", completeProjects))

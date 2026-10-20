@@ -4,10 +4,7 @@ A hook runs [extensions](./extensions.md) around an operation, such as after a p
 
 A hook only lists extensions by name. What each one does is defined in `extensions`, so every step can also be run on its own with [`orca ext`](../CLI/orca_ext.md), and a step used by several hooks is defined once.
 
-`clone.post` and `init.post` run automatically, from [`orca ws init`](./workspaces.md#from-a-local-directory) and [`orca ws clone`](./workspaces.md#cloning-projects), and any hook can be [run by hand](#running-a-hook-by-hand).
-
-!!! note "Not implemented yet"
-    `up` and `down` hooks can be defined, and run by hand, but `orca up` and `orca down` don't run them yet.
+Hooks run automatically: `clone.post` and `init.post` from [`orca ws init`](./workspaces.md#from-a-local-directory) and [`orca ws clone`](./workspaces.md#cloning-projects), and `up` and `down` from [`orca up` and `orca down`](./environments.md#hooks). Any hook can also be [run by hand](#running-a-hook-by-hand).
 
 ## Defining hooks
 
@@ -64,8 +61,8 @@ An entry can't define an extension itself. Define it in `extensions`, and refere
 | ---- | ---------- | ---- |
 | `clone.post` | project | After the project is cloned, in its directory, by `ws init` and `ws clone`. Again whenever they're re-run. |
 | `init.post` | workspace | At the end of `ws init`, after every project is cloned, and their `clone.post` hooks have run. |
-| `up.pre`, `up.post` | workspace, project | Before and after the stack, or the project, is started. |
-| `down.pre`, `down.post` | workspace, project | Before and after it's stopped. |
+| `up.pre`, `up.post` | workspace, project | Before and after the project is started, by `orca up`. The workspace's run before the first project starts, and after the last. See [the order](./environments.md#hooks). |
+| `down.pre`, `down.post` | workspace, project | Before and after it's stopped, by `orca down`, in the same way. |
 
 There's no `init.pre` or `clone.pre`. A project's config can't be read until it's cloned, so nothing it defines can run before then.
 

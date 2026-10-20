@@ -199,7 +199,7 @@ func (s *services) GetStack() *stack.Manager {
 		return s.stack
 	}
 
-	s.stack = stack.NewManager(s.GetCompose(), s.GetTui())
+	s.stack = stack.NewManager(s.GetCompose(), s.GetTui(), s.GetExtension())
 
 	return s.stack
 }

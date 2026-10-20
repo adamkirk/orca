@@ -14,6 +14,10 @@ type UpCommand struct {
 
 	Workspace string
 	Project   string
+
+	// Run every extension the hooks run without asking, and without recording
+	// them as trusted
+	Yes bool
 }
 
 func (UpCommand) MessageName() string {
@@ -71,28 +75,18 @@ func (m *Manager) warnAboutUnclonedLibraries(ws *workspace.Workspace, projects [
 	}
 }
 
-func (m *Manager) startServices(execCtx workspace.ExecutionContext) error {
+// startServices starts the projects, each between its up.pre and up.post
+// hooks, and for the whole workspace, between the workspace's too.
+func (m *Manager) startServices(execCtx workspace.ExecutionContext, yes bool) error {
 	ordered, err := m.startupOrder(execCtx)
 
 	if err != nil {
 		return err
 	}
 
-	for _, p := range ordered {
-		// This shouldn't ever really return an error at this point, if it does
-		// something went wrong while building the runtime context
-		projectConfig, err := execCtx.Workspace.GetProject(p)
-
-		if err != nil {
-			return err
-		}
-
-		if err := m.compose.Up(execCtx.Workspace, projectConfig); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return m.withHooks(execCtx, ordered, workspace.HookUpPre, workspace.HookUpPost, yes, func(p *workspace.Project) error {
+		return m.compose.Up(execCtx.Workspace, p)
+	})
 }
 
 func (m *Manager) Up(ctx context.Context, cmd UpCommand) error {
@@ -102,5 +96,5 @@ func (m *Manager) Up(ctx context.Context, cmd UpCommand) error {
 		return err
 	}
 
-	return m.startServices(execCtx)
+	return m.startServices(execCtx, cmd.Yes)
 }

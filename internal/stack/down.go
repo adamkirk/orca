@@ -16,6 +16,10 @@ type DownCommand struct {
 
 	Workspace string
 	Project   string
+
+	// Run every extension the hooks run without asking, and without recording
+	// them as trusted
+	Yes bool
 }
 
 func (DownCommand) MessageName() string {
@@ -60,28 +64,18 @@ func (m *Manager) shutdownOrder(execCtx workspace.ExecutionContext) ([]string, e
 	return g.TopologicalKeysFromLeaves()
 }
 
-func (m *Manager) stopServices(execCtx workspace.ExecutionContext) error {
+// stopServices stops the projects, each between its down.pre and down.post
+// hooks, and for the whole workspace, between the workspace's too.
+func (m *Manager) stopServices(execCtx workspace.ExecutionContext, yes bool) error {
 	ordered, err := m.shutdownOrder(execCtx)
 
 	if err != nil {
 		return err
 	}
 
-	for _, p := range ordered {
-		// This shouldn't ever really return an error at this point, if it does
-		// something went wrong while building the runtime context
-		projectConfig, err := execCtx.Workspace.GetProject(p)
-
-		if err != nil {
-			return err
-		}
-
-		if err := m.compose.Down(execCtx.Workspace, projectConfig); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return m.withHooks(execCtx, ordered, workspace.HookDownPre, workspace.HookDownPost, yes, func(p *workspace.Project) error {
+		return m.compose.Down(execCtx.Workspace, p)
+	})
 }
 
 func (m *Manager) Down(ctx context.Context, cmd DownCommand) error {
@@ -91,5 +85,5 @@ func (m *Manager) Down(ctx context.Context, cmd DownCommand) error {
 		return err
 	}
 
-	return m.stopServices(execCtx)
+	return m.stopServices(execCtx, cmd.Yes)
 }

@@ -75,6 +75,13 @@ type HookEntry struct {
 	Scope HookScope
 }
 
+// HookRun is one of a project's hooks, or one of the workspace's when Project is
+// nil.
+type HookRun struct {
+	Project *Project
+	Hook    Hook
+}
+
 // SetUpOpts are the hooks to run once projects are cloned.
 type SetUpOpts struct {
 	// Each project's clone.post runs, in this order

@@ -60,7 +60,7 @@ func Test_ServiceChoices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewManager(tt.compose, nil).ServiceChoices(tt.ctx, ServiceChoicesQuery{})
+			got, err := NewManager(tt.compose, nil, nil).ServiceChoices(tt.ctx, ServiceChoicesQuery{})
 
 			if tt.wantErr != nil {
 				assert.ErrorIs(t, err, tt.wantErr)

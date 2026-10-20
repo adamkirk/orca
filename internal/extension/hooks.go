@@ -76,11 +76,51 @@ func (m *Manager) runPlanned(runs []planned) error {
 	return nil
 }
 
+// planHooks plans the extensions of each of the hooks, in order.
+func planHooks(ws *workspace.Workspace, runs []workspace.HookRun) ([]planned, error) {
+	all := []planned{}
+
+	for _, run := range runs {
+		planned, err := planHook(ws, run.Project, run.Hook)
+
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, planned...)
+	}
+
+	return all, nil
+}
+
+// ConfirmHooks asks about every extension the hooks will run, once, before any
+// of them do, so they can be run, with RunConfirmedHook, in between other work.
+func (m *Manager) ConfirmHooks(ws *workspace.Workspace, runs []workspace.HookRun, yes bool) error {
+	planned, err := planHooks(ws, runs)
+
+	if err != nil {
+		return err
+	}
+
+	return m.confirm(planned, yes)
+}
+
+// RunConfirmedHook runs one of the hooks ConfirmHooks has already asked about.
+func (m *Manager) RunConfirmedHook(ws *workspace.Workspace, run workspace.HookRun) error {
+	planned, err := planHook(ws, run.Project, run.Hook)
+
+	if err != nil {
+		return err
+	}
+
+	return m.runPlanned(planned)
+}
+
 // SetUp runs the clone.post hook of each of the projects, then the workspace's
 // init.post, if asked for. Everything they'll run is asked about first, in one
 // go, and it all stops at the first extension that fails.
 func (m *Manager) SetUp(ws *workspace.Workspace, opts workspace.SetUpOpts) error {
-	runs := []planned{}
+	runs := []workspace.HookRun{}
 
 	for _, name := range opts.Projects {
 		project, err := ws.GetProject(name)
@@ -89,32 +129,22 @@ func (m *Manager) SetUp(ws *workspace.Workspace, opts workspace.SetUpOpts) error
 			return err
 		}
 
-		projectRuns, err := planHook(ws, project, workspace.HookClonePost)
-
-		if err != nil {
-			return err
-		}
-
-		runs = append(runs, projectRuns...)
+		runs = append(runs, workspace.HookRun{Project: project, Hook: workspace.HookClonePost})
 	}
 
 	if opts.Initialise {
-		wsRuns, err := planHook(ws, nil, workspace.HookInitPost)
-
-		if err != nil {
-			return err
-		}
-
-		runs = append(runs, wsRuns...)
+		runs = append(runs, workspace.HookRun{Hook: workspace.HookInitPost})
 	}
 
-	if len(runs) == 0 {
-		return nil
-	}
+	planned, err := planHooks(ws, runs)
 
-	if err := m.confirm(runs, opts.Yes); err != nil {
+	if err != nil || len(planned) == 0 {
 		return err
 	}
 
-	return m.runPlanned(runs)
+	if err := m.confirm(planned, opts.Yes); err != nil {
+		return err
+	}
+
+	return m.runPlanned(planned)
 }

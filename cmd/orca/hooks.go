@@ -29,7 +29,7 @@ them, are listed first, and you're asked to trust them.`,
 func init() {
 	addWorkspaceOption(hooksRunCmd, false)
 	addProjectOption(hooksRunCmd)
-	hooksRunCmd.Flags().BoolP("yes", "y", false, "Run every extension without asking, for this run only: it doesn't record them as trusted.")
+	addYesFlag(hooksRunCmd)
 	hooksCmd.AddCommand(hooksRunCmd)
 	rootCmd.AddCommand(hooksCmd)
 }

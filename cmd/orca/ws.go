@@ -241,5 +241,5 @@ func handleWsDisable(cmd *cobra.Command, args []string) error {
 // addHookFlags adds the flags for commands that run hooks after cloning.
 func addHookFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("skip-hooks", false, "Clone without running any hooks.")
-	cmd.Flags().BoolP("yes", "y", false, "Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted.")
+	addYesFlag(cmd)
 }

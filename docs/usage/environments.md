@@ -36,6 +36,20 @@ $ orca restart            # down, then up
 
 For a whole workspace, `up` starts projects in dependency order (projects before the ones that `require` them), and `down` stops them in reverse. See [dependencies between projects](../configuration/workspace_config.md#dependencies-between-projects). Projects you've [disabled](./workspaces.md#enabling-and-disabling-projects) are skipped by `up`, unless an enabled project requires them.
 
+### Hooks
+
+`up` and `down` run the `up` and `down` [hooks](./hooks.md), around starting and stopping each project:
+
+1. The workspace's `up.pre`, for the whole workspace only.
+2. For each project, in the order they're started: its `up.pre`, then it's started, then its `up.post`.
+3. The workspace's `up.post`, for the whole workspace only.
+
+`down` does the same, with the `down` hooks, in the order projects are stopped. With `-p`, only that project's hooks run, not the workspace's.
+
+A project's hooks only run when it's started or stopped. So a disabled project that's skipped doesn't run them, but one that's started anyway, as an enabled project requires it, does.
+
+Any extension that you haven't trusted yet is asked about before anything starts or stops. `--yes` runs them all without asking, for that run only. A failing hook stops the command: a failing `up.pre` stops before its project starts, and a failing `up.post` fails the command, though its project is already started. `restart` asks about `down`'s hooks, then `up`'s.
+
 ## Logs
 
 ```sh

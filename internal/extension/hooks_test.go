@@ -293,3 +293,35 @@ func Test_SetUp(t *testing.T) {
 		assert.Equal(t, []ran{{name: "composer", args: []string{"install"}, dir: "/code/acme/api", service: "app", captured: true}}, got)
 	})
 }
+
+func Test_ConfirmHooks_RunConfirmedHook(t *testing.T) {
+	ws := hooksWorkspace()
+	ws.Hooks[workspace.HookUpPre] = []workspace.HookEntry{{Extension: "install-deps", Scope: workspace.HookScopeWorkspace}}
+	ws.Projects[0].Config.Hooks[workspace.HookUpPost] = []workspace.HookEntry{{Extension: "migrate", Scope: workspace.HookScopeProject}}
+	got := []ran{}
+	out := &stubTui{answer: true}
+	m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got}, out, newTrustStore())
+	runs := []workspace.HookRun{
+		{Hook: workspace.HookUpPre},
+		{Project: &ws.Projects[0], Hook: workspace.HookUpPre},
+		{Project: &ws.Projects[0], Hook: workspace.HookUpPost},
+	}
+
+	require.NoError(t, m.ConfirmHooks(ws, runs, false))
+
+	assert.Equal(t, 1, out.asked)
+	assert.Equal(t, [][][]string{{
+		{"workspace", "up.pre", "install-deps", "command", "npm ci"},
+		{"api", "up.post", "migrate", "command", "./bin/migrate"},
+	}}, out.tables)
+
+	for _, run := range runs {
+		require.NoError(t, m.RunConfirmedHook(ws, run))
+	}
+
+	assert.Equal(t, 1, out.asked, "running them asks nothing more")
+	assert.Equal(t, []ran{
+		{name: "npm", args: []string{"ci"}, dir: "/code/acme/local-env"},
+		{name: "./bin/migrate", args: []string{}, dir: "/code/acme/api"},
+	}, got)
+}
