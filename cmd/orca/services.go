@@ -56,7 +56,8 @@ type services struct {
 
 	provision *provision.Manager
 
-	pluginManager *plugins.Manager
+	pluginManager      *plugins.Manager
+	pluginCommandCache *plugins.CommandCache
 
 	bus *bus.Bus
 
@@ -248,6 +249,7 @@ func (s *services) GetCompose() *docker.Compose {
 		s.GetExecutor(),
 		s.GetTui(),
 		s.GetComposeOverlayGenerator(),
+		s.GetComposeParser(),
 	)
 
 	return s.compose
@@ -303,6 +305,16 @@ func (s *services) GetPluginManager() *plugins.Manager {
 	return s.pluginManager
 }
 
+func (s *services) GetPluginCommandCache() *plugins.CommandCache {
+	if s.pluginCommandCache != nil {
+		return s.pluginCommandCache
+	}
+
+	s.pluginCommandCache = plugins.NewCommandCache(s.GetFs(), getPluginCommandCachePath())
+
+	return s.pluginCommandCache
+}
+
 // GetBus returns the command bus, with every command handler registered.
 func (s *services) GetBus() *bus.Bus {
 	if s.bus != nil {
@@ -325,6 +337,8 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
+	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
+	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ExtensionChoices))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
@@ -334,6 +348,7 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Logl))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Status))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Pull))
+	b.Handle(lazyResult(s.GetGit, (*git.Manager).BranchChoices))
 
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Initialise))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Switch))
@@ -341,6 +356,8 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ShowCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
+	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).WorkspaceChoices))
+	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).ProjectChoices))
 
 	b.HandleVoid(lazy(s.GetTLS, (*tls.Manager).Generate))
 
@@ -386,6 +403,12 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(query stack.ShowComposeCommandQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
+	ec.Target(func(query stack.ServiceChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(query stack.ExtensionChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
 	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
@@ -401,6 +424,9 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(cmd git.PushCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, WorkspaceOptional: !cmd.AllProjects}
 	})
+	ec.Target(func(query git.BranchChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: true}
+	})
 	ec.Target(func(query git.StatusQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, WorkspaceOptional: !query.AllProjects}
 	})
@@ -410,6 +436,9 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	})
 	ec.Target(func(cmd tls.GenerateCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+	ec.Target(func(query workspace.ProjectChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace}
 	})
 
 	s.executionContextMiddleware = ec
@@ -422,6 +451,13 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 // built.
 func lazy[S any, M bus.Message[bus.Void]](get func() S, method func(S, context.Context, M) error) func(context.Context, M) error {
 	return func(ctx context.Context, msg M) error {
+		return method(get(), ctx, msg)
+	}
+}
+
+// lazyResult is lazy, for messages that return a result.
+func lazyResult[S any, M bus.Message[R], R any](get func() S, method func(S, context.Context, M) (R, error)) func(context.Context, M) (R, error) {
+	return func(ctx context.Context, msg M) (R, error) {
 		return method(get(), ctx, msg)
 	}
 }

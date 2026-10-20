@@ -84,6 +84,7 @@ func convertExtension(e model.Extension) Extension {
 		Command:     e.Command,
 		Service:     e.Service,
 		DefaultArgs: e.DefaultArgs,
+		Description: e.Description,
 	}
 }
 

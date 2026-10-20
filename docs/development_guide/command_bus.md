@@ -35,7 +35,10 @@ They're registered in `GetBus()` in `cmd/orca/services.go`. `lazy` wraps the met
 
 ```go
 b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
+b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).WorkspaceChoices))
 ```
+
+`lazyResult` is the same as `lazy`, for handlers that return a result.
 
 A message without a handler only fails when it's dispatched, so `Test_AllDispatchedMessagesHaveHandlers` checks that every message the commands dispatch has one. For that to work, messages must be dispatched as literals.
 

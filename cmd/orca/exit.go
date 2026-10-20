@@ -97,7 +97,14 @@ func checkErr(err error) {
 		return
 	}
 
-	fmt.Fprintln(os.Stderr, "Error:", err)
+	if !completing {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		exit(1)
+	}
+
+	// Completion never shows errors, it offers nothing instead. Without a
+	// directive, shells would offer files.
+	fmt.Printf(":%d\n", cobra.ShellCompDirectiveNoFileComp)
 	exit(1)
 }
 

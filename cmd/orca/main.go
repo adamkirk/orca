@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -11,8 +10,8 @@ import (
 
 	"github.com/adamkirk/orca/internal/logging"
 	"github.com/adamkirk/orca/internal/plugins"
+	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -97,6 +96,13 @@ func getOverlayDir() string {
 	return fmt.Sprintf("%s/.orca/overlays", homeDir)
 }
 
+func getPluginCommandCachePath() string {
+	homeDir, err := os.UserHomeDir()
+	checkErr(err)
+
+	return fmt.Sprintf("%s/.orca/cache/plugin-commands.json", homeDir)
+}
+
 func getTLSDir() string {
 	homeDir, err := os.UserHomeDir()
 	checkErr(err)
@@ -165,16 +171,9 @@ func init() {
 	checkErr(viper.BindPFlag("logging.format", rootCmd.PersistentFlags().Lookup("log-format")))
 }
 
-func addServiceOption(cmd *cobra.Command, required bool) {
-	cmd.Flags().StringP("service", "s", "", "The service within the project to exec into")
-
-	if required {
-		cmd.MarkFlagRequired("service")
-	}
-}
-
 func addWorkspaceOption(cmd *cobra.Command, required bool) {
 	cmd.Flags().StringP("workspace", "w", "", "The name of the workspace to run this command for.")
+	checkErr(cmd.RegisterFlagCompletionFunc("workspace", completeWorkspaces))
 
 	if required {
 		cmd.MarkFlagRequired("workspace")
@@ -183,6 +182,22 @@ func addWorkspaceOption(cmd *cobra.Command, required bool) {
 
 func addProjectOption(cmd *cobra.Command) {
 	cmd.Flags().StringP("project", "p", "", "The name of the project within the workspace to run this command for.")
+	checkErr(cmd.RegisterFlagCompletionFunc("project", completeProjects))
+}
+
+// rejectDashesAfterName fails if args[0], the name of what the rest of args are
+// passed to (e.g. exec's service), is followed by '--'. Everything after the
+// name is passed through as it is, including a '--', which used to be needed
+// before flags, and would now be passed on as an argument.
+func rejectDashesAfterName(args []string, what string) error {
+	if len(args) < 2 || args[1] != "--" {
+		return nil
+	}
+
+	return usererr.Wrap(
+		fmt.Errorf("%w after the %s", ErrUnneededDashes, what),
+		fmt.Sprintf("Everything after the %s is passed on as it is, flags included, so drop the '--'!", what),
+	)
 }
 
 func bootstrap() {
@@ -198,6 +213,12 @@ func bootstrap() {
 	err := viper.Unmarshal(cfg.GetRuntimeConfig())
 	checkErr(err)
 
+	// Anything logged would be shown in the middle of the user's command line
+	if completing {
+		slog.SetDefault(slog.New(slog.DiscardHandler))
+		return
+	}
+
 	h, err := logging.NewSlogHandler(cfg)
 
 	checkErr(err)
@@ -205,20 +226,28 @@ func bootstrap() {
 	slog.SetDefault(slog.New(h))
 }
 
-// parsePersistentFlagsEarly parses the root command's persistent flags (e.g.
-// --log-level) before cobra does, ignoring any other flags. Plugins are loaded
-// before cobra runs, and they need to respect these.
-func parsePersistentFlagsEarly() {
-	fs := pflag.NewFlagSet("early", pflag.ContinueOnError)
-	fs.ParseErrorsAllowlist.UnknownFlags = true
-	fs.SetOutput(io.Discard)
-	fs.Usage = func() {}
+// parsePersistentFlagsEarly parses the flags (e.g. --log-level) before cobra
+// does. Plugins are loaded before cobra runs, and they need to respect these.
+//
+// They're parsed as cobra will parse them, for the command being run, so that
+// arguments passed through to a container, as exec and ext do, aren't mistaken
+// for orca's own flags. Plugin commands don't exist yet, so a line running one
+// is parsed as the root command's.
+func parsePersistentFlagsEarly(args []string) {
+	cmd, flagArgs, err := rootCmd.Find(args)
 
-	// Shares the underlying flags, so parsed values land on the root command
-	fs.AddFlagSet(rootCmd.PersistentFlags())
+	if err != nil {
+		cmd, flagArgs = rootCmd, args
+	}
+
+	// A plugin command's flags don't exist yet, so are skipped. Restored after,
+	// so cobra still rejects unknown flags.
+	allowlist := cmd.FParseErrWhitelist
+	cmd.FParseErrWhitelist.UnknownFlags = true
+	defer func() { cmd.FParseErrWhitelist = allowlist }()
 
 	// Any real errors will be reported when cobra parses the flags
-	_ = fs.Parse(os.Args[1:])
+	_ = cmd.ParseFlags(flagArgs)
 }
 
 func main() {
@@ -231,7 +260,7 @@ func main() {
 func run() int {
 	// Configure logging from flags/env before plugins are started, cobra will run
 	// bootstrap again once it has parsed the flags itself.
-	parsePersistentFlagsEarly()
+	parsePersistentFlagsEarly(os.Args[1:])
 	bootstrap()
 
 	stopHandlingSignals := handleSignals()
@@ -239,8 +268,18 @@ func run() int {
 	// Deferred after the above, so signals are still handled while plugins stop
 	defer svcContainer.KillPlugins()
 
-	// Done here rather than in init, so all builtin commands are registered first
-	registerPluginCommands(svcContainer.GetConfig())
+	// Done here rather than in init, so all builtin commands are registered first,
+	// and before plugin commands are added, as their arguments may be files
+	noFileCompletions(rootCmd)
+
+	// Starting every plugin would make completion far too slow, so it uses
+	// the commands they provided the last time orca ran
+	if completing {
+		registerCachedPluginCommands()
+	} else {
+		registerPluginCommands(svcContainer.GetConfig())
+		cachePluginCommands()
+	}
 
 	err := rootCmd.Execute()
 

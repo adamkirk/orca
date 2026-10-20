@@ -17,7 +17,11 @@ var gCoCmd = &cobra.Command{
 	Use:   "co",
 	Short: "Checkout a branch for a git repository.",
 	Long: `Searches for a branch with the name provided as an argument. If a single branch is
-found, it will be checked out. If multiple are found will provide a list to select from.`,
+found, it will be checked out. If multiple are found will provide a list to select from.
+
+Local branches are searched first, then branches that only exist on a remote, which are
+checked out as a local branch tracking them. Remote branches are read from git's local
+refs, without fetching.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		rebase, _ := cmd.Flags().GetBool("rebase")
 		pull, _ := cmd.Flags().GetBool("pull")
@@ -28,7 +32,8 @@ found, it will be checked out. If multiple are found will provide a list to sele
 
 		return nil
 	},
-	RunE: handleErrors(handleGCo),
+	ValidArgsFunction: firstArgOnly(completeBranches),
+	RunE:              handleErrors(handleGCo),
 }
 
 var gBranchesCmd = &cobra.Command{
@@ -36,7 +41,8 @@ var gBranchesCmd = &cobra.Command{
 	Short: "Searches branches for the git repository.",
 	Long: `Will search for any branches containing the given search term (case-insensitive).
 If no search term is given, will list all branches.`,
-	RunE: handleErrors(handleGBranches),
+	ValidArgsFunction: firstArgOnly(completeBranches),
+	RunE:              handleErrors(handleGBranches),
 }
 
 var gPullCmd = &cobra.Command{

@@ -14,9 +14,10 @@ var wsCmd = &cobra.Command{
 }
 
 var wsSwitchCmd = &cobra.Command{
-	Use:   "switch",
-	Short: "Switch to another workspace",
-	RunE:  handleErrors(handleWsSwitch),
+	Use:               "switch <workspace>",
+	Short:             "Switch to another workspace",
+	ValidArgsFunction: firstArgOnly(completeWorkspaces),
+	RunE:              handleErrors(handleWsSwitch),
 }
 
 var wsInitCmd = &cobra.Command{

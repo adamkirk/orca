@@ -124,10 +124,35 @@ For example, a `ps` command that shows the running services:
     }
     ```
 
+5. **Complete its arguments**, if their values come from config or the environment, such as service or branch names. See [Shell completion](#shell-completion) below. `-w` and `-p` already complete, as `addWorkspaceOption` and `addProjectOption` register them.
+
 Two tests in `cmd/orca/services_test.go` catch wiring mistakes that would otherwise only fail at runtime:
 
 - `Test_AllDispatchedMessagesHaveHandlers` checks every dispatched message has a handler.
 - `Test_ExecutionContextHandlersHaveTargets` checks every handler that reads the `ExecutionContext` has a target.
+
+## Shell completion
+
+Completion runs orca as `orca __complete <args>`, on every <kbd>Tab</kbd>, so it must be fast and silent. In that mode (`completing` in `cmd/orca/completion.go`), plugins aren't started, logging is discarded, and `checkErr` prints nothing.
+
+The values offered come from `...ChoicesQuery` messages, handled in the feature package that owns them, and returning `[]workspace.Choice`. They go through the bus like any other message, so the `ExecutionContextMiddleware` works out the workspace and project as it would for the command, from the working directory and any `-w`/`-p` typed so far. Interactive prompts can use the same queries, so the two never disagree.
+
+```go
+type ServiceChoicesQuery struct {
+	bus.Returns[[]workspace.Choice]
+
+	Workspace string
+	Project   string
+}
+
+func (ServiceChoicesQuery) MessageName() string {
+	return "choices.services"
+}
+```
+
+Register the handler with `b.Handle(lazyResult(...))`, and give it a target if it reads the `ExecutionContext`. In `cmd/orca/completion.go`, add a completion function that dispatches the query as a literal and passes the result to `toCompletions`, which filters by what's typed, and offers nothing on an error. Use it as a command's `ValidArgsFunction` (with `firstArgOnly` if it only completes the first argument), or a flag's with `RegisterFlagCompletionFunc`.
+
+File names are never offered: `noFileCompletions` turns them off for every builtin command that doesn't complete its own arguments.
 
 ## Dependencies
 

@@ -18,7 +18,7 @@ As mentioned above we use conventional commits. In order to ensure this there is
 
 ### Running the commit lint
 
-You can easily run the commit lint script locally for the latest commit with `npx commitlint --latest` from the root of the repository.
+You can run the same check locally, for the last commit, with `make lint-last-commit` from the root of the repository. Run it after each commit, as fixing a commit further back means rewriting the branch's history.
 
 ## Documentation
 

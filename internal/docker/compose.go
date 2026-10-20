@@ -6,6 +6,7 @@ import (
 
 	"github.com/adamkirk/orca/internal/process"
 	"github.com/adamkirk/orca/internal/workspace"
+	"github.com/compose-spec/compose-go/v2/types"
 )
 
 type composeOverlayGenerator interface {
@@ -22,10 +23,15 @@ type cli interface {
 	Exec(cmdName string, args []string, opts ...process.ExecOpt) (err error)
 }
 
+type composeParser interface {
+	Parse(paths []string, envFiles []string) (*types.Project, error)
+}
+
 type Compose struct {
 	cli              cli
 	tui              tui
 	overlayGenerator composeOverlayGenerator
+	parser           composeParser
 }
 
 func (c *Compose) getOverlay(ws *workspace.Workspace, p *workspace.Project) (string, error) {
@@ -60,10 +66,11 @@ func buildBaseComposeCommand(ws *workspace.Workspace, p *workspace.Project, over
 	return args
 }
 
-func NewCompose(cli cli, tui tui, overlayGenerator composeOverlayGenerator) *Compose {
+func NewCompose(cli cli, tui tui, overlayGenerator composeOverlayGenerator, parser composeParser) *Compose {
 	return &Compose{
 		cli:              cli,
 		tui:              tui,
 		overlayGenerator: overlayGenerator,
+		parser:           parser,
 	}
 }

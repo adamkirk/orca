@@ -33,6 +33,7 @@ type Extension struct {
 	Command     string
 	Service     string
 	DefaultArgs []string `yaml:"defaultArgs"`
+	Description string
 }
 
 type EnvFile struct {

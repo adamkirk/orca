@@ -174,3 +174,43 @@ projects:
 		assert.Equal(t, ProjectRepositoryConfig{Self: true}, ws.Projects[0].RepositoryConfig)
 	})
 }
+
+func TestLoadExtensions(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	path := "/acme/api/orca.workspace.yaml"
+
+	assert.NoError(t, afero.WriteFile(fs, path, []byte(`
+name: acme
+projects:
+  - name: api
+    repository:
+      self: true
+`), 0644))
+	assert.NoError(t, afero.WriteFile(fs, "/acme/api/"+DefaultProjectFileName, []byte(`
+extensions:
+  - name: artisan
+    service: app
+    command: php artisan
+    description: Run an artisan command
+  - name: test
+    service: app
+    command: vendor/bin/phpunit
+`), 0644))
+
+	repo := NewRepository(fs, stubUserConfig{
+		workspaces: map[string]WorkspaceMeta{
+			"acme": {Name: "acme", Path: path},
+		},
+		projects: map[string]ProjectMeta{
+			"api": {Name: "api", Path: "/acme/api", WorkspaceName: "acme"},
+		},
+	})
+
+	ws, err := repo.Load("acme")
+
+	assert.NoError(t, err)
+	assert.Equal(t, []Extension{
+		{Name: "artisan", Service: "app", Command: "php artisan", Description: "Run an artisan command"},
+		{Name: "test", Service: "app", Command: "vendor/bin/phpunit"},
+	}, ws.Projects[0].Config.Extensions)
+}

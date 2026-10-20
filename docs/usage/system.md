@@ -36,10 +36,4 @@ Earlier versions had an `orca sys install` command, which downloaded tools into 
 
 ## Shell completion
 
-[`orca completion`](../CLI/orca_completion.md) generates completion scripts for bash, zsh, fish and PowerShell. For example, for zsh:
-
-```sh
-$ orca completion zsh > "${fpath[1]}/_orca"
-```
-
-Run `orca completion <shell> --help` for instructions for your shell.
+[`orca completion`](../CLI/orca_completion.md) generates completion scripts for bash, zsh, fish and PowerShell. See [Shell completion](./shell_completion.md) for how to install it in your shell.

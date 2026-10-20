@@ -14,6 +14,10 @@ import (
 type Branch struct {
 	Name    string
 	Current bool
+	// Only on a remote, with no local branch yet. Name has no remote prefix
+	// (feature/x, not origin/feature/x), as checking it out by that name
+	// creates a local branch tracking it.
+	RemoteOnly bool
 }
 type Branches []Branch
 
@@ -64,9 +68,12 @@ func (branches Branches) Filter(f branchFilterFunc) Branches {
 	return new
 }
 
-func (branches Branches) StrictSearch(search string) Branches {
+// Search returns the branches whose names contain search, ignoring case.
+func (branches Branches) Search(search string) Branches {
+	search = strings.ToLower(search)
+
 	return branches.Filter(func(b Branch) bool {
-		return strings.Contains(b.Name, search)
+		return strings.Contains(strings.ToLower(b.Name), search)
 	})
 }
 
@@ -74,6 +81,39 @@ type searchBranchesOpts struct {
 	Search string
 	// The directory to run the command in, defaults to the current directory
 	Dir string
+	// Also search branches that are only on a remote, after the local ones
+	IncludeRemote bool
+}
+
+// remoteBranchesFormat lists remote branches without the refs/remotes/<remote>/
+// prefix, so feature/x rather than origin/feature/x.
+const remoteBranchesFormat = "--format=%(refname:lstrip=3)"
+
+// parseRemoteBranches returns the remote branches in the output of
+// remoteBranchesFormat that aren't also local, once each, in the order given.
+func parseRemoteBranches(output string, local Branches) Branches {
+	seen := map[string]bool{}
+
+	for _, b := range local {
+		seen[b.Name] = true
+	}
+
+	branches := Branches{}
+
+	for _, name := range strings.Split(output, "\n") {
+		name = strings.TrimSpace(name)
+
+		// HEAD points to the remote's default branch, which is listed anyway
+		if name == "" || name == "HEAD" || seen[name] {
+			continue
+		}
+
+		seen[name] = true
+
+		branches = append(branches, Branch{Name: name, RemoteOnly: true})
+	}
+
+	return branches
 }
 
 func parseGitBranchOutput(output string) Branches {
@@ -126,11 +166,40 @@ func (m *Manager) searchBranches(dto searchBranchesOpts) (Branches, error) {
 
 	branches := parseGitBranchOutput(stdout.String())
 
+	if dto.IncludeRemote {
+		remote, err := m.remoteOnlyBranches(dto.Dir, branches)
+
+		if err != nil {
+			return nil, err
+		}
+
+		branches = append(branches, remote...)
+	}
+
 	if dto.Search == "" {
 		return branches, nil
 	}
 
-	return branches.StrictSearch(dto.Search), nil
+	return branches.Search(dto.Search), nil
+}
+
+// remoteOnlyBranches lists the branches that are only on a remote, from git's
+// local refs, so it doesn't fetch. A branch pushed since the last fetch won't
+// be listed.
+func (m *Manager) remoteOnlyBranches(dir string, local Branches) (Branches, error) {
+	opt, stdout := process.WithStdout()
+
+	err := m.exec.Exec("git", []string{
+		"for-each-ref",
+		remoteBranchesFormat,
+		"refs/remotes",
+	}, withDir(dir, opt)...)
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", workspace.ErrInvalidExecutionContext, "failed to execute 'git for-each-ref'")
+	}
+
+	return parseRemoteBranches(stdout.String(), local), nil
 }
 
 type BranchesQuery struct {

@@ -76,6 +76,7 @@ nav:
       - Hosts & TLS: usage/hosts_and_tls.md
       - Git: usage/git.md
       - Orca itself: usage/system.md
+      - Shell completion: usage/shell_completion.md
   - Configuration:
       - configuration/index.md
       - User config: configuration/user_config.md

@@ -113,6 +113,7 @@ extensions:
     command: php artisan
     defaultArgs:
       - list
+    description: Run an artisan command
 ```
 
 | Property | Description |
@@ -121,5 +122,6 @@ extensions:
 | `service` | The compose service to run the command in. Required. |
 | `command` | The command to run. It's split on spaces, so quoting isn't supported. |
 | `defaultArgs` | Arguments added when you don't give any. Any arguments you do give replace these entirely. |
+| `description` | Optional. Shown next to the name when you [complete](../usage/shell_completion.md) `orca ext <tab>`, in shells that show descriptions. |
 
 See [Extensions & provisioners](../usage/extensions_and_provisioners.md#extensions).
