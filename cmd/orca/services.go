@@ -8,6 +8,7 @@ import (
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/config"
 	"github.com/adamkirk/orca/internal/docker"
+	"github.com/adamkirk/orca/internal/extension"
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
 	"github.com/adamkirk/orca/internal/hosts"
@@ -42,6 +43,8 @@ type services struct {
 	workspaceManager *workspace.Manager
 
 	stack *stack.Manager
+
+	extension *extension.Manager
 
 	hosts *hosts.Manager
 
@@ -198,6 +201,16 @@ func (s *services) GetStack() *stack.Manager {
 	return s.stack
 }
 
+func (s *services) GetExtension() *extension.Manager {
+	if s.extension != nil {
+		return s.extension
+	}
+
+	s.extension = extension.NewManager(s.GetFs(), s.GetCompose(), s.GetExecutor(), s.GetTui())
+
+	return s.extension
+}
+
 func (s *services) GetHosts() *hosts.Manager {
 	if s.hosts != nil {
 		return s.hosts
@@ -316,13 +329,13 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Down))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecOrRun))
-	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
+	b.HandleVoid(lazy(s.GetExtension, (*extension.Manager).Run))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
 	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
-	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ExtensionChoices))
+	b.Handle(lazyResult(s.GetExtension, (*extension.Manager).Choices))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
@@ -375,7 +388,7 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(cmd stack.ExecCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, ServicesOnly: true}
 	})
-	ec.Target(func(cmd stack.ExecuteExtensionCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd extension.RunCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
@@ -390,7 +403,7 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(query stack.ServiceChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
-	ec.Target(func(query stack.ExtensionChoicesQuery) workspace.ExecutionTarget {
+	ec.Target(func(query extension.ChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
 	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {

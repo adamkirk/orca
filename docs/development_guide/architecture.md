@@ -37,7 +37,8 @@ Feature packages hold the commands' handlers, and mirror the CLI's command group
 
 | Package | Commands |
 | ------- | -------- |
-| `internal/stack` | `up`, `down`, `exec`, `ext`, `logs`, `debug` (`restart` dispatches `down` then `up`) |
+| `internal/stack` | `up`, `down`, `exec`, `logs`, `debug` (`restart` dispatches `down` then `up`) |
+| `internal/extension` | `ext`, and running every type of extension: commands in a service or on the host, `syncFile` and `symlink` |
 | `internal/hosts` | `hosts`, with the `/etc/hosts` manager it uses |
 | `internal/git` | `g`. It's also the wrapper around the git CLI that `workspace` uses to clone projects. |
 | `internal/tls` | `tls gen` |

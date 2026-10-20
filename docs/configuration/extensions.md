@@ -24,9 +24,6 @@ extensions:
     target: node_modules/@acme/sdk
 ```
 
-!!! note "Not implemented yet"
-    So far, `orca ext` only runs `command` extensions with a `service`. Running the other types, and commands on your machine, is coming soon.
-
 ## Shared properties
 
 Every type of extension takes these:
@@ -43,7 +40,7 @@ Every other property depends on the type. A property that the type doesn't take 
 
 Paths are relative to the directory the extension runs in. That's the project's directory, for a project's extension, and the directory of `orca.workspace.yaml`, for a workspace's.
 
-A `source` can refer to where another project is cloned with `{{ .Projects.<name>.Path }}`, e.g. `{{ .Projects.sdk.Path }}`. This is how a [library](../usage/workspaces.md#library-projects) is linked into another project.
+A `source` can refer to where another project is cloned with `{{ .Projects.<name>.Path }}`, e.g. `{{ .Projects.sdk.Path }}`. Any project name works, including ones with a `-`, like `{{ .Projects.acme-sdk.Path }}/dist`. It fails if the project isn't in the workspace, or isn't cloned yet. This is how a [library](../usage/workspaces.md#library-projects) is linked into another project.
 
 ## Types
 

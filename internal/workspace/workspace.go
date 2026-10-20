@@ -108,14 +108,22 @@ func (p Project) EnvFilePaths() []string {
 	return paths
 }
 
+// FindExtension returns the extension the project's config defines with the
+// name.
 func (p Project) FindExtension(name string) (Extension, error) {
-	for _, ext := range p.Config.Extensions {
-		if ext.Name == name {
-			return ext, nil
-		}
+	return findExtension(p.Config.Extensions, name)
+}
+
+func findExtension(exts []Extension, name string) (Extension, error) {
+	i := slices.IndexFunc(exts, func(e Extension) bool {
+		return e.Name == name
+	})
+
+	if i == -1 {
+		return Extension{}, fmt.Errorf("%w: %s", ErrUnknownExtension, name)
 	}
 
-	return Extension{}, fmt.Errorf("%w: %s", ErrUnknownExtension, name)
+	return exts[i], nil
 }
 
 type NetworkOverlayConfig struct {
@@ -145,6 +153,12 @@ type Workspace struct {
 	// Extensions defined in the workspace config, which run in the workspace's
 	// directory (see Dir), or any project's that references them
 	Extensions []Extension
+}
+
+// FindExtension returns the extension the workspace config defines with the
+// name.
+func (ws *Workspace) FindExtension(name string) (Extension, error) {
+	return findExtension(ws.Extensions, name)
 }
 
 // Dir is the directory the workspace config is in, where workspace extensions

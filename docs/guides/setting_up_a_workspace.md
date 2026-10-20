@@ -247,7 +247,7 @@ $ orca ws ls
 Create each project's `.env` from its example:
 
 ```sh
-$ cp ~/code/acme/api/.env.example ~/code/acme/api/.env
+$ orca ext -p api env
 ```
 
 Generate TLS certificates, and add the hosts to `/etc/hosts`:
