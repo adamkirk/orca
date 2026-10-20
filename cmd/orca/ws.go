@@ -58,8 +58,45 @@ The project option allows you to clone only a specific project.`,
 	RunE: handleErrors(handleWsClone),
 }
 
+var wsProjectsCmd = &cobra.Command{
+	Use:   "projects",
+	Short: "Lists the workspace's projects, and whether each is enabled, cloned and running.",
+	Long: `Lists the projects in the workspace, with whether each is enabled in your preferences file, cloned, and running.
+Running is '?' when docker can't be asked.`,
+	RunE: handleErrors(handleWsProjects),
+}
+
+var wsEnableCmd = &cobra.Command{
+	Use:   "enable <project>...",
+	Short: "Enables projects, so workspace-wide commands run them.",
+	Long: `Enables the projects in your preferences file, so 'up', 'down' and 'g --all' include them.
+It doesn't start them.`,
+	ValidArgsFunction: completeDisabledProjects,
+	RunE:              handleErrors(handleWsEnable),
+}
+
+var wsDisableCmd = &cobra.Command{
+	Use:   "disable <project>...",
+	Short: "Disables projects, so workspace-wide commands skip them.",
+	Long: `Disables the projects in your preferences file, so 'up', 'down' and 'g --all' skip them, unless an enabled project requires them.
+Disabled projects are still cloned, and can still be run with --project.
+Any of them that are running are stopped, unless a running project requires them, or --orphan is given.`,
+	ValidArgsFunction: completeEnabledProjects,
+	RunE:              handleErrors(handleWsDisable),
+}
+
 func init() {
 	wsCmd.AddCommand(wsSwitchCmd)
+
+	addWorkspaceOption(wsProjectsCmd, false)
+	wsCmd.AddCommand(wsProjectsCmd)
+
+	addWorkspaceOption(wsEnableCmd, false)
+	wsCmd.AddCommand(wsEnableCmd)
+
+	wsDisableCmd.Flags().Bool("orphan", false, "Leaves the projects running, rather than stopping them.")
+	addWorkspaceOption(wsDisableCmd, false)
+	wsCmd.AddCommand(wsDisableCmd)
 
 	wsInitCmd.Flags().StringP("source", "s", getWorkingDir(), "The directory of the workspace configuration.")
 	wsInitCmd.Flags().StringP("target", "t", getWorkingDirParent(), "The directory to store the workspace projects. Defaults to the current directory when --repo is used.")
@@ -147,6 +184,41 @@ func handleWsClone(cmd *cobra.Command, args []string) error {
 		WorkspaceName: name,
 		Project:       projectName,
 		To:            to,
+	})
+
+	return err
+}
+
+func handleWsProjects(cmd *cobra.Command, args []string) error {
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.ProjectsQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+	})
+
+	return err
+}
+
+func handleWsEnable(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return usererr.Wrap(fmt.Errorf("%w: 'project' at position 1", ErrArgumentRequired), "Must supply at least one project!")
+	}
+
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.EnableCommand{
+		Workspace: mustGetString(cmd, "workspace"),
+		Projects:  args,
+	})
+
+	return err
+}
+
+func handleWsDisable(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return usererr.Wrap(fmt.Errorf("%w: 'project' at position 1", ErrArgumentRequired), "Must supply at least one project!")
+	}
+
+	_, err := svcContainer.GetBus().Dispatch(cmd.Context(), workspace.DisableCommand{
+		Workspace: mustGetString(cmd, "workspace"),
+		Projects:  args,
+		Orphan:    mustGetBool(cmd, "orphan"),
 	})
 
 	return err

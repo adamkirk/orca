@@ -59,7 +59,7 @@ func (m *Manager) pushInContext(execCtx workspace.ExecutionContext, allProjects 
 		return m.PushBranch(PushBranchOpts{Dir: execCtx.Dir(), Force: force})
 	}
 
-	for _, p := range execCtx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.EnabledProjects() {
 		if err := m.PushBranch(PushBranchOpts{Dir: p.ProjectDir, Force: force}); err != nil {
 			return usererr.Wrap(err, "Push failed, you should check the branches for all projects as this failed mid-flow")
 		}

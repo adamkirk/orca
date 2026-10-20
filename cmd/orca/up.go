@@ -8,8 +8,10 @@ import (
 var upCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Starts the workspace or project.",
-	Long:  `...TBD...`,
-	RunE:  handleErrors(handleUp),
+	Long: `Starts the project, or with no project, every enabled project in the workspace, after the projects they require.
+A project that an enabled project requires is started even if it's disabled, with a warning.
+A disabled project given with --project is still started.`,
+	RunE: handleErrors(handleUp),
 }
 
 func init() {

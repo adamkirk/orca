@@ -15,15 +15,22 @@ type compose interface {
 	IsSvcRunning(ws *workspace.Workspace, p *workspace.Project, service string) (bool, error)
 	Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error
 	ServiceNames(p *workspace.Project) ([]string, error)
+	IsProjectRunning(ws *workspace.Workspace, p *workspace.Project) (bool, error)
+}
+
+type tui interface {
+	Info(msg ...string)
 }
 
 // Manager handles the commands that run a workspace or project's compose stack.
 type Manager struct {
 	compose compose
+	tui     tui
 }
 
-func NewManager(compose compose) *Manager {
+func NewManager(compose compose, tui tui) *Manager {
 	return &Manager{
 		compose: compose,
+		tui:     tui,
 	}
 }

@@ -41,6 +41,7 @@ projects:
 | `name` | The workspace's name. It's used in commands (`-w acme`), compose project names (`orca-acme-api`) and DNS aliases, so keep it short and lowercase. |
 | `projects` | The projects in this workspace, see [below](#projects). |
 | `overlays` | Workspace-wide [overlays](../compose_files/overlays/index.md). Currently only [`network`](../compose_files/overlays/network.md) is available. |
+| `preferences.path` | Where each developer's [preferences file](./preferences.md) lives, relative to this file. Defaults to `orca.preferences.yaml`, next to it. |
 
 ### Projects
 
@@ -49,6 +50,7 @@ projects:
 | `name` | The project's name, unique within the workspace. When cloning, it's also the name of the directory the project is cloned into. |
 | `repository` | Where the project's code comes from, see [below](#repository). |
 | `requires` | Names of other projects in this workspace that must be started before this one. |
+| `enabled` | Optional. Whether the project runs in workspace-wide commands by default, `true` or `false`. Defaults to `true`. Each developer can override it in their [preferences file](./preferences.md). |
 
 ### Repository
 
@@ -89,6 +91,8 @@ Workspace config '/Users/me/code/acme/local-env/orca.workspace.yaml' is invalid:
 In the example above, `up` starts `local-env`, then `api`, then `web`, and `down` stops them in the opposite order.
 
 `requires` must not contain cycles. It isn't used when you run a command against a single project: `orca up -p web` starts only `web`, not `api` or `local-env`.
+
+`requires` also wins over your [preferences](./preferences.md): if an enabled project requires a disabled one, `orca up` starts the disabled one too, with a warning. See [Enabling and disabling projects](../usage/workspaces.md#enabling-and-disabling-projects).
 
 ## Overlays
 

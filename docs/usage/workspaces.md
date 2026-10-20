@@ -35,6 +35,7 @@ Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 
 1. Reads the workspace config from the current directory, checks that it's [valid](../configuration/workspace_config.md#validation), and registers the workspace in your [user config](../configuration/user_config.md).
 2. Sets up every project in it, as [`orca ws clone`](#cloning-projects) does.
+3. Creates your [preferences file](../configuration/preferences.md), listing every project, unless it already exists. Each project follows the workspace config's [`enabled`](../configuration/workspace_config.md#projects) until you enable or disable it. If git doesn't ignore it, orca suggests adding it to `.gitignore`.
 
 ### Flags
 
@@ -66,6 +67,65 @@ $ orca ws clone -p payments     # just one project
 Before cloning anything, orca checks that the `repository.branch` of every project it's about to clone exists on its remote, and lists every missing one. The branch is only used for the first clone: projects that are already cloned are never switched to another branch.
 
 Projects are cloned into `{target}/{project name}`. `--target` defaults to the parent of the workspace config's repository, so projects end up next to it. With `-p` and `--target`, the project is cloned into `--target` itself.
+
+[Disabled](#enabling-and-disabling-projects) projects are cloned too: being disabled only means they don't run.
+
+## Enabling and disabling projects
+
+If you only work on part of a workspace, disable the projects you don't need, and `orca up` won't start them. Your choices are kept in your [preferences file](../configuration/preferences.md), and override the defaults in the workspace config's [`enabled`](../configuration/workspace_config.md#projects).
+
+```
+$ orca ws projects
+┌───────────┬─────────┬─────────┬────────┬─────────┐
+│  Project  │  Type   │ Enabled │ Cloned │ Running │
+├───────────┼─────────┼─────────┼────────┼─────────┤
+│ local-env │ service │ yes     │ yes    │ yes     │
+│ api       │ service │ yes     │ yes    │ yes     │
+│ web       │ service │ yes     │ yes    │ no      │
+│ admin     │ service │ yes     │ yes    │ no      │
+└───────────┴─────────┴─────────┴────────┴─────────┘
+
+$ orca ws disable web admin
+Disabled web and admin.
+
+$ orca up                 # starts local-env and api
+$ orca up -p web
+Note: web is disabled, but starting it as you asked for it.
+```
+
+| Command | Does |
+| ------- | ---- |
+| [`orca ws projects`](../CLI/orca_ws_projects.md) | Lists the workspace's projects, with whether each is enabled, cloned and running. Running is `?` if docker can't be asked, rather than the command failing. |
+| [`orca ws enable <project>...`](../CLI/orca_ws_enable.md) | Enables projects. It doesn't start them. |
+| [`orca ws disable <project>...`](../CLI/orca_ws_disable.md) | Disables projects, and stops any of them that are running. With `--orphan`, they're left running. |
+
+All of them take `-w`, and complete project names: `ws enable` offers the disabled projects, and `ws disable` the enabled ones.
+
+### What disabled means
+
+- **Workspace-wide commands skip disabled projects.** `orca up` only starts enabled projects, and [`g` with `--all`](./git.md) only acts on enabled projects.
+- **An explicit `-p`** still acts on a disabled project. `orca up -p web` starts it, with a note that it's disabled.
+- **Requirements win.** If an enabled project [`requires`](../configuration/workspace_config.md#dependencies-between-projects) a disabled one, `orca up` starts it anyway, and warns:
+
+    ```
+    Warning: api requires local-env, which is disabled, so it's being started anyway.
+    ```
+
+- **`orca down` stops everything that's running.** As well as what `orca up` starts, it stops any disabled project that's still running, so nothing is left behind.
+- **Nothing is deleted.** Disabling a project never removes its clone or its containers.
+
+### Disabling a running project
+
+`orca ws disable` stops any of the projects that are running, as `orca down -p <project>` would:
+
+```
+$ orca ws disable web
+Disabled web.
+web:acme[/Users/me/code/acme/web] stopping...
+```
+
+- With `--orphan`, they're left running, and orca tells you how to stop them later.
+- A project that another running project still requires is left running, with a warning, as requirements win. Disabling both at once stops both.
 
 ## Switching workspaces
 

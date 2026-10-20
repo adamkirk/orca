@@ -8,7 +8,7 @@ import (
 var downCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Stops the workspace or project.",
-	Long:  `...TBD...`,
+	Long:  `Stops the project, or with no project, every project in the workspace that's enabled, required by an enabled project, or still running, before the projects they require.`,
 	RunE:  handleErrors(handleDown),
 }
 

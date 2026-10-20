@@ -20,6 +20,7 @@ type stubGit struct {
 	branches map[string][]string
 	checked  []string
 	cloned   []string
+	ignored  bool
 }
 
 func (g *stubGit) GetRepositoryRootFromPath(path string) (string, error) {
@@ -48,6 +49,10 @@ func (g *stubGit) DirectoryHasOrigin(dir string, origin string) (bool, error) {
 	return false, nil
 }
 
+func (g *stubGit) IsIgnored(path string) (bool, error) {
+	return g.ignored, nil
+}
+
 func TestCheckBranches(t *testing.T) {
 	git := &stubGit{
 		branches: map[string][]string{
@@ -60,7 +65,7 @@ func TestCheckBranches(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	assert.NoError(t, fs.MkdirAll("/acme/db", 0755))
 
-	m := NewManager(fs, stubTUI{}, nil, git, nil, nil)
+	m := NewManager(fs, stubTUI{}, nil, git, nil, nil, nil)
 
 	target := func(name string, repo ProjectRepositoryConfig) cloneTarget {
 		return cloneTarget{project: Project{Name: name, RepositoryConfig: repo}, into: "/acme/" + name}
@@ -117,4 +122,54 @@ func TestCheckBranches(t *testing.T) {
 			assert.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+// cloneConfig registers the one workspace, and records the projects cloned.
+type cloneConfig struct {
+	config
+
+	meta       WorkspaceMeta
+	registered []string
+}
+
+func (c *cloneConfig) GetWorkspaceMeta(name string) (WorkspaceMeta, error) {
+	return c.meta, nil
+}
+
+func (c *cloneConfig) ProjectExists(wsName string, name string) (bool, error) {
+	return false, nil
+}
+
+func (c *cloneConfig) SetProjectPath(wsName string, name string, into string) error {
+	c.registered = append(c.registered, name)
+
+	return nil
+}
+
+func TestCloneIncludesDisabledProjects(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	path := "/acme/root/orca.workspace.yaml"
+
+	assert.NoError(t, afero.WriteFile(fs, path, []byte(`
+name: acme
+projects:
+  - name: api
+    repository:
+      ssh: git@github.com:acme/api.git
+  - name: web
+    repository:
+      ssh: git@github.com:acme/web.git
+`), 0644))
+	assert.NoError(t, afero.WriteFile(fs, "/acme/root/"+DefaultPreferencesFileName, []byte("projects:\n  web:\n    enabled: false\n"), 0644))
+
+	meta := WorkspaceMeta{Name: "acme", Path: path}
+	cfg := &cloneConfig{meta: meta}
+	git := &stubGit{}
+	repo := NewRepository(fs, stubUserConfig{workspaces: map[string]WorkspaceMeta{"acme": meta}})
+
+	err := NewManager(fs, stubTUI{}, cfg, git, nil, repo, nil).clone("acme", "", "/acme", true)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"git@github.com:acme/api.git", "git@github.com:acme/web.git"}, git.cloned)
+	assert.Equal(t, []string{"api", "web"}, cfg.registered)
 }

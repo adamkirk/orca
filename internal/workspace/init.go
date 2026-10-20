@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -96,8 +97,58 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return err
 	}
 
+	if err := m.createPreferences(cfg); err != nil {
+		return err
+	}
+
 	m.tui.Success("Workspace initialised!")
+	m.suggestIgnoringPreferences(cfg.PreferencesPath)
+
 	return nil
+}
+
+// createPreferences creates the workspace's preferences file, listing every
+// project, unless it already exists.
+func (m *Manager) createPreferences(cfg *UnconfiguredWorkspace) error {
+	names := make([]string, len(cfg.Projects))
+
+	for i, p := range cfg.Projects {
+		names[i] = p.Name
+	}
+
+	created, err := writeDefaultPreferences(m.fs, cfg.PreferencesPath, names)
+
+	if err != nil {
+		return usererr.Wrap(err, fmt.Sprintf("Failed to create the preferences file '%s'!", cfg.PreferencesPath))
+	}
+
+	if created {
+		m.tui.Info(fmt.Sprintf("Created %s, where you can enable and disable projects.", cfg.PreferencesPath))
+	}
+
+	return nil
+}
+
+// suggestIgnoringPreferences suggests gitignoring the preferences file, which
+// is usually personal, if it isn't already.
+func (m *Manager) suggestIgnoringPreferences(path string) {
+	ignored, err := m.git.IsIgnored(path)
+
+	if err != nil {
+		slog.Debug("couldn't check whether the preferences file is ignored", "err", err)
+		return
+	}
+
+	if ignored {
+		return
+	}
+
+	m.tui.Info(
+		"",
+		"Next steps:",
+		fmt.Sprintf("  %s holds your own preferences, like which projects are enabled.", path),
+		"  It isn't ignored by git, so unless your team commits it as shared defaults, add it to the workspace repository's .gitignore.",
+	)
 }
 
 type githubRepo struct {

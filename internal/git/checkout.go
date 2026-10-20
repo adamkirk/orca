@@ -138,7 +138,7 @@ func (m *Manager) checkoutSingle(search string, execCtx workspace.ExecutionConte
 func (m *Manager) chooseBranchesForAllProjects(search string, execCtx workspace.ExecutionContext) (map[string]Branch, error) {
 	chosenBranches := map[string]Branch{}
 
-	for _, p := range execCtx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.EnabledProjects() {
 		branches, err := m.searchBranches(searchBranchesOpts{
 			Search:        search,
 			Dir:           p.ProjectDir,
@@ -185,7 +185,7 @@ func (m *Manager) handleCreate(execCtx workspace.ExecutionContext, cmd CheckoutC
 		return usererr.Wrap(m.checkoutOrCreate(execCtx.Dir(), cmd.Name), "Failed to checkout branch")
 	}
 
-	for _, p := range execCtx.Workspace.Projects {
+	for _, p := range execCtx.Workspace.EnabledProjects() {
 		if err := m.checkoutOrCreate(p.ProjectDir, cmd.Name); err != nil {
 			return usererr.Wrap(err, "Checkout failed, you should check the branches for all projects as this failed mid-flow")
 		}

@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/dag"
@@ -19,14 +20,26 @@ func (UpCommand) MessageName() string {
 	return "up"
 }
 
-func determineStartupOrder(execCtx workspace.ExecutionContext) ([]string, error) {
+// startupOrder orders the projects to start: the one asked for, or the
+// workspace's enabled projects and their requirements, requirements first.
+func (m *Manager) startupOrder(execCtx workspace.ExecutionContext) ([]string, error) {
 	if execCtx.Project != nil {
+		if execCtx.Project.Disabled {
+			m.tui.Info(fmt.Sprintf("Note: %s is disabled, but starting it as you asked for it.", execCtx.Project.Name))
+		}
+
 		return []string{
 			execCtx.Project.Name,
 		}, nil
 	}
 
-	g, err := dag.NewGraph(execCtx.Workspace.Projects)
+	projects, pulledIn := execCtx.Workspace.RunSet()
+
+	for _, p := range pulledIn {
+		m.tui.Info(fmt.Sprintf("Warning: %s requires %s, which is disabled, so it's being started anyway.", p.RequiredBy, p.Name))
+	}
+
+	g, err := dag.NewGraph(projects)
 
 	if err != nil {
 		return nil, err
@@ -36,7 +49,7 @@ func determineStartupOrder(execCtx workspace.ExecutionContext) ([]string, error)
 }
 
 func (m *Manager) startServices(execCtx workspace.ExecutionContext) error {
-	ordered, err := determineStartupOrder(execCtx)
+	ordered, err := m.startupOrder(execCtx)
 
 	if err != nil {
 		return err

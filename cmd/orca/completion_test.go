@@ -109,3 +109,10 @@ func Test_NoFileCompletions(t *testing.T) {
 	assert.Equal(t, cobra.ShellCompDirectiveDefault, directive, "keeps its own")
 	assert.Nil(t, static.ValidArgsFunction, "static args are left to cobra")
 }
+
+func Test_WithoutGiven(t *testing.T) {
+	choices := []workspace.Choice{{Value: "api"}, {Value: "web"}, {Value: "admin"}}
+
+	assert.Equal(t, []workspace.Choice{{Value: "api"}, {Value: "admin"}}, withoutGiven(choices, []string{"web"}))
+	assert.Equal(t, []workspace.Choice{{Value: "api"}}, withoutGiven([]workspace.Choice{{Value: "api"}}, nil))
+}

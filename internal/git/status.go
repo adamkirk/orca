@@ -135,7 +135,7 @@ func (m *Manager) Status(ctx context.Context, query StatusQuery) error {
 
 	switch {
 	case query.AllProjects:
-		for _, p := range execCtx.Workspace.Projects {
+		for _, p := range execCtx.Workspace.EnabledProjects() {
 			rows = append(rows, m.statusRow(p.Name, p.ProjectDir))
 		}
 	case execCtx.Project != nil:

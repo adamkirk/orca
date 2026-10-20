@@ -27,6 +27,13 @@ type git interface {
 	Clone(repoUrl string, target string, branch string) error
 	RemoteBranchExists(repoUrl string, branch string) (bool, error)
 	DirectoryHasOrigin(dir string, origin string) (bool, error)
+	IsIgnored(path string) (bool, error)
+}
+
+// stack runs projects' compose stacks.
+type stack interface {
+	IsProjectRunning(ws *Workspace, p *Project) (bool, error)
+	Down(ws *Workspace, p *Project) error
 }
 
 type githubClient interface {
@@ -46,9 +53,10 @@ type Manager struct {
 	git           git
 	githubClient  githubClient
 	workspaceRepo workspaceRepo
+	stack         stack
 }
 
-func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo) *Manager {
+func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo, stack stack) *Manager {
 	return &Manager{
 		fs:            fs,
 		tui:           tui,
@@ -56,5 +64,6 @@ func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClien
 		git:           git,
 		githubClient:  githubClient,
 		workspaceRepo: workspaceRepo,
+		stack:         stack,
 	}
 }

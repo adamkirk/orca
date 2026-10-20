@@ -34,29 +34,43 @@ func (m *Manager) WorkspaceChoices(_ context.Context, _ WorkspaceChoicesQuery) (
 	return choices, nil
 }
 
+// ProjectFilter narrows the projects offered by ProjectChoicesQuery.
+type ProjectFilter string
+
+const (
+	AllProjects      ProjectFilter = ""
+	EnabledProjects  ProjectFilter = "enabled"
+	DisabledProjects ProjectFilter = "disabled"
+)
+
 // ProjectChoicesQuery lists the projects in the workspace, which is worked out
 // as it is for any command, from the working directory or Workspace.
 type ProjectChoicesQuery struct {
 	bus.Returns[[]Choice]
 
 	Workspace string
+	Filter    ProjectFilter
 }
 
 func (ProjectChoicesQuery) MessageName() string {
 	return "choices.projects"
 }
 
-func (m *Manager) ProjectChoices(ctx context.Context, _ ProjectChoicesQuery) ([]Choice, error) {
+func (m *Manager) ProjectChoices(ctx context.Context, query ProjectChoicesQuery) ([]Choice, error) {
 	execCtx, err := ExecutionContextFrom(ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	choices := make([]Choice, len(execCtx.Workspace.Projects))
+	choices := []Choice{}
 
-	for i, p := range execCtx.Workspace.Projects {
-		choices[i] = Choice{Value: p.Name}
+	for _, p := range execCtx.Workspace.Projects {
+		if (query.Filter == EnabledProjects && p.Disabled) || (query.Filter == DisabledProjects && !p.Disabled) {
+			continue
+		}
+
+		choices = append(choices, Choice{Value: p.Name})
 	}
 
 	return choices, nil

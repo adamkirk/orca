@@ -34,7 +34,7 @@ $ orca restart            # down, then up
 | [`orca down`](../CLI/orca_down.md) | `docker compose down --remove-orphans` |
 | [`orca restart`](../CLI/orca_restart.md) | `down`, then `up` |
 
-For a whole workspace, `up` starts projects in dependency order (projects before the ones that `require` them), and `down` stops them in reverse. See [dependencies between projects](../configuration/workspace_config.md#dependencies-between-projects).
+For a whole workspace, `up` starts projects in dependency order (projects before the ones that `require` them), and `down` stops them in reverse. See [dependencies between projects](../configuration/workspace_config.md#dependencies-between-projects). Projects you've [disabled](./workspaces.md#enabling-and-disabling-projects) are skipped by `up`, unless an enabled project requires them.
 
 ## Logs
 

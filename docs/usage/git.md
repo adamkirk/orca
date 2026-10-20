@@ -4,7 +4,7 @@ The `orca g` commands are shortcuts for everyday git tasks. Several of them can 
 
 ## Across projects
 
-These accept `-a/--all` to act on every project in the workspace, as well as the usual `-w` and `-p` (see [Choosing a workspace and project](../getting_started/context.md)). Without them, they act on the project you're in.
+These accept `-a/--all` to act on every [enabled](./workspaces.md#enabling-and-disabling-projects) project in the workspace, as well as the usual `-w` and `-p` (see [Choosing a workspace and project](../getting_started/context.md)). Without them, they act on the project you're in.
 
 They also work in any git repository, even one that isn't part of a workspace. If orca can't work out a workspace, they act on the repository you're in. Only `--all` and `-p` need a workspace.
 
@@ -35,7 +35,7 @@ Remote branches are read from what git already knows, without fetching, so a bra
 
 | Flag | Effect |
 | ---- | ------ |
-| `-a`, `--all` | Check out the branch in every project in the workspace. |
+| `-a`, `--all` | Check out the branch in every enabled project in the workspace. |
 | `-b`, `--create` | Create the branch if it doesn't exist, locally or on a remote. Can't be used with `--pull`. |
 | `--pull` | Pull the branch from `origin` after checking it out. |
 | `-r`, `--rebase` | With `--pull`, pull with `--rebase`. |

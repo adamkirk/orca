@@ -42,7 +42,7 @@ func TestWorkspaceChoices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewManager(afero.NewMemMapFs(), stubTUI{}, stubConfig{workspaces: tt.workspaces}, nil, nil, nil)
+			m := NewManager(afero.NewMemMapFs(), stubTUI{}, stubConfig{workspaces: tt.workspaces}, nil, nil, nil, nil)
 
 			got, err := m.WorkspaceChoices(context.Background(), WorkspaceChoicesQuery{})
 
@@ -53,7 +53,7 @@ func TestWorkspaceChoices(t *testing.T) {
 }
 
 func TestProjectChoices(t *testing.T) {
-	m := NewManager(afero.NewMemMapFs(), stubTUI{}, nil, nil, nil, nil)
+	m := NewManager(afero.NewMemMapFs(), stubTUI{}, nil, nil, nil, nil, nil)
 
 	t.Run("the projects in the context's workspace", func(t *testing.T) {
 		ws := &Workspace{Projects: []Project{{Name: "api"}, {Name: "web"}}}
@@ -63,6 +63,19 @@ func TestProjectChoices(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, []Choice{{Value: "api"}, {Value: "web"}}, got)
+	})
+
+	t.Run("filtered by whether they're enabled", func(t *testing.T) {
+		ws := &Workspace{Projects: []Project{{Name: "api"}, {Name: "web", Disabled: true}, {Name: "admin"}}}
+		ctx := WithExecutionContext(context.Background(), ExecutionContext{Workspace: ws})
+
+		enabled, err := m.ProjectChoices(ctx, ProjectChoicesQuery{Filter: EnabledProjects})
+		require.NoError(t, err)
+		assert.Equal(t, []Choice{{Value: "api"}, {Value: "admin"}}, enabled)
+
+		disabled, err := m.ProjectChoices(ctx, ProjectChoicesQuery{Filter: DisabledProjects})
+		require.NoError(t, err)
+		assert.Equal(t, []Choice{{Value: "web"}}, disabled)
 	})
 
 	t.Run("without an execution context", func(t *testing.T) {

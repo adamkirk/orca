@@ -56,6 +56,18 @@ func Test_ReportError(t *testing.T) {
 			},
 		},
 		{
+			name: "shows the problems with an invalid preferences file",
+			err: workspace.InvalidPreferencesError{
+				Path:     "/code/orca.preferences.yaml",
+				Problems: []string{"project 'api': 'enabled' must be true or false", "unknown property 'colour'"},
+			},
+			expect: []string{
+				"Preferences file '/code/orca.preferences.yaml' is invalid:",
+				"  - project 'api': 'enabled' must be true or false",
+				"  - unknown property 'colour'",
+			},
+		},
+		{
 			name: "says nothing when the user aborted",
 			err:  fmt.Errorf("choosing a branch: %w", tui.ErrUserAbortedExecution),
 		},

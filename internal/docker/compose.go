@@ -43,6 +43,11 @@ func (c *Compose) goToProject(p *workspace.Project) error {
 	return os.Chdir(p.ProjectDir)
 }
 
+// composeProjectName is the name docker compose knows the project by.
+func composeProjectName(ws *workspace.Workspace, p *workspace.Project) string {
+	return fmt.Sprintf("orca-%s-%s", ws.Name, p.Name)
+}
+
 func buildBaseComposeCommand(ws *workspace.Workspace, p *workspace.Project, overlayPath string) []string {
 	envArgs := []string{}
 
@@ -58,7 +63,7 @@ func buildBaseComposeCommand(ws *workspace.Workspace, p *workspace.Project, over
 		"-f",
 		overlayPath,
 		"-p",
-		fmt.Sprintf("orca-%s-%s", ws.Name, p.Name),
+		composeProjectName(ws, p),
 	}
 
 	args = append(args, envArgs...)

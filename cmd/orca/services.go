@@ -185,6 +185,7 @@ func (s *services) GetWorkspaceManager() *workspace.Manager {
 		s.GetGit(),
 		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
+		s.GetCompose(),
 	)
 
 	return s.workspaceManager
@@ -195,7 +196,7 @@ func (s *services) GetStack() *stack.Manager {
 		return s.stack
 	}
 
-	s.stack = stack.NewManager(s.GetCompose())
+	s.stack = stack.NewManager(s.GetCompose(), s.GetTui())
 
 	return s.stack
 }
@@ -356,6 +357,9 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ShowCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).ClearCurrent))
 	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Clone))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Projects))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Enable))
+	b.HandleVoid(lazy(s.GetWorkspaceManager, (*workspace.Manager).Disable))
 	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).WorkspaceChoices))
 	b.Handle(lazyResult(s.GetWorkspaceManager, (*workspace.Manager).ProjectChoices))
 
@@ -433,6 +437,15 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 
 	ec.Target(func(cmd workspace.CloneCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.WorkspaceName}
+	})
+	ec.Target(func(query workspace.ProjectsQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace}
+	})
+	ec.Target(func(cmd workspace.EnableCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
+	})
+	ec.Target(func(cmd workspace.DisableCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
 	})
 	ec.Target(func(cmd tls.GenerateCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace}
