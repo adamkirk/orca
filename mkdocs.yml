@@ -73,6 +73,7 @@ nav:
       - Environments: usage/environments.md
       - Workspaces: usage/workspaces.md
       - Extensions: usage/extensions.md
+      - Hooks: usage/hooks.md
       - Hosts & TLS: usage/hosts_and_tls.md
       - Git: usage/git.md
       - Orca itself: usage/system.md

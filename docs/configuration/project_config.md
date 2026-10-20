@@ -43,6 +43,7 @@ extensions:
 | [`hosts`](#hosts) | Hostnames this project serves, added to `/etc/hosts` by [`orca hosts`](../CLI/orca_hosts.md). |
 | [`tlsCerts`](#tls-certificates) | Domains to generate TLS certificates for with [`orca tls gen`](../CLI/orca_tls_gen.md). |
 | [`extensions`](#extensions) | Named steps, such as commands and files to set up, run with [`orca ext`](../CLI/orca_ext.md). |
+| [`hooks`](#hooks) | Extensions to run around operations, such as after the project is cloned. |
 
 ### Compose files
 
@@ -108,3 +109,22 @@ extensions:
 Named steps, each of a `type`: a `command` (in a service, or on your machine), a `syncFile` or a `symlink`. Paths are relative to the project's directory. Each type takes its own properties, and the config is invalid if an extension has one its type doesn't take.
 
 See the [extensions reference](./extensions.md) for every type and property, and [Extensions](../usage/extensions.md) for running them.
+
+### Hooks
+
+```yaml
+hooks:
+  clone:
+    post:
+      - extension: env
+      - extension: install-deps
+        scope: workspace
+  up:
+    pre:
+      - extension: install-deps
+        scope: workspace
+```
+
+The extensions to run around an operation, by name, keyed by the operation, then `pre` or `post`. A project can have `clone.post`, `up.pre`, `up.post`, `down.pre` and `down.post`, and a library only `clone.post`. Each entry's `extension` must be defined in this config, or in the workspace config with `scope: workspace`.
+
+See [Hooks](../usage/hooks.md).

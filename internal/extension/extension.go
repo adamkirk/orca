@@ -1,6 +1,8 @@
 package extension
 
 import (
+	"io"
+
 	"github.com/adamkirk/orca/internal/process"
 	"github.com/adamkirk/orca/internal/workspace"
 	"github.com/spf13/afero"
@@ -21,6 +23,7 @@ type executor interface {
 
 type tui interface {
 	Info(msg ...string)
+	Indented(prefix string) io.Writer
 	Table(header []string, rows [][]string)
 	Confirm(question string) (bool, error)
 }

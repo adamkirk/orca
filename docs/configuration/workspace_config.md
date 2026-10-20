@@ -49,6 +49,7 @@ projects:
 | `projects` | The projects in this workspace, see [below](#projects). |
 | `overlays` | Workspace-wide [overlays](../compose_files/overlays/index.md). Currently only [`network`](../compose_files/overlays/network.md) is available. |
 | `preferences.path` | Where each developer's [preferences file](./preferences.md) lives, relative to this file. Defaults to `orca.preferences.yaml`, next to it. |
+| `hooks` | Optional. [Hooks](../usage/hooks.md) for the whole workspace: `init.post`, `up.pre`, `up.post`, `down.pre` and `down.post`. They can only run the workspace's own extensions, and run in the directory of this file. |
 | `extensions` | Optional. [Extensions](./extensions.md) for the whole workspace, which run in the directory of this file, e.g. a script that seeds every project's database. They're defined exactly as in a project config. Projects can run them too, and override them, see [Workspace extensions](../usage/extensions.md#workspace-extensions). |
 
 ### Projects
@@ -85,6 +86,7 @@ Orca checks the workspace config whenever it loads it, so every command fails if
 - Every `type` is `service` or `library`.
 - No `path` is absolute, or escapes the directory projects are cloned into with `..`, and none is combined with `repository.self`.
 - Every extension is valid, as described in [the extensions reference](./extensions.md#validation).
+- Every hook is one the workspace can have, and every entry in it names one of the workspace's extensions, with no other properties than `extension` and `scope`. A project's hooks are checked the same way when it's loaded, against its own and the workspace's extensions.
 
 Every problem found is listed, e.g.:
 

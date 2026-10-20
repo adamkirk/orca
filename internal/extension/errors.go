@@ -1,6 +1,9 @@
 package extension
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrUnknownService       = errors.New("unknown service")
@@ -13,3 +16,46 @@ var (
 	ErrTrustDeclined        = errors.New("the extensions weren't trusted")
 	ErrTrustNeeded          = errors.New("the extensions need trusting")
 )
+
+// HookFailedError is an extension that failed while a hook was running it.
+type HookFailedError struct {
+	Workspace string
+
+	// Empty for one of the workspace's hooks
+	Project   string
+	Hook      string
+	Extension string
+	Err       error
+}
+
+func (err HookFailedError) Error() string {
+	where := "the workspace"
+
+	if err.Project != "" {
+		where = err.Project
+	}
+
+	return fmt.Sprintf("%s's %s hook failed running '%s': %s", where, err.Hook, err.Extension, err.Err)
+}
+
+func (err HookFailedError) Unwrap() error {
+	return err.Err
+}
+
+// RerunCommand is how to run the failed extension again, on its own.
+func (err HookFailedError) RerunCommand() string {
+	return fmt.Sprintf("orca ext %s %s", err.target(), err.Extension)
+}
+
+// RerunHookCommand is how to run the whole hook again.
+func (err HookFailedError) RerunHookCommand() string {
+	return fmt.Sprintf("orca hooks run %s %s", err.target(), err.Hook)
+}
+
+func (err HookFailedError) target() string {
+	if err.Project != "" {
+		return fmt.Sprintf("-w %s -p %s", err.Workspace, err.Project)
+	}
+
+	return fmt.Sprintf("-w %s", err.Workspace)
+}

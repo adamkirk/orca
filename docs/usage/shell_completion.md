@@ -104,6 +104,7 @@ orca completion powershell | Out-String | Invoke-Expression
 | `orca ws switch <tab>` | Your registered workspaces. |
 | `orca ws enable <tab>` | The workspace's [disabled](./workspaces.md#enabling-and-disabling-projects) projects, leaving out any you've already typed. |
 | `orca ws disable <tab>` | The workspace's enabled projects, leaving out any you've already typed. |
+| `orca hooks run <tab>` | The [hooks](./hooks.md) that run something: the project's, plus the workspace's `init.post`, or outside of a project, the workspace's. Each has the extensions it runs as its description. |
 | `orca ext <tab>` | The [extensions](./extensions.md) you can run: the project's, then the workspace's that the project doesn't override. Each has its `description`, in shells that show descriptions. |
 | `orca g co <tab>`, `orca g branches <tab>` | Branches in the repository, apart from the current one: local branches first, then those only on a remote, without the remote's name (`feature/x`, not `origin/feature/x`). Remote branches are those git already knows about, so fetch to see new ones. With `--all`, nothing is offered, as the branches of one repository would be misleading for every project. |
 | `orca exec <tab>`, `orca logs <tab>` | The services in the project's compose file (`composeFiles.primary`). Docker isn't needed, so this works when it isn't running. |

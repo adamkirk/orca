@@ -2,6 +2,7 @@ package process
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -24,6 +25,18 @@ func WithHostIO() ExecOpt {
 		cmd.Stdout = os.Stdout
 		cmd.Stdin = os.Stdin
 		cmd.Stderr = os.Stderr
+
+		return nil
+	}
+}
+
+// WithOutput sends the command's output, and its errors, to w, while it still
+// reads the host's input.
+func WithOutput(w io.Writer) ExecOpt {
+	return func(cmd *exec.Cmd) error {
+		cmd.Stdout = w
+		cmd.Stderr = w
+		cmd.Stdin = os.Stdin
 
 		return nil
 	}

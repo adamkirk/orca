@@ -348,6 +348,8 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
 	b.Handle(lazyResult(s.GetExtension, (*extension.Manager).Choices))
+	b.HandleVoid(lazy(s.GetExtension, (*extension.Manager).RunHook))
+	b.Handle(lazyResult(s.GetExtension, (*extension.Manager).HookChoices))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
@@ -416,6 +418,12 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
 	ec.Target(func(query extension.ChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd extension.RunHookCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query extension.HookChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
 	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {

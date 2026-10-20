@@ -46,3 +46,15 @@ func Test_Confirm_NotATerminal(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotInteractive)
 	assert.Empty(t, out.String(), "nothing is asked")
 }
+
+func Test_Indented(t *testing.T) {
+	var out bytes.Buffer
+	w := NewTui(strings.NewReader(""), &out, &out).Indented("  ")
+
+	for _, chunk := range []string{"added 3 packages", "\nfound 0 vuln", "erabilities\n", "\n", "done"} {
+		_, err := w.Write([]byte(chunk))
+		require.NoError(t, err)
+	}
+
+	assert.Equal(t, "  added 3 packages\n  found 0 vulnerabilities\n\n  done", out.String())
+}

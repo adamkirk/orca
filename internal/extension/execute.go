@@ -30,8 +30,10 @@ func (t target) dir() string {
 	return t.ws.Dir()
 }
 
-// execute runs the extension in the target, with args for a command.
-func (m *Manager) execute(t target, ext workspace.Extension, args []string) error {
+// execute runs the extension in the target, with args for a command. What it
+// shows, and a host command's output, start with indent, so they can be shown
+// under the hook that's running them.
+func (m *Manager) execute(t target, ext workspace.Extension, args []string, indent string) error {
 	if t.project != nil && !t.project.IsRegistered {
 		return usererr.Wrap(
 			fmt.Errorf("%w: %s", ErrProjectNotCloned, t.project.Name),
@@ -41,19 +43,19 @@ func (m *Manager) execute(t target, ext workspace.Extension, args []string) erro
 
 	switch spec := ext.Spec.(type) {
 	case workspace.CommandSpec:
-		return m.executeCommand(t, spec, args)
+		return m.executeCommand(t, spec, args, indent)
 	case workspace.SyncFileSpec:
 		if err := noArgs(ext, args); err != nil {
 			return err
 		}
 
-		return m.syncFile(t, spec)
+		return m.syncFile(t, spec, indent)
 	case workspace.SymlinkSpec:
 		if err := noArgs(ext, args); err != nil {
 			return err
 		}
 
-		return m.symlink(t, spec)
+		return m.symlink(t, spec, indent)
 	default:
 		panic(fmt.Sprintf("unknown extension spec %T", spec))
 	}
@@ -82,11 +84,17 @@ func commandArgs(spec workspace.CommandSpec, args []string) []string {
 	return append(cmdArgs, spec.DefaultArgs...)
 }
 
-func (m *Manager) executeCommand(t target, spec workspace.CommandSpec, args []string) error {
+func (m *Manager) executeCommand(t target, spec workspace.CommandSpec, args []string, indent string) error {
 	cmdArgs := commandArgs(spec, args)
 
 	if spec.Service == "" {
-		return m.executor.Exec(cmdArgs[0], cmdArgs[1:], process.WithHostIO(), process.ChdirOpt(inDir(t.dir(), spec.Chdir)))
+		output := process.WithHostIO()
+
+		if indent != "" {
+			output = process.WithOutput(m.tui.Indented(indent))
+		}
+
+		return m.executor.Exec(cmdArgs[0], cmdArgs[1:], output, process.ChdirOpt(inDir(t.dir(), spec.Chdir)))
 	}
 
 	if t.project == nil || t.project.IsLibrary() {
@@ -133,7 +141,7 @@ func inDir(dir string, path string) string {
 
 // syncFile creates the target from the source, if it doesn't exist. An existing
 // target is never changed.
-func (m *Manager) syncFile(t target, spec workspace.SyncFileSpec) error {
+func (m *Manager) syncFile(t target, spec workspace.SyncFileSpec, indent string) error {
 	source, err := renderSource(t.ws, spec.Source)
 
 	if err != nil {
@@ -150,7 +158,7 @@ func (m *Manager) syncFile(t target, spec workspace.SyncFileSpec) error {
 	}
 
 	if targetExists {
-		m.tui.Info(fmt.Sprintf("%s already exists, leaving it as it is.", spec.Target))
+		m.tui.Info(indent + fmt.Sprintf("%s already exists, leaving it as it is.", spec.Target))
 		return nil
 	}
 
@@ -181,7 +189,7 @@ func (m *Manager) syncFile(t target, spec workspace.SyncFileSpec) error {
 		return err
 	}
 
-	m.tui.Info(fmt.Sprintf("Created %s from %s.", spec.Target, source))
+	m.tui.Info(indent + fmt.Sprintf("Created %s from %s.", spec.Target, source))
 
 	return nil
 }
@@ -189,7 +197,7 @@ func (m *Manager) syncFile(t target, spec workspace.SyncFileSpec) error {
 // symlink creates the target as an absolute symlink to the source. A target
 // that's already that symlink is left alone, anything else is an error, rather
 // than being replaced.
-func (m *Manager) symlink(t target, spec workspace.SymlinkSpec) error {
+func (m *Manager) symlink(t target, spec workspace.SymlinkSpec, indent string) error {
 	linker, canLink := m.fs.(afero.Linker)
 	reader, canRead := m.fs.(afero.LinkReader)
 	lstater, canLstat := m.fs.(afero.Lstater)
@@ -222,7 +230,7 @@ func (m *Manager) symlink(t target, spec workspace.SymlinkSpec) error {
 		}
 
 		if filepath.Clean(existing) == filepath.Clean(sourcePath) {
-			m.tui.Info(fmt.Sprintf("%s already links to %s.", spec.Target, sourcePath))
+			m.tui.Info(indent + fmt.Sprintf("%s already links to %s.", spec.Target, sourcePath))
 			return nil
 		}
 
@@ -242,7 +250,7 @@ func (m *Manager) symlink(t target, spec workspace.SymlinkSpec) error {
 		return err
 	}
 
-	m.tui.Info(fmt.Sprintf("Linked %s to %s.", spec.Target, sourcePath))
+	m.tui.Info(indent + fmt.Sprintf("Linked %s to %s.", spec.Target, sourcePath))
 
 	return nil
 }

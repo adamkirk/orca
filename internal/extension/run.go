@@ -44,7 +44,7 @@ func (m *Manager) Run(ctx context.Context, cmd RunCommand) error {
 		return usererr.Wrap(err, "Failed to record the extension as trusted!")
 	}
 
-	return usererr.Wrap(m.execute(run.target, run.ext, cmd.Args), fmt.Sprintf("Extension '%s' failed!", cmd.Name))
+	return usererr.Wrap(m.execute(run.target, run.ext, cmd.Args, ""), fmt.Sprintf("Extension '%s' failed!", cmd.Name))
 }
 
 // find looks for the extension in the project first, then the workspace, so a

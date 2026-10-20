@@ -49,4 +49,5 @@ type WorkspaceConfig struct {
 	Overlays    Overlays
 	Preferences PreferencesConfig
 	Extensions  []Extension
+	Hooks       Hooks
 }

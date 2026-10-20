@@ -1,11 +1,14 @@
 package extension
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/adamkirk/orca/internal/process"
@@ -28,6 +31,12 @@ type ran struct {
 type stubExecutor struct {
 	ran *[]ran
 	err error
+
+	// Written to the command's output, when it has somewhere to go
+	output string
+
+	// Fails the commands with these names, with err, and runs the rest
+	failing []string
 }
 
 func (e stubExecutor) Exec(name string, args []string, opts ...process.ExecOpt) error {
@@ -38,6 +47,14 @@ func (e stubExecutor) Exec(name string, args []string, opts ...process.ExecOpt) 
 	}
 
 	*e.ran = append(*e.ran, ran{name: name, args: args, dir: cmd.Dir})
+
+	if e.output != "" && cmd.Stdout != nil {
+		_, _ = cmd.Stdout.Write([]byte(e.output))
+	}
+
+	if len(e.failing) > 0 && !slices.Contains(e.failing, name) {
+		return nil
+	}
 
 	return e.err
 }
@@ -74,6 +91,7 @@ func (c stubCompose) Exec(_ *workspace.Workspace, p *workspace.Project, service 
 
 type stubTui struct {
 	lines  []string
+	output bytes.Buffer
 	tables [][][]string
 
 	// The answer to every question, or the error asking it
@@ -84,6 +102,23 @@ type stubTui struct {
 
 func (t *stubTui) Info(msg ...string) {
 	t.lines = append(t.lines, msg...)
+}
+
+// Indented records what's written to it, after the prefix, so the output of
+// a hook's commands can be checked.
+func (t *stubTui) Indented(prefix string) io.Writer {
+	return &prefixed{prefix: prefix, w: &t.output}
+}
+
+type prefixed struct {
+	prefix string
+	w      io.Writer
+}
+
+func (p *prefixed) Write(b []byte) (int, error) {
+	_, err := p.w.Write(append([]byte(p.prefix), b...))
+
+	return len(b), err
 }
 
 func (t *stubTui) Table(_ []string, rows [][]string) {

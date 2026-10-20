@@ -113,7 +113,7 @@ func projectType(cfg model.WorkspaceProjectConfig) ProjectType {
 	return ProjectType(cfg.Type)
 }
 
-func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig, exts []Extension) Project {
+func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig, exts []Extension, hooks map[Hook][]HookEntry) Project {
 	return Project{
 		Name:             wsPCfg.Name,
 		Type:             projectType(wsPCfg),
@@ -129,6 +129,7 @@ func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg mo
 			Hosts:           pCfg.Hosts,
 			TLSCertificates: pCfg.TLSCertificates,
 			Extensions:      exts,
+			Hooks:           hooks,
 			EnvFiles:        convertEnvFiles(pCfg.EnvFiles),
 		},
 	}
@@ -245,8 +246,11 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		}
 	}
 
-	_, extProblems := buildExtensions(cfg.Extensions)
+	exts, extProblems := buildExtensions(cfg.Extensions)
 	problems = append(problems, extProblems...)
+
+	_, hookProblems := buildHooks(cfg.Hooks, workspaceHooksConfig(exts))
+	problems = append(problems, hookProblems...)
 
 	if len(problems) > 0 {
 		return InvalidWorkspaceConfigError{
@@ -258,24 +262,47 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	return nil
 }
 
-// buildProjectExtensions decodes a project's extensions, and checks its config
-// as a whole: a library can only have what applies to a project with no compose
-// stack.
-func buildProjectExtensions(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType) ([]Extension, error) {
+// workspaceHooksConfig is what the workspace config's hooks can use.
+func workspaceHooksConfig(exts []Extension) hooksConfig {
+	return hooksConfig{
+		label:     "the workspace config",
+		supported: WorkspaceHooks,
+		scope:     HookScopeWorkspace,
+		own:       exts,
+		workspace: exts,
+	}
+}
+
+// buildProjectConfig decodes a project's extensions and hooks, and checks its
+// config as a whole: a library can only have what applies to a project with no
+// compose stack. The hooks can reference the workspace's extensions too.
+func buildProjectConfig(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType, wsExts []Extension) ([]Extension, map[Hook][]HookEntry, error) {
 	exts, problems := buildExtensions(cfg.Extensions)
+	hc := hooksConfig{
+		label:     "a project config",
+		supported: ProjectHooks,
+		scope:     HookScopeProject,
+		own:       exts,
+		workspace: wsExts,
+	}
 
 	if projectType == ProjectTypeLibrary {
 		problems = append(problems, libraryProblems(cfg, exts)...)
+		hc.label = "a library project, as it's never started"
+		hc.supported = libraryHooks
 	}
 
+	hooks, hookProblems := buildHooks(cfg.Hooks, hc)
+	problems = append(problems, hookProblems...)
+
 	if len(problems) > 0 {
-		return nil, InvalidProjectConfigError{
+		return nil, nil, InvalidProjectConfigError{
 			Path:     projectConfigPath(meta),
 			Problems: problems,
 		}
 	}
 
-	return exts, nil
+	return exts, hooks, nil
 }
 
 // libraryProblems lists what's in a library's project config that only applies
@@ -362,12 +389,14 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 
 	// They were checked when the config was parsed
 	exts, _ := buildExtensions(cfg.Extensions)
+	hooks, _ := buildHooks(cfg.Hooks, workspaceHooksConfig(exts))
 
 	ws := &Workspace{
 		Name:       cfg.Name,
 		ConfigPath: wsMeta.Path,
 		Projects:   make([]Project, len(cfg.Projects)),
 		Extensions: exts,
+		Hooks:      hooks,
 		OverlayConfig: OverlayConfig{
 			Network: NetworkOverlayConfig{
 				Enabled:        cfg.Overlays.Network.Enabled,
@@ -411,13 +440,13 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 			return nil, err
 		}
 
-		exts, err := buildProjectExtensions(p, projectMeta, projectType(pCfg))
+		pExts, hooks, err := buildProjectConfig(p, projectMeta, projectType(pCfg), exts)
 
 		if err != nil {
 			return nil, err
 		}
 
-		ws.Projects[i] = buildProject(pCfg, projectMeta, *p, exts)
+		ws.Projects[i] = buildProject(pCfg, projectMeta, *p, pExts, hooks)
 	}
 
 	ws.PreferencesPath = preferencesPath(wsMeta.Path, cfg.Preferences.Path)

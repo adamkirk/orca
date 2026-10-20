@@ -6,6 +6,7 @@ These pages cover what you can do with orca, by topic. Every command also has a 
 | ----- | -------- |
 | [Environments](./environments.md) | `up`, `down`, `restart`, `logs`, `exec`, `debug` |
 | [Extensions](./extensions.md) | `ext` |
+| [Hooks](./hooks.md) | `hooks run` |
 | [Hosts & TLS](./hosts_and_tls.md) | `hosts`, `tls gen` |
 | [Git](./git.md) | `g co`, `g branches`, `g status`, `g pull`, `g push`, `g logl`, `g rbi`, `g undo` |
 | [Workspaces](./workspaces.md) | `ws init`, `ws clone`, `ws ls`, `ws switch`, `ws current`, `ws clear-current` |

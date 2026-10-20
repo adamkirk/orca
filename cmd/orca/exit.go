@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/adamkirk/orca/internal/extension"
 	"github.com/adamkirk/orca/internal/tui"
 	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
@@ -86,10 +87,22 @@ func reportError(out errorPrinter, err error) {
 
 	if !hasMsg {
 		out.Error(fmt.Sprintf("Error: %s", err))
-		return
+	} else {
+		out.Error(fmt.Sprintf("  %s", cause))
 	}
 
-	out.Error(fmt.Sprintf("  %s", cause))
+	// Whatever the extension said, say where it was running, and how to try
+	// it again once it's fixed
+	if hookErr, ok := errors.AsType[extension.HookFailedError](err); ok {
+		where := "the workspace's"
+
+		if hookErr.Project != "" {
+			where = hookErr.Project + "'s"
+		}
+
+		out.Error(fmt.Sprintf("This was '%s', in %s %s hook. Nothing after it ran.", hookErr.Extension, where, hookErr.Hook))
+		out.Error(fmt.Sprintf("Once it's fixed, re-run it with '%s', or the whole hook with '%s'.", hookErr.RerunCommand(), hookErr.RerunHookCommand()))
+	}
 }
 
 func reportProblems(out errorPrinter, title string, problems []string) {

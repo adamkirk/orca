@@ -88,7 +88,7 @@ A workspace extension with a `service` can only run in a project with that servi
 
 ## Trusting extensions
 
-An extension runs on your machine, from config that someone else wrote, so orca asks before running one that you haven't asked for yourself:
+An extension runs on your machine, from config that someone else wrote, so orca asks before a [hook](./hooks.md) runs one that you haven't asked for yourself:
 
 ```
 This workspace wants to run the following on your machine:

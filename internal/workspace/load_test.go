@@ -368,6 +368,7 @@ projects:
 			EnvFiles:     []EnvFile{},
 			Properties:   []Property{},
 			Extensions:   []Extension{},
+			Hooks:        map[Hook][]HookEntry{},
 		}, ws.Projects[0].Config)
 	})
 

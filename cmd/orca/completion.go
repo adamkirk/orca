@@ -154,6 +154,15 @@ func completeExtensions(cmd *cobra.Command, _ []string, toComplete string) ([]co
 	return toCompletions(choices, err, toComplete)
 }
 
+func completeHooks(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	choices, err := svcContainer.GetBus().Dispatch(cmd.Context(), extension.HookChoicesQuery{
+		Workspace: mustGetString(cmd, "workspace"),
+		Project:   mustGetString(cmd, "project"),
+	})
+
+	return toCompletions(choices, err, toComplete)
+}
+
 // completeBranches offers the branches in the repository, local ones first, so
 // the shell is told to keep their order.
 func completeBranches(cmd *cobra.Command, _ []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {

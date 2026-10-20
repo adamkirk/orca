@@ -89,4 +89,15 @@ type ProjectConfig struct {
 	Hosts           []string
 	TLSCertificates []string `yaml:"tlsCerts"`
 	Extensions      []Extension
+	Hooks           Hooks
+}
+
+// Hooks are keyed by the operation, then the phase ('pre' or 'post'). Each entry
+// is kept as a node, so its keys can be checked before it's decoded into a
+// HookEntry.
+type Hooks map[string]map[string][]yaml.Node
+
+type HookEntry struct {
+	Extension string `yaml:"extension"`
+	Scope     string `yaml:"scope"`
 }

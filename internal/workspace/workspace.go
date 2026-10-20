@@ -44,6 +44,7 @@ type ProjectConfig struct {
 	Hosts           []string
 	TLSCertificates []string
 	Extensions      []Extension
+	Hooks           map[Hook][]HookEntry
 }
 
 type ProjectRepositoryConfig struct {
@@ -108,6 +109,11 @@ func (p Project) EnvFilePaths() []string {
 	return paths
 }
 
+// DefinedHooks returns the project's hooks that run something.
+func (p Project) DefinedHooks() []Hook {
+	return definedHooks(p.Config.Hooks, ProjectHooks)
+}
+
 // FindExtension returns the extension the project's config defines with the
 // name.
 func (p Project) FindExtension(name string) (Extension, error) {
@@ -153,6 +159,12 @@ type Workspace struct {
 	// Extensions defined in the workspace config, which run in the workspace's
 	// directory (see Dir), or any project's that references them
 	Extensions []Extension
+	Hooks      map[Hook][]HookEntry
+}
+
+// DefinedHooks returns the workspace's hooks that run something.
+func (ws *Workspace) DefinedHooks() []Hook {
+	return definedHooks(ws.Hooks, WorkspaceHooks)
 }
 
 // FindExtension returns the extension the workspace config defines with the
