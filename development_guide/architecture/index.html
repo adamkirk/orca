@@ -1,0 +1,2190 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../release_process/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Architecture - Orca</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Orca" class="md-header__button md-logo" aria-label="Orca" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Orca
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/adamkirk/orca/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adamkirk/Orca
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Orca" class="md-nav__button md-logo" aria-label="Orca" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Orca
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/adamkirk/orca/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adamkirk/Orca
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../getting_started/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting_started/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a workspace and project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setting_up_a_workspace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setting up a workspace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../usage/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using orca
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using orca
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/environments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/workspaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workspaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/hosts_and_tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosts & TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/git/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orca itself
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/shell_completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell completion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../configuration/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/user_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/workspace_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workspace config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/project_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/preferences/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preferences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../compose_files/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compose files
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Compose files
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../compose_files/overlays/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overlays
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Overlays
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../compose_files/overlays/network/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network & Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../compose_files/overlays/TLS-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TLS Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../plugins/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building a plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/how_it_works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How plugins work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CLI/orca/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-command-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a command runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Packages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapters-and-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters and infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extension types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell completion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../release_process/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release process
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../github_actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Github Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../command_bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command bus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-command-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a command runs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Packages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adapters-and-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adapters and infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extension types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell completion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conventions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="architecture">Architecture</h1>
+<p>This page covers how the code is organised, and the conventions to follow when changing it. The <a href="../command_bus/">command bus</a> and <a href="../errors/">errors</a> pages go into those two parts in more detail.</p>
+<h2 id="how-a-command-runs">How a command runs</h2>
+<p>Every command that does something goes through the same path:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>cobra handler (cmd/orca)          reads flags, builds a message, dispatches it
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  └─ bus.Dispatch                 internal/bus
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>       ├─ LoggingMiddleware       logs the dispatch at debug level
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>       ├─ ExecutionContextMiddleware   resolves the workspace/project, if the message has a target
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>       ├─ Before hooks
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>       ├─ handler                 a method on a feature package's Manager
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>       └─ After hooks
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  └─ reportError                  shows any error to the user, once (cmd/orca/exit.go)
+</span></code></pre></div>
+<p><code>cmd/orca</code> is the only package that knows about cobra, flags or how services are wired together. Everything under <code>internal/</code> works with messages, <code>context.Context</code> and its own small interfaces.</p>
+<h2 id="packages">Packages</h2>
+<p>Each package is one of three kinds, and named after what it provides, not its layer. There's no <code>common</code>, <code>util</code>, <code>controller</code> or <code>repository</code> package.</p>
+<h3 id="domain">Domain</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/workspace</code></td>
+<td>Everything about workspaces: the model (<code>Workspace</code>, <code>Project</code>, <code>Extension</code>...), loading their config (<code>Repository</code>), working out which workspace and project a command runs against (<code>Resolver</code>, <code>ExecutionContext</code>, <code>ExecutionContextMiddleware</code>), and the <code>ws</code> commands (<code>Manager</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>The other packages import <code>workspace</code> for the model. It never imports them, so it only depends on them through its own interfaces (e.g. the git calls it needs to clone a project).</p>
+<h3 id="features">Features</h3>
+<p>Feature packages hold the commands' handlers, and mirror the CLI's command groups.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/stack</code></td>
+<td><code>up</code>, <code>down</code>, <code>exec</code>, <code>logs</code>, <code>debug</code> (<code>restart</code> dispatches <code>down</code> then <code>up</code>)</td>
+</tr>
+<tr>
+<td><code>internal/extension</code></td>
+<td><code>ext</code> and <code>hooks run</code>, running every type of extension (commands in a service or on the host, <code>syncFile</code> and <code>symlink</code>), and the trust store and prompt</td>
+</tr>
+<tr>
+<td><code>internal/hosts</code></td>
+<td><code>hosts</code>, with the <code>/etc/hosts</code> manager it uses</td>
+</tr>
+<tr>
+<td><code>internal/git</code></td>
+<td><code>g</code>. It's also the wrapper around the git CLI that <code>workspace</code> uses to clone projects.</td>
+</tr>
+<tr>
+<td><code>internal/tls</code></td>
+<td><code>tls gen</code></td>
+</tr>
+<tr>
+<td><code>internal/sys</code></td>
+<td><code>sys check</code>, <code>sys self-update</code></td>
+</tr>
+<tr>
+<td><code>internal/workspace</code></td>
+<td><code>ws</code> (see above)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adapters-and-infrastructure">Adapters and infrastructure</h3>
+<p>These talk to things outside of orca, or are plumbing shared by the rest.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>internal/bus</code></td>
+<td>The command bus, its middleware and hooks. It has no dependencies on the rest of orca.</td>
+</tr>
+<tr>
+<td><code>internal/usererr</code></td>
+<td>Attaching messages for the user to errors.</td>
+</tr>
+<tr>
+<td><code>internal/process</code></td>
+<td><code>Executor</code>, which runs external commands.</td>
+</tr>
+<tr>
+<td><code>internal/docker</code></td>
+<td>The docker compose wrapper, and the compose overlays.</td>
+</tr>
+<tr>
+<td><code>internal/github</code></td>
+<td>The GitHub API client.</td>
+</tr>
+<tr>
+<td><code>internal/config</code></td>
+<td>The user config, <code>~/.orca/orca.yaml</code>.</td>
+</tr>
+<tr>
+<td><code>internal/tui</code></td>
+<td>Terminal output and prompts.</td>
+</tr>
+<tr>
+<td><code>internal/logging</code></td>
+<td>The slog handler.</td>
+</tr>
+<tr>
+<td><code>internal/plugins</code></td>
+<td>Orca's side of the plugin system, see <a href="../../plugins/how_it_works/">how plugins work</a>.</td>
+</tr>
+<tr>
+<td><code>internal/dag</code></td>
+<td>The dependency graph used to order projects.</td>
+</tr>
+</tbody>
+</table>
+<p><code>pkg/</code> is only for public API, and only <code>pkg/plugin</code> (the plugin SDK) belongs there. Anything that's only used by orca goes in <code>internal/</code>.</p>
+<h2 id="adding-a-command">Adding a command</h2>
+<p>For example, a <code>ps</code> command that shows the running services:</p>
+<ol>
+<li>
+<p><strong>Define the message</strong> in the feature package it belongs to, next to its handler. Name it <code>...Command</code>, or <code>...Query</code> if it only reads and shows something. Give it a <code>MessageName()</code>, which is the command's path joined with dots:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">PsQuery</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">bus</span><span class="p">.</span><span class="nx">Returns</span><span class="p">[</span><span class="nx">bus</span><span class="p">.</span><span class="nx">Void</span><span class="p">]</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">Workspace</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">Project</span><span class="w">   </span><span class="kt">string</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">PsQuery</span><span class="p">)</span><span class="w"> </span><span class="nx">MessageName</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">"ps"</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Write the handler</strong> as a method on the package's <code>Manager</code>, taking <code>(ctx context.Context, msg)</code>. If it runs against a workspace or project, read the <code>ExecutionContext</code> first:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">Manager</span><span class="p">)</span><span class="w"> </span><span class="nx">Ps</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">query</span><span class="w"> </span><span class="nx">PsQuery</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">execCtx</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">ExecutionContextFrom</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="p">...</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Register it</strong> in <code>cmd/orca/services.go</code>. Add the handler to <code>GetBus()</code>:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">b</span><span class="p">.</span><span class="nx">HandleVoid</span><span class="p">(</span><span class="nx">lazy</span><span class="p">(</span><span class="nx">s</span><span class="p">.</span><span class="nx">GetStack</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">stack</span><span class="p">.</span><span class="nx">Manager</span><span class="p">).</span><span class="nx">Ps</span><span class="p">))</span>
+</span></code></pre></div>
+<p>If the handler reads the <code>ExecutionContext</code>, also add a target to <code>GetExecutionContextMiddleware()</code>:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">ec</span><span class="p">.</span><span class="nx">Target</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">query</span><span class="w"> </span><span class="nx">stack</span><span class="p">.</span><span class="nx">PsQuery</span><span class="p">)</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">ExecutionTarget</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">ExecutionTarget</span><span class="p">{</span><span class="nx">Workspace</span><span class="p">:</span><span class="w"> </span><span class="nx">query</span><span class="p">.</span><span class="nx">Workspace</span><span class="p">,</span><span class="w"> </span><span class="nx">Project</span><span class="p">:</span><span class="w"> </span><span class="nx">query</span><span class="p">.</span><span class="nx">Project</span><span class="p">}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">})</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Dispatch it</strong> from the cobra handler, wrapped in <code>handleErrors</code>. The handler only reads flags and dispatches a message literal:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">handlePs</span><span class="p">(</span><span class="nx">cmd</span><span class="w"> </span><span class="o">*</span><span class="nx">cobra</span><span class="p">.</span><span class="nx">Command</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">svcContainer</span><span class="p">.</span><span class="nx">GetBus</span><span class="p">().</span><span class="nx">Dispatch</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">Context</span><span class="p">(),</span><span class="w"> </span><span class="nx">stack</span><span class="p">.</span><span class="nx">PsQuery</span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">        </span><span class="nx">Workspace</span><span class="p">:</span><span class="w"> </span><span class="nx">mustGetString</span><span class="p">(</span><span class="nx">cmd</span><span class="p">,</span><span class="w"> </span><span class="s">"workspace"</span><span class="p">),</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="nx">Project</span><span class="p">:</span><span class="w">   </span><span class="nx">mustGetString</span><span class="p">(</span><span class="nx">cmd</span><span class="p">,</span><span class="w"> </span><span class="s">"project"</span><span class="p">),</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p">})</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Complete its arguments</strong>, if their values come from config or the environment, such as service or branch names. See <a href="#shell-completion">Shell completion</a> below. <code>-w</code> and <code>-p</code> already complete, as <code>addWorkspaceOption</code> and <code>addProjectOption</code> register them.</p>
+</li>
+</ol>
+<p>Two tests in <code>cmd/orca/services_test.go</code> catch wiring mistakes that would otherwise only fail at runtime:</p>
+<ul>
+<li><code>Test_AllDispatchedMessagesHaveHandlers</code> checks every dispatched message has a handler.</li>
+<li><code>Test_ExecutionContextHandlersHaveTargets</code> checks every handler that reads the <code>ExecutionContext</code> has a target.</li>
+</ul>
+<h2 id="extension-types">Extension types</h2>
+<p>An extension's properties depend on its <code>type</code>. In <code>internal/workspace/extension.go</code>, each type is its own spec (<code>CommandSpec</code>, <code>SyncFileSpec</code>, <code>SymlinkSpec</code>) behind the sealed <code>ExtensionSpec</code> interface, so code can only read the fields of the type it's handling. Switch on the concrete type, and panic in the <code>default</code> case, as the set is closed.</p>
+<p>The config is decoded in two passes. <code>model.Extension</code> reads the shared fields (<code>name</code>, <code>type</code>, <code>description</code>) and keeps the whole YAML node. <code>buildExtensions</code> then looks the type up in <code>extensionKinds</code>, rejects any key that's missing from the <code>yaml</code> tags of the type's model struct, checks the fields tagged <code>required:"true"</code>, and decodes the node into that struct. Every problem is collected, rather than stopping at the first.</p>
+<p>To add a type:</p>
+<ol>
+<li>Add its model struct to <code>internal/workspace/internal/model/project.go</code>, with a <code>yaml</code> tag on every field.</li>
+<li>Add its spec, and an entry in <code>extensionKinds</code>, to <code>extension.go</code>.</li>
+<li>Add a case wherever extensions are switched on.</li>
+<li>Add a section for it to <code>docs/configuration/extensions.md</code>. <code>Test_ExtensionTypesAreDocumented</code> fails until that section lists every property.</li>
+</ol>
+<h2 id="shell-completion">Shell completion</h2>
+<p>Completion runs orca as <code>orca __complete &lt;args&gt;</code>, on every <kbd>Tab</kbd>, so it must be fast and silent. In that mode (<code>completing</code> in <code>cmd/orca/completion.go</code>), plugins aren't started, logging is discarded, and <code>checkErr</code> prints nothing.</p>
+<p>The values offered come from <code>...ChoicesQuery</code> messages, handled in the feature package that owns them, and returning <code>[]workspace.Choice</code>. They go through the bus like any other message, so the <code>ExecutionContextMiddleware</code> works out the workspace and project as it would for the command, from the working directory and any <code>-w</code>/<code>-p</code> typed so far. Interactive prompts can use the same queries, so the two never disagree.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ServiceChoicesQuery</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">bus</span><span class="p">.</span><span class="nx">Returns</span><span class="p">[[]</span><span class="nx">workspace</span><span class="p">.</span><span class="nx">Choice</span><span class="p">]</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">Workspace</span><span class="w"> </span><span class="kt">string</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nx">Project</span><span class="w">   </span><span class="kt">string</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">ServiceChoicesQuery</span><span class="p">)</span><span class="w"> </span><span class="nx">MessageName</span><span class="p">()</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">"choices.services"</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Register the handler with <code>b.Handle(lazyResult(...))</code>, and give it a target if it reads the <code>ExecutionContext</code>. In <code>cmd/orca/completion.go</code>, add a completion function that dispatches the query as a literal and passes the result to <code>toCompletions</code>, which filters by what's typed, and offers nothing on an error. Use it as a command's <code>ValidArgsFunction</code> (with <code>firstArgOnly</code> if it only completes the first argument), or a flag's with <code>RegisterFlagCompletionFunc</code>.</p>
+<p>File names are never offered: <code>noFileCompletions</code> turns them off for every builtin command that doesn't complete its own arguments.</p>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li><strong>Packages declare the interfaces they need</strong>, privately, next to the code that uses them (e.g. <code>stack</code> declares <code>compose</code>). Keep them to the methods that are actually called, so they're easy to fake.</li>
+<li><strong>Constructors take those interfaces</strong>, and return the concrete type: <code>NewManager(compose compose) *Manager</code>.</li>
+<li><strong>Services are wired together in <code>cmd/orca/services.go</code></strong>, by getters that build each one the first time it's needed. Handlers are registered with <code>lazy</code>, so dispatching one command only builds the services it uses.</li>
+<li><strong>Don't depend on the tui for errors.</strong> Return them instead (see <a href="../errors/">errors</a>). A service only needs the tui to show output.</li>
+<li><strong>The <code>ExecutionContext</code> is read from the <code>context.Context</code> once, in the handler</strong>, then passed explicitly to any helpers, by convention as <code>execCtx</code>. Don't add other context values for workspace or project data.</li>
+</ul>
+<h2 id="conventions">Conventions</h2>
+<ul>
+<li><strong>Files</strong> are named after what's in them. Name a package's main file after the package (<code>git/git.go</code>), never <code>main.go</code>, which is for <code>package main</code>. Use one file per command handler (<code>stack/up.go</code>, <code>stack/down.go</code>), and put the package's errors in <code>errors.go</code>.</li>
+<li><strong>Receivers</strong> are short, and the same for every method on a type (<code>m *Manager</code>, <code>c *Compose</code>). Never <code>self</code> or <code>this</code>.</li>
+<li><strong>Feature services</strong> are always called <code>Manager</code> (<code>stack.Manager</code>, <code>git.Manager</code>, <code>tls.Manager</code>...), built with <code>NewManager</code>. Their getters in <code>cmd/orca/services.go</code> are named after the package (<code>GetStack</code>, <code>GetTLS</code>). Avoid names that repeat the package, like <code>workspace.WorkspaceRepository</code>.</li>
+<li><strong>Options structs</strong> that aren't messages are named <code>...Opts</code> (<code>git.PullBranchOpts</code>), not <code>...DTO</code>.</li>
+<li><strong>Errors</strong> follow the conventions in <a href="../errors/">errors</a>: return them, don't print them; use sentinels by default; check them with <code>errors.Is</code>/<code>errors.AsType</code>.</li>
+<li><strong>Exiting:</strong> never call <code>os.Exit</code>, <code>cobra.CheckErr</code> or <code>log.Fatal</code> directly. Return an error, or use <code>exit</code>/<code>checkErr</code> from <code>cmd/orca/exit.go</code>, so plugin processes are always stopped. <code>Test_NoDirectExits</code> enforces this.</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<ul>
+<li>Tests use <a href="https://github.com/stretchr/testify">testify</a>, and are mostly table-driven with <code>t.Run</code>.</li>
+<li>Use <code>afero.NewMemMapFs()</code> for anything that touches the filesystem.</li>
+<li>Fake dependencies with small hand-written stubs, or mockery mocks for larger interfaces. Mocks are configured in <code>.mockery.yaml</code>, generated into <code>tests/mocks/&lt;package&gt;</code> with <code>make gen-mocks</code>, and committed.</li>
+<li>
+<p>Handlers that read the <code>ExecutionContext</code> are tested by putting one in the context, rather than mocking a resolver:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">WithExecutionContext</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="nx">workspace</span><span class="p">.</span><span class="nx">ExecutionContext</span><span class="p">{</span><span class="nx">Workspace</span><span class="p">:</span><span class="w"> </span><span class="nx">ws</span><span class="p">})</span>
+</span></code></pre></div>
+</li>
+<li>
+<p>Check errors with <code>assert.ErrorIs</code>/<code>assert.ErrorAs</code>, and their text with <code>assert.EqualError</code>, rather than comparing error values.</p>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+        <script src="../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>

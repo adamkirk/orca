@@ -1,0 +1,2229 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../environments/">
+      
+      
+        <link rel="next" href="../extensions/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Workspaces - Orca</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#workspaces" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Orca" class="md-header__button md-logo" aria-label="Orca" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Orca
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Workspaces
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/adamkirk/orca/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adamkirk/Orca
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Orca" class="md-nav__button md-logo" aria-label="Orca" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Orca
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/adamkirk/orca/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    adamkirk/Orca
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../getting_started/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting_started/context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing a workspace and project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/setting_up_a_workspace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setting up a workspace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using orca
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Using orca
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workspaces
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workspaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#initialising-a-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initialising a workspace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Initialising a workspace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-a-local-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From a local directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-it-again" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running it again
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloning-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloning projects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabling-and-disabling-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling and disabling projects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enabling and disabling projects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-disabled-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What disabled means
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-a-running-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling a running project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#library-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library projects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Library projects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cloning-inside-another-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloning inside another project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-workspaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching workspaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hooks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hosts_and_tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hosts & TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../git/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Git
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orca itself
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell_completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell completion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../configuration/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_5" id="__nav_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/user_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/workspace_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workspace config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/project_config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/extensions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/preferences/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preferences
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../compose_files/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compose files
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Compose files
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../compose_files/overlays/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overlays
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Overlays
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../compose_files/overlays/network/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network & Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../compose_files/overlays/TLS-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TLS Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../plugins/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Plugins
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/building/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building a plugin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/how_it_works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How plugins work
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CLI/orca/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../development_guide/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development guide
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development_guide/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development_guide/release_process/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release process
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development_guide/github_actions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Github Actions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development_guide/command_bus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command bus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development_guide/errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#initialising-a-workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initialising a workspace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Initialising a workspace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-a-local-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        From a local directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-it-again" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running it again
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloning-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloning projects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabling-and-disabling-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling and disabling projects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enabling and disabling projects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-disabled-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What disabled means
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-a-running-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling a running project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#library-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library projects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Library projects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cloning-inside-another-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cloning inside another project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#switching-workspaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Switching workspaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="workspaces">Workspaces</h1>
+<p>The <code>orca ws</code> commands register workspaces on your machine, clone their projects, and choose which workspace is current. For a full example, see <a href="../../guides/setting_up_a_workspace/">Setting up a workspace</a>.</p>
+<h2 id="initialising-a-workspace">Initialising a workspace</h2>
+<p>You can initialise a workspace straight from its GitHub repository, or from a copy of the repository you've already cloned.</p>
+<h3 id="from-github">From GitHub</h3>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/code/acme<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/code/acme
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>$<span class="w"> </span>orca<span class="w"> </span>ws<span class="w"> </span>init<span class="w"> </span>--repo<span class="w"> </span>acme/local-env
+</span></code></pre></div>
+<p>With <code>--repo</code>, <a href="../../CLI/orca_ws_init/"><code>orca ws init</code></a>:</p>
+<ol>
+<li>Fetches the workspace config from the repository's default branch, or <code>--branch</code>, through the GitHub API, and checks that it's <a href="../../configuration/workspace_config/#validation">valid</a>. If the branch or the config is missing, or the config is invalid, orca stops before cloning anything.</li>
+<li>Checks that every project's <a href="../../configuration/workspace_config/#repository"><code>repository.branch</code></a> exists on its remote. If any are missing, orca lists them all and stops before cloning anything.</li>
+<li>Clones the repository over SSH (<code>git@github.com:acme/local-env.git</code>) into <code>{target}/{repo name}</code>, here <code>~/code/acme/local-env</code>, on <code>--branch</code> if it's given. If that directory is already a clone of the repository, e.g. as you're running <code>ws init</code> again, it's used as it is. If it's anything else, orca stops with an error rather than touch it.</li>
+<li>Carries on as if you'd run <code>orca ws init</code> from inside the clone (see <a href="#from-a-local-directory">below</a>), so the other projects are cloned next to it.</li>
+</ol>
+<p><code>--repo</code> only accepts GitHub repositories, in the form <code>owner/repo</code>. You'll need SSH access to the repository for the clone.</p>
+<p>For a private repository, set <code>GH_TOKEN</code> or <code>GITHUB_TOKEN</code> to a token that can read it, as you would for the <a href="https://cli.github.com/manual/gh_help_environment">GitHub CLI</a>. <code>GH_TOKEN</code> is used if both are set. Without a token, a private repository looks the same as one without a workspace config.</p>
+<h3 id="from-a-local-directory">From a local directory</h3>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/code/acme/local-env<span class="w">      </span><span class="c1"># a repository containing orca.workspace.yaml</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>$<span class="w"> </span>orca<span class="w"> </span>ws<span class="w"> </span>init
+</span></code></pre></div>
+<p>Without <code>--repo</code>, <a href="../../CLI/orca_ws_init/"><code>orca ws init</code></a>:</p>
+<ol>
+<li>Reads the workspace config from the current directory, checks that it's <a href="../../configuration/workspace_config/#validation">valid</a>, and registers the workspace in your <a href="../../configuration/user_config/">user config</a>.</li>
+<li>Creates your <a href="../../configuration/preferences/">preferences file</a>, listing every project, unless it already exists. Each project follows the workspace config's <a href="../../configuration/workspace_config/#projects"><code>enabled</code></a> until you enable or disable it.</li>
+<li>Clones every project, as <a href="#cloning-projects"><code>orca ws clone</code></a> does.</li>
+<li>Runs every project's <code>clone.post</code> <a href="../hooks/">hook</a>, in the order they're cloned, then the workspace's <code>init.post</code>, each of whose extensions runs in the project it belongs to. Any extension they run that you haven't trusted yet is listed first, in one go, and you're asked to <a href="../extensions/#trusting-extensions">trust</a> it.</li>
+<li>
+<p>Lists what's left to do, which orca never does itself, e.g. as it needs <code>sudo</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Workspace acme is ready. Next steps:
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  orca ws switch acme                                        make it your current workspace
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  sudo ORCA_CONFIG_PATH="$HOME/.orca/orca.yaml" orca hosts   add its hosts to /etc/hosts
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  orca tls gen                                               generate its TLS certificates
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  orca up                                                    start it
+</span></code></pre></div>
+<p>If git doesn't ignore the preferences file, orca also suggests adding it to <code>.gitignore</code>.</p>
+</li>
+</ol>
+<h3 id="running-it-again">Running it again</h3>
+<p><code>orca ws init</code> is safe to run again, in the same place. If the workspace is already registered from the same config, it carries on: it clones any projects that are missing, then runs every hook again. Nothing records which hooks have run, so this is how to finish a setup that failed part-way, once you've fixed the problem. It only asks about extensions that are new, or have changed since you trusted them.</p>
+<p>That relies on hooks being safe to run more than once, see <a href="../hooks/#write-extensions-that-are-safe-to-run-again">Write extensions that are safe to run again</a>. To clone without running anything, pass <code>--skip-hooks</code>.</p>
+<p>A different workspace with the same name is still an error.</p>
+<h3 id="flags">Flags</h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-r</code>, <code>--repo</code></td>
+<td>The GitHub repository to initialise from, as <code>owner/repo</code>. Can't be used with <code>--source</code>.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>-b</code>, <code>--branch</code></td>
+<td>The branch of the <code>--repo</code> repository to read the workspace config from, and to clone. It only applies to the workspace repository: each project's branch comes from its <code>repository.branch</code>. Can't be used with <code>--source</code>, which uses the local checkout on whichever branch it's on.</td>
+<td>The repository's default branch</td>
+</tr>
+<tr>
+<td><code>-s</code>, <code>--source</code></td>
+<td>The directory containing the workspace config.</td>
+<td>The current directory</td>
+</tr>
+<tr>
+<td><code>-c</code>, <code>--config</code></td>
+<td>The workspace config's file name, relative to the source directory or the repository's root.</td>
+<td><code>orca.workspace.yaml</code></td>
+</tr>
+<tr>
+<td><code>-t</code>, <code>--target</code></td>
+<td>The directory to clone projects into.</td>
+<td>The current directory with <code>--repo</code>, otherwise its parent</td>
+</tr>
+<tr>
+<td><code>--skip-hooks</code></td>
+<td>Clone without running any hooks.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>-y</code>, <code>--yes</code></td>
+<td>Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>It doesn't make the workspace current; use <code>orca ws switch</code> for that.</p>
+<h2 id="cloning-projects">Cloning projects</h2>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span>orca<span class="w"> </span>ws<span class="w"> </span>clone<span class="w">                 </span><span class="c1"># every project in the workspace</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>$<span class="w"> </span>orca<span class="w"> </span>ws<span class="w"> </span>clone<span class="w"> </span>-p<span class="w"> </span>payments<span class="w">     </span><span class="c1"># just one project</span>
+</span></code></pre></div>
+<p><a href="../../CLI/orca_ws_clone/"><code>orca ws clone</code></a> sets up any projects that aren't set up yet. Run it after a project is added to the workspace config. For each project:</p>
+<ul>
+<li>A <code>self: true</code> project is registered at the root of the workspace config's repository.</li>
+<li>If its directory exists and the project is already registered, it's skipped.</li>
+<li>If its directory exists and is a clone of the project's repository (checked by its git remote), it's registered as is.</li>
+<li>If its directory exists but is something else, orca stops with an error, rather than overwrite it.</li>
+<li>Otherwise the repository is cloned, on its <code>repository.branch</code> if it has one, and registered.</li>
+</ul>
+<p>Before cloning anything, orca checks that the <code>repository.branch</code> of every project it's about to clone exists on its remote, and lists every missing one. The branch is only used for the first clone: projects that are already cloned are never switched to another branch.</p>
+<p>Projects are cloned into <code>{target}/{project name}</code>, or <code>{target}/{path}</code> for a project with a <a href="../../configuration/workspace_config/#projects"><code>path</code></a>. <code>--target</code> defaults to the parent of the workspace config's repository, so projects end up next to it. With <code>-p</code> and <code>--target</code>, the project is cloned into <code>--target</code> itself.</p>
+<p>Projects are cloned in the order they're configured, except that a project is cloned after the projects it <a href="../../configuration/workspace_config/#dependencies-between-projects"><code>requires</code></a>, and after any project whose directory its <code>path</code> is inside.</p>
+<p><a href="#enabling-and-disabling-projects">Disabled</a> projects are cloned too: being disabled only means they don't run.</p>
+<p>Then the <code>clone.post</code> <a href="../hooks/">hook</a> of every project it was asked for runs, in the same order, whether it was cloned now or before. So running <code>orca ws clone</code> again sets the projects up again. <code>--skip-hooks</code> clones without running them, and <code>--yes</code> runs them without asking about untrusted extensions.</p>
+<h2 id="enabling-and-disabling-projects">Enabling and disabling projects</h2>
+<p>If you only work on part of a workspace, disable the projects you don't need, and <code>orca up</code> won't start them. Your choices are kept in your <a href="../../configuration/preferences/">preferences file</a>, and override the defaults in the workspace config's <a href="../../configuration/workspace_config/#projects"><code>enabled</code></a>.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$ orca ws projects
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>┌───────────┬─────────┬─────────┬────────┬─────────┐
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│  Project  │  Type   │ Enabled │ Cloned │ Running │
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>├───────────┼─────────┼─────────┼────────┼─────────┤
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│ local-env │ service │ yes     │ yes    │ yes     │
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│ api       │ service │ yes     │ yes    │ yes     │
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│ web       │ service │ yes     │ yes    │ no      │
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>│ admin     │ service │ yes     │ yes    │ no      │
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>└───────────┴─────────┴─────────┴────────┴─────────┘
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>$ orca ws disable web admin
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>Disabled web and admin.
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>$ orca up                 # starts local-env and api
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>$ orca up -p web
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>Note: web is disabled, but starting it as you asked for it.
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../CLI/orca_ws_projects/"><code>orca ws projects</code></a></td>
+<td>Lists the workspace's projects, with whether each is enabled, cloned and running. Running is <code>?</code> if docker can't be asked, rather than the command failing.</td>
+</tr>
+<tr>
+<td><a href="../../CLI/orca_ws_enable/"><code>orca ws enable &lt;project&gt;...</code></a></td>
+<td>Enables projects. It doesn't start them.</td>
+</tr>
+<tr>
+<td><a href="../../CLI/orca_ws_disable/"><code>orca ws disable &lt;project&gt;...</code></a></td>
+<td>Disables projects, and stops any of them that are running. With <code>--orphan</code>, they're left running.</td>
+</tr>
+</tbody>
+</table>
+<p>All of them take <code>-w</code>, and complete project names: <code>ws enable</code> offers the disabled projects, and <code>ws disable</code> the enabled ones.</p>
+<h3 id="what-disabled-means">What disabled means</h3>
+<ul>
+<li><strong>Workspace-wide commands skip disabled projects.</strong> <code>orca up</code> only starts enabled projects, and <a href="../git/"><code>g</code> with <code>--all</code></a> only acts on enabled projects.</li>
+<li><strong>An explicit <code>-p</code></strong> still acts on a disabled project. <code>orca up -p web</code> starts it, with a note that it's disabled.</li>
+<li>
+<p><strong>Requirements win.</strong> If an enabled project <a href="../../configuration/workspace_config/#dependencies-between-projects"><code>requires</code></a> a disabled one, <code>orca up</code> starts it anyway, and warns:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Warning: api requires local-env, which is disabled, so it's being started anyway.
+</span></code></pre></div>
+</li>
+<li>
+<p><strong><code>orca down</code> stops everything that's running.</strong> As well as what <code>orca up</code> starts, it stops any disabled project that's still running, so nothing is left behind.</p>
+</li>
+<li><strong>Nothing is deleted.</strong> Disabling a project never removes its clone or its containers.</li>
+</ul>
+<h3 id="disabling-a-running-project">Disabling a running project</h3>
+<p><code>orca ws disable</code> stops any of the projects that are running, as <code>orca down -p &lt;project&gt;</code> would:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$ orca ws disable web
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Disabled web.
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>web:acme[/Users/me/code/acme/web] stopping...
+</span></code></pre></div>
+<ul>
+<li>With <code>--orphan</code>, they're left running, and orca tells you how to stop them later.</li>
+<li>A project that another running project still requires is left running, with a warning, as requirements win. Disabling both at once stops both.</li>
+</ul>
+<h2 id="library-projects">Library projects</h2>
+<p>Some repositories don't have anything to run: shared packages, SDKs or config repositories that only need cloning into the right place. Give them <code>type: library</code> in the <a href="../../configuration/workspace_config/#projects">workspace config</a>, and orca clones and keeps them up to date with everything else, but never tries to run them:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">projects</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sdk</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">library</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">repository</span><span class="p">:</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">ssh</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">git@github.com:acme/sdk.git</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api/packages/sdk</span>
+</span></code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$ orca ws clone
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Cloning 'git@github.com:acme/api.git' into /Users/me/code/acme/api...
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>Cloning 'git@github.com:acme/sdk.git' (library) into /Users/me/code/acme/api/packages/sdk...
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>$ orca up -p sdk
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>Error: sdk is a library project, so it has no compose stack for this command to act on!
+</span></code></pre></div>
+<ul>
+<li><strong>Included:</strong> <code>ws init</code>, <code>ws clone</code>, <code>ws projects</code>, <code>ws enable</code>/<code>disable</code>, and the <a href="../git/"><code>g</code> commands</a> (with and without <code>--all</code>).</li>
+<li><strong>Not included:</strong> <code>up</code>, <code>down</code>, <code>restart</code>, <code>logs</code>, <code>exec</code>, <code>debug</code>, <code>hosts</code> and <code>tls gen</code>. Workspace-wide, they skip libraries. With <code>-p &lt;library&gt;</code>, or run inside a library's directory, they fail with the error above. <code>-p &lt;tab&gt;</code> doesn't offer libraries for them.</li>
+<li><strong>Inside a library's directory</strong>, orca acts on the library, even when it's cloned inside another project, so <code>orca g status</code> there shows the library's status.</li>
+<li><strong>Project config is optional.</strong> See <a href="../../configuration/project_config/">Project config</a> for what a library's can contain.</li>
+<li>
+<p><strong>Required libraries that aren't cloned:</strong> if <code>orca up</code> starts a project that requires a library that isn't cloned yet, e.g. one added to the workspace config since you last cloned, it warns, and starts the project anyway:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>Warning: web requires sdk, which isn't cloned; clone it with 'orca ws clone -p sdk'.
+</span></code></pre></div>
+</li>
+<li>
+<p><strong>Disabling</strong> a library only leaves it out of <code>g --all</code>, as there's nothing to run.</p>
+</li>
+</ul>
+<h3 id="cloning-inside-another-project">Cloning inside another project</h3>
+<p>A <code>path</code> inside another project puts the library inside that project's git repository. Unless that repository ignores it, the library shows up there as untracked files, so <code>orca ws clone</code> warns about it:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Warning: sdk is inside api, whose repository doesn't ignore packages/sdk, so it shows up there as untracked files. Add it to api's .gitignore.
+</span></code></pre></div>
+<p>The project it's inside is always cloned first. <code>orca ws clone -p sdk</code> fails if that project isn't cloned yet, and tells you to clone it first, as cloning the library would create its directory, which couldn't then be cloned into.</p>
+<h2 id="switching-workspaces">Switching workspaces</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../CLI/orca_ws_ls/"><code>orca ws ls</code></a></td>
+<td>Lists your workspaces, and which is current.</td>
+</tr>
+<tr>
+<td><a href="../../CLI/orca_ws_switch/"><code>orca ws switch &lt;name&gt;</code></a></td>
+<td>Makes a workspace the current one.</td>
+</tr>
+<tr>
+<td><a href="../../CLI/orca_ws_current/"><code>orca ws current</code></a></td>
+<td>Shows the current workspace.</td>
+</tr>
+<tr>
+<td><a href="../../CLI/orca_ws_clear-current/"><code>orca ws clear-current</code></a></td>
+<td>Unsets the current workspace.</td>
+</tr>
+</tbody>
+</table>
+<p>The current workspace is used when you're not inside any project's directory and don't pass <code>-w</code>. See <a href="../../getting_started/context/">Choosing a workspace and project</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.indexes", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+        <script src="../../js/open_in_new_tab.js"></script>
+      
+    
+  </body>
+</html>
