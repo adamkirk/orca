@@ -118,13 +118,11 @@ hooks:
     post:
       - extension: env
       - extension: install-deps
-        scope: workspace
   up:
     pre:
       - extension: install-deps
-        scope: workspace
 ```
 
-The extensions to run around an operation, by name, keyed by the operation, then `pre` or `post`. A project can have `clone.post`, `up.pre`, `up.post`, `down.pre` and `down.post`, and a library only `clone.post`. Each entry's `extension` must be defined in this config, or in the workspace config with `scope: workspace`.
+The extensions to run around an operation, by name, keyed by the operation, then `pre` or `post`. Every project can have `clone.post`, `up.pre`, `up.post`, `down.pre` and `down.post`, the workspace repository's own included, and a library only `clone.post`. Each entry's `extension` must be defined in this config: a project can't run another's.
 
 See [Hooks](../usage/hooks.md).

@@ -36,7 +36,7 @@ Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 1. Reads the workspace config from the current directory, checks that it's [valid](../configuration/workspace_config.md#validation), and registers the workspace in your [user config](../configuration/user_config.md).
 2. Creates your [preferences file](../configuration/preferences.md), listing every project, unless it already exists. Each project follows the workspace config's [`enabled`](../configuration/workspace_config.md#projects) until you enable or disable it.
 3. Clones every project, as [`orca ws clone`](#cloning-projects) does.
-4. Runs every project's `clone.post` [hook](./hooks.md), in the order they're cloned, then the workspace's `init.post`. Any extension they run that you haven't trusted yet is listed first, in one go, and you're asked to [trust](./extensions.md#trusting-extensions) it.
+4. Runs every project's `clone.post` [hook](./hooks.md), in the order they're cloned, then the workspace's `init.post`, each of whose extensions runs in the project it belongs to. Any extension they run that you haven't trusted yet is listed first, in one go, and you're asked to [trust](./extensions.md#trusting-extensions) it.
 5. Lists what's left to do, which orca never does itself, e.g. as it needs `sudo`:
 
     ```

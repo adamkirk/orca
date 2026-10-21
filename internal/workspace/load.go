@@ -246,10 +246,7 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		}
 	}
 
-	exts, extProblems := buildExtensions(cfg.Extensions)
-	problems = append(problems, extProblems...)
-
-	_, hookProblems := buildHooks(cfg.Hooks, workspaceHooksConfig(exts))
+	_, hookProblems := buildInitHooks(cfg.Hooks, workspaceProjectNames(cfg))
 	problems = append(problems, hookProblems...)
 
 	if len(problems) > 0 {
@@ -262,37 +259,30 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	return nil
 }
 
-// workspaceHooksConfig is what the workspace config's hooks can use.
-func workspaceHooksConfig(exts []Extension) hooksConfig {
-	return hooksConfig{
-		label:     "the workspace config",
-		supported: WorkspaceHooks,
-		scope:     HookScopeWorkspace,
-		own:       exts,
-		workspace: exts,
+// workspaceProjectNames are the names of the workspace config's projects.
+func workspaceProjectNames(cfg *model.WorkspaceConfig) []string {
+	names := make([]string, len(cfg.Projects))
+
+	for i, p := range cfg.Projects {
+		names[i] = p.Name
 	}
+
+	return names
 }
 
 // buildProjectConfig decodes a project's extensions and hooks, and checks its
 // config as a whole: a library can only have what applies to a project with no
-// compose stack. The hooks can reference the workspace's extensions too.
-func buildProjectConfig(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType, wsExts []Extension) ([]Extension, map[Hook][]HookEntry, error) {
+// compose stack. Its hooks can only run its own extensions.
+func buildProjectConfig(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType) ([]Extension, map[Hook][]HookEntry, error) {
 	exts, problems := buildExtensions(cfg.Extensions)
-	hc := hooksConfig{
-		label:     "a project config",
-		supported: ProjectHooks,
-		scope:     HookScopeProject,
-		own:       exts,
-		workspace: wsExts,
-	}
+	label, supported := "a project config", ProjectHooks
 
 	if projectType == ProjectTypeLibrary {
 		problems = append(problems, libraryProblems(cfg, exts)...)
-		hc.label = "a library project, as it's never started"
-		hc.supported = libraryHooks
+		label, supported = "a library project, as it's never started", libraryHooks
 	}
 
-	hooks, hookProblems := buildHooks(cfg.Hooks, hc)
+	hooks, hookProblems := buildHooks(cfg.Hooks, label, supported, exts)
 	problems = append(problems, hookProblems...)
 
 	if len(problems) > 0 {
@@ -388,15 +378,13 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 	}
 
 	// They were checked when the config was parsed
-	exts, _ := buildExtensions(cfg.Extensions)
-	hooks, _ := buildHooks(cfg.Hooks, workspaceHooksConfig(exts))
+	initHooks, _ := buildInitHooks(cfg.Hooks, workspaceProjectNames(cfg))
 
 	ws := &Workspace{
 		Name:       cfg.Name,
 		ConfigPath: wsMeta.Path,
 		Projects:   make([]Project, len(cfg.Projects)),
-		Extensions: exts,
-		Hooks:      hooks,
+		InitHooks:  initHooks,
 		OverlayConfig: OverlayConfig{
 			Network: NetworkOverlayConfig{
 				Enabled:        cfg.Overlays.Network.Enabled,
@@ -440,13 +428,18 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 			return nil, err
 		}
 
-		pExts, hooks, err := buildProjectConfig(p, projectMeta, projectType(pCfg), exts)
+		pExts, hooks, err := buildProjectConfig(p, projectMeta, projectType(pCfg))
 
 		if err != nil {
 			return nil, err
 		}
 
 		ws.Projects[i] = buildProject(pCfg, projectMeta, *p, pExts, hooks)
+	}
+
+	// Only now are the projects' extensions known
+	if problems := checkInitHookExtensions(ws); len(problems) > 0 {
+		return nil, InvalidWorkspaceConfigError{Path: wsMeta.Path, Problems: problems}
 	}
 
 	ws.PreferencesPath = preferencesPath(wsMeta.Path, cfg.Preferences.Path)

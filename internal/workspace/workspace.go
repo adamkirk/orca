@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"fmt"
-	"path/filepath"
 	"slices"
 )
 
@@ -156,27 +155,9 @@ type Workspace struct {
 	// in the workspace, so are ignored
 	UnknownPreferenceProjects []string
 
-	// Extensions defined in the workspace config, which run in the workspace's
-	// directory (see Dir), or any project's that references them
-	Extensions []Extension
-	Hooks      map[Hook][]HookEntry
-}
-
-// DefinedHooks returns the workspace's hooks that run something.
-func (ws *Workspace) DefinedHooks() []Hook {
-	return definedHooks(ws.Hooks, WorkspaceHooks)
-}
-
-// FindExtension returns the extension the workspace config defines with the
-// name.
-func (ws *Workspace) FindExtension(name string) (Extension, error) {
-	return findExtension(ws.Extensions, name)
-}
-
-// Dir is the directory the workspace config is in, where workspace extensions
-// run.
-func (ws *Workspace) Dir() string {
-	return filepath.Dir(ws.ConfigPath)
+	// The workspace's init.post, which runs projects' extensions once every
+	// project is cloned and set up
+	InitHooks []InitHookEntry
 }
 
 func (ws *Workspace) GetProject(name string) (*Project, error) {

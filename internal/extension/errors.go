@@ -3,10 +3,13 @@ package extension
 import (
 	"errors"
 	"fmt"
+
+	"github.com/adamkirk/orca/internal/workspace"
 )
 
 var (
 	ErrUnknownService       = errors.New("unknown service")
+	ErrNoProject            = errors.New("no project")
 	ErrNoServices           = errors.New("no services to run the extension in")
 	ErrProjectNotCloned     = errors.New("project isn't cloned")
 	ErrUnexpectedArgs       = errors.New("extension doesn't take arguments")
@@ -21,21 +24,25 @@ var (
 type HookFailedError struct {
 	Workspace string
 
-	// Empty for one of the workspace's hooks
+	// The project the extension belongs to, and ran in
 	Project   string
 	Hook      string
 	Extension string
 	Err       error
 }
 
-func (err HookFailedError) Error() string {
-	where := "the workspace"
-
-	if err.Project != "" {
-		where = err.Project
+// Describe says which extension failed, and in which hook, e.g. "'env', in
+// api's clone.post hook".
+func (err HookFailedError) Describe() string {
+	if err.Hook == workspace.HookInitPost.String() {
+		return fmt.Sprintf("%s's '%s', in the workspace's %s hook", err.Project, err.Extension, err.Hook)
 	}
 
-	return fmt.Sprintf("%s's %s hook failed running '%s': %s", where, err.Hook, err.Extension, err.Err)
+	return fmt.Sprintf("'%s', in %s's %s hook", err.Extension, err.Project, err.Hook)
+}
+
+func (err HookFailedError) Error() string {
+	return fmt.Sprintf("%s failed: %s", err.Describe(), err.Err)
 }
 
 func (err HookFailedError) Unwrap() error {
@@ -44,18 +51,15 @@ func (err HookFailedError) Unwrap() error {
 
 // RerunCommand is how to run the failed extension again, on its own.
 func (err HookFailedError) RerunCommand() string {
-	return fmt.Sprintf("orca ext %s %s", err.target(), err.Extension)
+	return fmt.Sprintf("orca ext -w %s -p %s %s", err.Workspace, err.Project, err.Extension)
 }
 
-// RerunHookCommand is how to run the whole hook again.
+// RerunHookCommand is how to run the whole hook again. init.post is the
+// workspace's, so it doesn't need the project.
 func (err HookFailedError) RerunHookCommand() string {
-	return fmt.Sprintf("orca hooks run %s %s", err.target(), err.Hook)
-}
-
-func (err HookFailedError) target() string {
-	if err.Project != "" {
-		return fmt.Sprintf("-w %s -p %s", err.Workspace, err.Project)
+	if err.Hook == workspace.HookInitPost.String() {
+		return fmt.Sprintf("orca hooks run -w %s %s", err.Workspace, err.Hook)
 	}
 
-	return fmt.Sprintf("-w %s", err.Workspace)
+	return fmt.Sprintf("orca hooks run -w %s -p %s %s", err.Workspace, err.Project, err.Hook)
 }

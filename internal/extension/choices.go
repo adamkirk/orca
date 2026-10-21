@@ -2,14 +2,12 @@ package extension
 
 import (
 	"context"
-	"slices"
 
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-// ChoicesQuery lists the extensions that can be run in the context, with their
-// descriptions: the project's, then the workspace's that it doesn't override.
+// ChoicesQuery lists the project's extensions, with their descriptions.
 type ChoicesQuery struct {
 	bus.Returns[[]workspace.Choice]
 
@@ -30,20 +28,13 @@ func (m *Manager) Choices(ctx context.Context, _ ChoicesQuery) ([]workspace.Choi
 
 	choices := []workspace.Choice{}
 
-	if execCtx.Project != nil {
-		for _, ext := range execCtx.Project.Config.Extensions {
-			choices = append(choices, workspace.Choice{Value: ext.Name, Description: ext.Description})
-		}
+	// Outside a project, there's nothing to run
+	if execCtx.Project == nil {
+		return choices, nil
 	}
 
-	for _, ext := range execCtx.Workspace.Extensions {
-		overridden := slices.ContainsFunc(choices, func(c workspace.Choice) bool {
-			return c.Value == ext.Name
-		})
-
-		if !overridden {
-			choices = append(choices, workspace.Choice{Value: ext.Name, Description: ext.Description})
-		}
+	for _, ext := range execCtx.Project.Config.Extensions {
+		choices = append(choices, workspace.Choice{Value: ext.Name, Description: ext.Description})
 	}
 
 	return choices, nil

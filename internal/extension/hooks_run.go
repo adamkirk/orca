@@ -3,7 +3,6 @@ package extension
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
@@ -11,8 +10,8 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-// RunHookCommand runs a hook by hand: the project's, or the workspace's for a
-// hook only the workspace has (init.post), or outside of any project.
+// RunHookCommand runs a hook by hand: one of the project's, or the
+// workspace's init.post, from anywhere.
 type RunHookCommand struct {
 	bus.Returns[bus.Void]
 
@@ -38,31 +37,16 @@ func (m *Manager) RunHook(ctx context.Context, cmd RunHookCommand) error {
 	hook, err := workspace.ParseHook(cmd.Hook)
 
 	if err != nil {
-		return usererr.Wrap(err, fmt.Sprintf("There's no hook '%s'; a project can have %s, and the workspace %s.", cmd.Hook, hookList(workspace.ProjectHooks), hookList(workspace.WorkspaceHooks)))
+		return usererr.Wrap(err, fmt.Sprintf("There's no hook '%s'; a project can have %s, and the workspace init.post.", cmd.Hook, hookList(workspace.ProjectHooks)))
 	}
 
-	project := hookProject(execCtx, hook)
-
-	if project == nil && !slices.Contains(workspace.WorkspaceHooks, hook) {
-		return usererr.Wrap(
-			fmt.Errorf("%w: %s needs a project", workspace.ErrUnknownHook, hook),
-			fmt.Sprintf("%s is a project's hook; run it from inside the project, or pass it with -p.", hook),
-		)
-	}
-
-	runs, err := planHook(execCtx.Workspace, project, hook)
+	runs, where, err := planHookRun(execCtx, hook)
 
 	if err != nil {
 		return err
 	}
 
 	if len(runs) == 0 {
-		where := "The workspace"
-
-		if project != nil {
-			where = project.Name
-		}
-
 		m.tui.Info(fmt.Sprintf("%s has no %s hook, so there's nothing to run.", where, hook))
 
 		return nil
@@ -75,14 +59,25 @@ func (m *Manager) RunHook(ctx context.Context, cmd RunHookCommand) error {
 	return m.runPlanned(runs)
 }
 
-// hookProject is the project whose hook runs: the one in the context, unless
-// only the workspace has the hook.
-func hookProject(execCtx workspace.ExecutionContext, hook workspace.Hook) *workspace.Project {
-	if execCtx.Project == nil || !slices.Contains(workspace.ProjectHooks, hook) {
-		return nil
+// planHookRun plans the hook asked for: the workspace's init.post, from
+// anywhere, or the project's hook. It also says whose hook it is, for messages.
+func planHookRun(execCtx workspace.ExecutionContext, hook workspace.Hook) ([]planned, string, error) {
+	if hook == workspace.HookInitPost {
+		runs, err := planInit(execCtx.Workspace)
+
+		return runs, "The workspace", err
 	}
 
-	return execCtx.Project
+	if execCtx.Project == nil {
+		return nil, "", usererr.Wrap(
+			fmt.Errorf("%w: %s needs a project", workspace.ErrUnknownHook, hook),
+			fmt.Sprintf("%s is a project's hook; run it from inside the project, or pass it with -p.", hook),
+		)
+	}
+
+	runs, err := planHook(execCtx.Workspace, execCtx.Project, hook)
+
+	return runs, execCtx.Project.Name, err
 }
 
 func hookList(hooks []workspace.Hook) string {

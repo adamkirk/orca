@@ -11,10 +11,6 @@ import (
 
 func Test_Choices(t *testing.T) {
 	ws := &workspace.Workspace{
-		Extensions: []workspace.Extension{
-			{Name: "seed", Description: "Seed the databases"},
-			{Name: "install", Description: "Install dependencies"},
-		},
 		Projects: []workspace.Project{{
 			Name: "api",
 			Config: workspace.ProjectConfig{Extensions: []workspace.Extension{
@@ -31,21 +27,17 @@ func Test_Choices(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "the project's, then the workspace's it doesn't override",
+			name: "the project's, with their descriptions",
 			ctx:  workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]}),
 			want: []workspace.Choice{
 				{Value: "artisan", Description: "Run an artisan command"},
 				{Value: "install"},
-				{Value: "seed", Description: "Seed the databases"},
 			},
 		},
 		{
-			name: "outside of a project, the workspace's",
+			name: "none outside of a project",
 			ctx:  workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws}),
-			want: []workspace.Choice{
-				{Value: "seed", Description: "Seed the databases"},
-				{Value: "install", Description: "Install dependencies"},
-			},
+			want: []workspace.Choice{},
 		},
 		{
 			name:    "no execution context",

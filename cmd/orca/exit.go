@@ -94,13 +94,7 @@ func reportError(out errorPrinter, err error) {
 	// Whatever the extension said, say where it was running, and how to try
 	// it again once it's fixed
 	if hookErr, ok := errors.AsType[extension.HookFailedError](err); ok {
-		where := "the workspace's"
-
-		if hookErr.Project != "" {
-			where = hookErr.Project + "'s"
-		}
-
-		out.Error(fmt.Sprintf("This was '%s', in %s %s hook. Nothing after it ran.", hookErr.Extension, where, hookErr.Hook))
+		out.Error(fmt.Sprintf("This was %s. Nothing after it ran.", hookErr.Describe()))
 		out.Error(fmt.Sprintf("Once it's fixed, re-run it with '%s', or the whole hook with '%s'.", hookErr.RerunCommand(), hookErr.RerunHookCommand()))
 	}
 }

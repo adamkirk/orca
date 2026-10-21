@@ -11,12 +11,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TrustKey is an extension, by where it's defined: the workspace config, or a
-// project's config.
+// TrustKey is an extension, by the project that defines it.
 type TrustKey struct {
 	Workspace string
-
-	// Empty for an extension defined in the workspace config
 	Project   string
 	Extension string
 }
@@ -31,8 +28,7 @@ type Trusted struct {
 }
 
 type trustedWorkspace struct {
-	Workspace map[string]Trusted            `yaml:"workspace,omitempty"`
-	Projects  map[string]map[string]Trusted `yaml:"projects,omitempty"`
+	Projects map[string]map[string]Trusted `yaml:"projects,omitempty"`
 }
 
 type trustFile struct {
@@ -92,14 +88,7 @@ func (s *TrustStore) Get(key TrustKey) (Trusted, bool, error) {
 		return Trusted{}, false, err
 	}
 
-	ws := file.Workspaces[key.Workspace]
-	exts := ws.Workspace
-
-	if key.Project != "" {
-		exts = ws.Projects[key.Project]
-	}
-
-	trusted, ok := exts[key.Extension]
+	trusted, ok := file.Workspaces[key.Workspace].Projects[key.Project][key.Extension]
 
 	return trusted, ok, nil
 }
@@ -116,24 +105,15 @@ func (s *TrustStore) Trust(trusted map[TrustKey]Trusted) error {
 	for key, t := range trusted {
 		ws := file.Workspaces[key.Workspace]
 
-		if key.Project == "" {
-			if ws.Workspace == nil {
-				ws.Workspace = map[string]Trusted{}
-			}
-
-			ws.Workspace[key.Extension] = t
-		} else {
-			if ws.Projects == nil {
-				ws.Projects = map[string]map[string]Trusted{}
-			}
-
-			if ws.Projects[key.Project] == nil {
-				ws.Projects[key.Project] = map[string]Trusted{}
-			}
-
-			ws.Projects[key.Project][key.Extension] = t
+		if ws.Projects == nil {
+			ws.Projects = map[string]map[string]Trusted{}
 		}
 
+		if ws.Projects[key.Project] == nil {
+			ws.Projects[key.Project] = map[string]Trusted{}
+		}
+
+		ws.Projects[key.Project][key.Extension] = t
 		file.Workspaces[key.Workspace] = ws
 	}
 

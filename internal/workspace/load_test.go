@@ -243,90 +243,25 @@ extensions:
 	}, ws.Projects[0].Config.Extensions)
 }
 
-func TestLoadWorkspaceExtensions(t *testing.T) {
-	newRepo := func(t *testing.T, wsConfig string, projectConfig string) *Repository {
-		fs := afero.NewMemMapFs()
-		path := "/acme/root/orca.workspace.yaml"
+func TestLoadIgnoresProvisioners(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	path := "/acme/root/orca.workspace.yaml"
 
-		assert.NoError(t, afero.WriteFile(fs, path, []byte(wsConfig), 0644))
-		assert.NoError(t, afero.WriteFile(fs, "/acme/api/"+DefaultProjectFileName, []byte(projectConfig), 0644))
-
-		return NewRepository(fs, stubUserConfig{
-			workspaces: map[string]WorkspaceMeta{"acme": {Name: "acme", Path: path}},
-			projects: map[string]ProjectMeta{
-				"api": {Name: "api", Path: "/acme/api", WorkspaceName: "acme"},
-			},
-		})
-	}
-
-	const projects = `
-projects:
-  - name: api
-    repository:
-      ssh: git@github.com:acme/api.git
-`
-
-	t.Run("loads them, to run in the workspace config's directory", func(t *testing.T) {
-		ws, err := newRepo(t, "name: acme\n"+projects+`
-extensions:
-  - name: seed
-    command: ./scripts/seed.sh
-    description: Seed the databases
-`, "").Load("acme")
-
-		require.NoError(t, err)
-		assert.Equal(t, []Extension{
-			{Name: "seed", Description: "Seed the databases", Spec: CommandSpec{Command: "./scripts/seed.sh"}},
-		}, ws.Extensions)
-		assert.Equal(t, "/acme/root", ws.Dir())
-	})
-
-	t.Run("lists invalid ones with the config's other problems", func(t *testing.T) {
-		_, err := newRepo(t, projects+`
-extensions:
-  - name: env
-    type: syncFile
-    source: .env.example
-`, "").Load("acme")
-
-		assert.Equal(t, InvalidWorkspaceConfigError{
-			Path: "/acme/root/orca.workspace.yaml",
-			Problems: []string{
-				"'name' is required",
-				"extension 'env': 'target' is required for type 'syncFile'",
-			},
-		}, err)
-	})
-
-	t.Run("a project's invalid extensions", func(t *testing.T) {
-		_, err := newRepo(t, "name: acme\n"+projects, `
-extensions:
-  - name: link
-    type: symlink
-    source: ../sdk
-    target: node_modules/sdk
-    command: ln -s
-`).Load("acme")
-
-		assert.Equal(t, InvalidProjectConfigError{
-			Path: "/acme/api/" + DefaultProjectFileName,
-			Problems: []string{
-				"extension 'link': 'command' can't be used with type 'symlink' (it takes: source, target)",
-			},
-		}, err)
-	})
-
-	t.Run("provisioners are no longer read", func(t *testing.T) {
-		ws, err := newRepo(t, "name: acme\n"+projects, `
+	require.NoError(t, afero.WriteFile(fs, path, []byte("name: acme\nprojects:\n  - name: api\n    repository:\n      ssh: git@github.com:acme/api.git\n"), 0644))
+	require.NoError(t, afero.WriteFile(fs, "/acme/api/"+DefaultProjectFileName, []byte(`
 provisioners:
   - exampleFile:
       src: .env.example
       target: .env
-`).Load("acme")
+`), 0644))
 
-		require.NoError(t, err)
-		assert.Equal(t, []Extension{}, ws.Projects[0].Config.Extensions)
-	})
+	ws, err := NewRepository(fs, stubUserConfig{
+		workspaces: map[string]WorkspaceMeta{"acme": {Name: "acme", Path: path}},
+		projects:   map[string]ProjectMeta{"api": {Name: "api", Path: "/acme/api", WorkspaceName: "acme"}},
+	}).Load("acme")
+
+	require.NoError(t, err)
+	assert.Equal(t, []Extension{}, ws.Projects[0].Config.Extensions)
 }
 
 func TestLoadLibrary(t *testing.T) {

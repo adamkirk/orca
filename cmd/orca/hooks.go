@@ -19,8 +19,8 @@ var hooksRunCmd = &cobra.Command{
 	Short: "Run a hook's extensions by hand, e.g. to set a project up again.",
 	Long: `Runs every extension in one of the project's hooks, in order, e.g. 'orca hooks run clone.post -p api'.
 
-Outside of a project, or for a hook only the workspace has (init.post), it runs the workspace's hook.
-It stops at the first extension that fails. Extensions that are new, or have changed since you trusted
+init.post is the workspace's, so 'orca hooks run init.post' runs it from anywhere, each extension in the
+project it belongs to. It stops at the first extension that fails. Extensions that are new, or have changed since you trusted
 them, are listed first, and you're asked to trust them.`,
 	ValidArgsFunction: firstArgOnly(completeHooks),
 	RunE:              handleErrors(handleHooksRun),

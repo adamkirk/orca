@@ -2,6 +2,7 @@ package extension
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/adamkirk/orca/internal/bus"
@@ -9,8 +10,8 @@ import (
 )
 
 // HookChoicesQuery lists the hooks that run something in the context: the
-// project's, plus the workspace's that only it has, or outside of a project,
-// the workspace's. Each is described by the extensions it runs.
+// project's, and the workspace's init.post. Each is described by the
+// extensions it runs.
 type HookChoicesQuery struct {
 	bus.Returns[[]workspace.Choice]
 
@@ -30,29 +31,32 @@ func (m *Manager) HookChoices(ctx context.Context, _ HookChoicesQuery) ([]worksp
 	}
 
 	choices := []workspace.Choice{}
-	ws := execCtx.Workspace
 
-	if execCtx.Project != nil {
-		for _, hook := range execCtx.Project.DefinedHooks() {
-			choices = append(choices, hookChoice(hook, execCtx.Project.Config.Hooks[hook]))
+	if p := execCtx.Project; p != nil {
+		for _, hook := range p.DefinedHooks() {
+			names := []string{}
+
+			for _, e := range p.Config.Hooks[hook] {
+				names = append(names, e.Extension)
+			}
+
+			choices = append(choices, hookChoice(hook, names))
 		}
 	}
 
-	for _, hook := range ws.DefinedHooks() {
-		if hookProject(execCtx, hook) == nil {
-			choices = append(choices, hookChoice(hook, ws.Hooks[hook]))
+	if init := execCtx.Workspace.InitHooks; len(init) > 0 {
+		names := make([]string, len(init))
+
+		for i, e := range init {
+			names[i] = fmt.Sprintf("%s's %s", e.Project, e.Extension)
 		}
+
+		choices = append(choices, hookChoice(workspace.HookInitPost, names))
 	}
 
 	return choices, nil
 }
 
-func hookChoice(hook workspace.Hook, entries []workspace.HookEntry) workspace.Choice {
-	names := make([]string, len(entries))
-
-	for i, e := range entries {
-		names[i] = e.Extension
-	}
-
+func hookChoice(hook workspace.Hook, names []string) workspace.Choice {
 	return workspace.Choice{Value: hook.String(), Description: "Runs " + strings.Join(names, ", ")}
 }

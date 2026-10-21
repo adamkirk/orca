@@ -1,6 +1,6 @@
 # Extensions
 
-An extension is a named step that orca can run: a command, or a change to a file. It's defined in the `extensions` list of a [project config](./project_config.md) or the [workspace config](./workspace_config.md), and run by name with [`orca ext`](../CLI/orca_ext.md). See [Extensions](../usage/extensions.md) for how to use them.
+An extension is a named step that orca can run: a command, or a change to a file. It's defined in the `extensions` list of a [project config](./project_config.md), and run by name with [`orca ext`](../CLI/orca_ext.md), or from the project's [hooks](../usage/hooks.md). See [Extensions](../usage/extensions.md) for how to use them.
 
 ```yaml
 extensions:
@@ -38,7 +38,7 @@ Every other property depends on the type. A property that the type doesn't take 
 
 ## Paths
 
-Paths are relative to the directory the extension runs in. That's the project's directory, for a project's extension, and the directory of `orca.workspace.yaml`, for a workspace's.
+Paths are relative to the project's directory, which is where its extensions run.
 
 A `source` can refer to where another project is cloned with `{{ .Projects.<name>.Path }}`, e.g. `{{ .Projects.sdk.Path }}`. Any project name works, including ones with a `-`, like `{{ .Projects.acme-sdk.Path }}/dist`. It fails if the project isn't in the workspace, or isn't cloned yet. This is how a [library](../usage/workspaces.md#library-projects) is linked into another project.
 

@@ -143,33 +143,37 @@ func command(name string, spec workspace.CommandSpec) workspace.Extension {
 	return workspace.Extension{Name: name, Spec: spec}
 }
 
-// testWorkspace has a workspace extension 'seed', a service project 'api' that
-// overrides the workspace's 'install', a library 'sdk', and 'web', which isn't
-// cloned.
+// testWorkspace has a service project 'api', a library 'sdk', and 'web',
+// which isn't cloned.
 func testWorkspace() *workspace.Workspace {
 	return &workspace.Workspace{
 		Name:       "acme",
 		ConfigPath: "/code/acme/local-env/orca.workspace.yaml",
-		Extensions: []workspace.Extension{
-			command("seed", workspace.CommandSpec{Command: "./scripts/seed.sh"}),
-			command("install", workspace.CommandSpec{Command: "npm ci"}),
-			command("migrate", workspace.CommandSpec{Command: "./bin/migrate", Service: "app"}),
-		},
 		Projects: []workspace.Project{
 			{
 				Name: "api", ProjectDir: "/code/acme/api", IsRegistered: true,
 				Config: workspace.ProjectConfig{Extensions: []workspace.Extension{
 					command("artisan", workspace.CommandSpec{Command: "php artisan", Service: "app", DefaultArgs: []string{"list"}}),
 					command("install", workspace.CommandSpec{Command: "composer install", Chdir: "src"}),
+					command("seed", workspace.CommandSpec{Command: "./scripts/seed.sh"}),
 				}},
 			},
 			{
 				Name: "sdk", Type: workspace.ProjectTypeLibrary, ProjectDir: "/code/acme/api/packages/sdk", IsRegistered: true,
 				Config: workspace.ProjectConfig{Extensions: []workspace.Extension{
 					command("build", workspace.CommandSpec{Command: "make build"}),
+
+					// Loading a library's config rejects this, so it's only here
+					// to check the safeguard
+					command("migrate", workspace.CommandSpec{Command: "./bin/migrate", Service: "app"}),
 				}},
 			},
-			{Name: "web"},
+			{
+				Name: "web",
+				Config: workspace.ProjectConfig{Extensions: []workspace.Extension{
+					command("seed", workspace.CommandSpec{Command: "./scripts/seed.sh"}),
+				}},
+			},
 		},
 	}
 }
@@ -185,35 +189,23 @@ func Test_Run(t *testing.T) {
 		wantErr  error
 	}{
 		{
-			name:    "a project's command in a service that isn't running",
+			name:    "a command in a service that isn't running",
 			project: "api",
 			cmd:     RunCommand{Name: "artisan"},
 			want:    []ran{{name: "php", args: []string{"artisan", "list"}, dir: "/code/acme/api", service: "app"}},
 		},
 		{
-			name:    "a project's command in a running service, with args",
+			name:    "a command in a running service, with args",
 			project: "api",
 			cmd:     RunCommand{Name: "artisan", Args: []string{"migrate", "--force"}},
 			running: true,
 			want:    []ran{{name: "php", args: []string{"artisan", "migrate", "--force"}, dir: "/code/acme/api", service: "app", exec: true}},
 		},
 		{
-			name:     "a project's own extension overrides the workspace's",
-			project:  "api",
-			cmd:      RunCommand{Name: "install"},
-			want:     []ran{{name: "composer", args: []string{"install"}, dir: "/code/acme/api/src"}},
-			wantInfo: []string{"Note: running api's own 'install', rather than the workspace's."},
-		},
-		{
-			name:    "a workspace extension runs in the project's directory",
+			name:    "a command on the host, in the project's directory and its chdir",
 			project: "api",
-			cmd:     RunCommand{Name: "seed"},
-			want:    []ran{{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/api"}},
-		},
-		{
-			name: "a workspace extension, outside of any project, runs in the workspace's directory",
-			cmd:  RunCommand{Name: "seed"},
-			want: []ran{{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"}},
+			cmd:     RunCommand{Name: "install"},
+			want:    []ran{{name: "composer", args: []string{"install"}, dir: "/code/acme/api/src"}},
 		},
 		{
 			name:    "a library's extension runs on the host, in its directory",
@@ -228,14 +220,14 @@ func Test_Run(t *testing.T) {
 			wantErr: ErrNoServices,
 		},
 		{
-			name:    "a service command can't run outside of a project",
-			cmd:     RunCommand{Name: "migrate"},
-			wantErr: ErrNoServices,
+			name:    "extensions belong to projects, so it needs one",
+			cmd:     RunCommand{Name: "seed"},
+			wantErr: ErrNoProject,
 		},
 		{
-			name:    "an unknown extension",
-			project: "api",
-			cmd:     RunCommand{Name: "deploy"},
+			name:    "one the project doesn't define",
+			project: "sdk",
+			cmd:     RunCommand{Name: "seed"},
 			wantErr: workspace.ErrUnknownExtension,
 		},
 		{
@@ -293,7 +285,7 @@ func Test_Run_CommandFails(t *testing.T) {
 	failure := errors.New("exit status 1")
 	got := []ran{}
 	m := NewManager(afero.NewMemMapFs(), stubCompose{ran: &got}, stubExecutor{ran: &got, err: failure}, &stubTui{}, newTrustStore())
-	ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws})
+	ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
 
 	err := m.Run(ctx, RunCommand{Name: "seed"})
 

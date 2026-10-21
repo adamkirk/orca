@@ -234,11 +234,11 @@ Once everything is cloned, it runs each project's `clone.post` [hook](../usage/h
 ```
 This workspace wants to run the following on your machine:
 
-┌────────────┬────────────┬───────────┬──────────┬─────────────────────┐
-│ Defined in │    Hook    │ Extension │   Type   │        Runs         │
-├────────────┼────────────┼───────────┼──────────┼─────────────────────┤
-│ api        │ clone.post │ env       │ syncFile │ .env.example → .env │
-└────────────┴────────────┴───────────┴──────────┴─────────────────────┘
+┌─────────┬────────────┬───────────┬──────────┬─────────────────────┐
+│ Project │    Hook    │ Extension │   Type   │        Runs         │
+├─────────┼────────────┼───────────┼──────────┼─────────────────────┤
+│ api     │ clone.post │ env       │ syncFile │ .env.example → .env │
+└─────────┴────────────┴───────────┴──────────┴─────────────────────┘
 Trust these and continue? [y/N] y
 api clone.post: env
   Created .env from .env.example.

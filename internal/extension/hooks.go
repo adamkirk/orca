@@ -7,40 +7,54 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-// planHook plans the extensions a hook runs, in order: a project's hook, or the
-// workspace's when project is nil. Every extension runs in the project, even
-// one defined in the workspace config.
+// planHook plans the extensions one of the project's hooks runs, in order.
+// They're all the project's own.
 func planHook(ws *workspace.Workspace, project *workspace.Project, hook workspace.Hook) ([]planned, error) {
 	t := target{ws: ws, project: project}
-	entries := ws.Hooks[hook]
-
-	if project != nil {
-		entries = project.Config.Hooks[hook]
-	}
-
+	entries := project.Config.Hooks[hook]
 	runs := make([]planned, len(entries))
 
 	for i, entry := range entries {
-		run := planned{hook: hook.String(), target: t}
+		ext, err := project.FindExtension(entry.Extension)
 
-		var err error
-
-		// Loading the config checked these exist, so this only fails on a bug
-		switch entry.Scope {
-		case workspace.HookScopeProject:
-			run.owner = project
-			run.ext, err = project.FindExtension(entry.Extension)
-		case workspace.HookScopeWorkspace:
-			run.ext, err = ws.FindExtension(entry.Extension)
-		default:
-			err = fmt.Errorf("unknown hook scope '%s'", entry.Scope)
+		// Loading the config checked they exist, so this only fails on a bug
+		if err != nil {
+			return nil, fmt.Errorf("planning %s's %s: %w", project.Name, hook, err)
 		}
+
+		runs[i] = planned{hook: hook.String(), target: t, ext: ext}
+	}
+
+	return runs, nil
+}
+
+// planInit plans the workspace's init.post. Each entry is one of a project's
+// extensions, which runs in that project.
+func planInit(ws *workspace.Workspace) ([]planned, error) {
+	runs := make([]planned, len(ws.InitHooks))
+
+	for i, entry := range ws.InitHooks {
+		project, err := ws.GetProject(entry.Project)
 
 		if err != nil {
-			return nil, fmt.Errorf("planning %s: %w", hook, err)
+			return nil, fmt.Errorf("planning init.post: %w", err)
 		}
 
-		runs[i] = run
+		// Its extensions aren't known until it's cloned
+		if !project.IsRegistered {
+			return nil, usererr.Wrap(
+				fmt.Errorf("%w: %s", ErrProjectNotCloned, project.Name),
+				fmt.Sprintf("init.post runs %s's '%s', but %s isn't cloned; clone it with 'orca ws clone -p %s'.", project.Name, entry.Extension, project.Name, project.Name),
+			)
+		}
+
+		ext, err := project.FindExtension(entry.Extension)
+
+		if err != nil {
+			return nil, fmt.Errorf("planning init.post: %w", err)
+		}
+
+		runs[i] = planned{hook: workspace.HookInitPost.String(), target: target{ws: ws, project: project}, ext: ext}
 	}
 
 	return runs, nil
@@ -50,15 +64,9 @@ func planHook(ws *workspace.Workspace, project *workspace.Project, hook workspac
 // Each is shown with the hook running it, and its output under it.
 func (m *Manager) runPlanned(runs []planned) error {
 	for _, run := range runs {
-		project := ""
-		label := fmt.Sprintf("%s: %s", run.hook, run.ext.Name)
+		project := run.target.project.Name
 
-		if run.target.project != nil {
-			project = run.target.project.Name
-			label = fmt.Sprintf("%s %s", project, label)
-		}
-
-		m.tui.Info(label)
+		m.tui.Info(fmt.Sprintf("%s %s: %s", project, run.hook, run.ext.Name))
 
 		if err := m.execute(run.target, run.ext, nil, "  "); err != nil {
 			return HookFailedError{
@@ -117,7 +125,7 @@ func (m *Manager) RunConfirmedHook(ws *workspace.Workspace, run workspace.HookRu
 }
 
 // SetUp runs the clone.post hook of each of the projects, then the workspace's
-// init.post, if asked for. Everything they'll run is asked about first, in one
+// init.post, if asked for, which runs projects' extensions. Everything they'll run is asked about first, in one
 // go, and it all stops at the first extension that fails.
 func (m *Manager) SetUp(ws *workspace.Workspace, opts workspace.SetUpOpts) error {
 	runs := []workspace.HookRun{}
@@ -132,14 +140,24 @@ func (m *Manager) SetUp(ws *workspace.Workspace, opts workspace.SetUpOpts) error
 		runs = append(runs, workspace.HookRun{Project: project, Hook: workspace.HookClonePost})
 	}
 
-	if opts.Initialise {
-		runs = append(runs, workspace.HookRun{Hook: workspace.HookInitPost})
-	}
-
 	planned, err := planHooks(ws, runs)
 
-	if err != nil || len(planned) == 0 {
+	if err != nil {
 		return err
+	}
+
+	if opts.Initialise {
+		initRuns, err := planInit(ws)
+
+		if err != nil {
+			return err
+		}
+
+		planned = append(planned, initRuns...)
+	}
+
+	if len(planned) == 0 {
+		return nil
 	}
 
 	if err := m.confirm(planned, opts.Yes); err != nil {

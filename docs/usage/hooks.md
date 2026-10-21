@@ -1,76 +1,78 @@
 # Hooks
 
-A hook runs [extensions](./extensions.md) around an operation, such as after a project is cloned, or before the stack starts. They're how a team gets a working environment without a setup guide. For example, each project creates its `.env` and links in a library after it's cloned, and the workspace seeds the databases once everything is set up.
+A hook runs [extensions](./extensions.md) around an operation, such as after a project is cloned, or before it starts. They're how a team gets a working environment without a setup guide. For example, each project creates its `.env` and links in a library after it's cloned, and the workspace seeds the databases once everything is set up.
 
-A hook only lists extensions by name. What each one does is defined in `extensions`, so every step can also be run on its own with [`orca ext`](../CLI/orca_ext.md), and a step used by several hooks is defined once.
+A hook only lists extensions by name. What each one does is defined in the same project's `extensions`, so every step can also be run on its own with [`orca ext`](../CLI/orca_ext.md), and a step used by several of the project's hooks is defined once.
 
 Hooks run automatically: `clone.post` and `init.post` from [`orca ws init`](./workspaces.md#from-a-local-directory) and [`orca ws clone`](./workspaces.md#cloning-projects), and `up` and `down` from [`orca up` and `orca down`](./environments.md#hooks). Any hook can also be [run by hand](#running-a-hook-by-hand).
 
 ## Defining hooks
 
-Hooks are keyed by the operation, then `pre` (before it) or `post` (after it). Each entry names an extension:
+A project's hooks are in its `orca.project.yaml`, keyed by the operation, then `pre` (before it) or `post` (after it). Each entry names one of the project's own extensions:
 
-=== "orca.project.yaml"
-    ```yaml
-    extensions:
-      - name: env
-        type: syncFile
-        source: .env.example
-        target: .env
-      - name: link-sdk
-        type: symlink
-        source: "{{ .Projects.sdk.Path }}"
-        target: node_modules/@acme/sdk
+```yaml
+# orca.project.yaml
+extensions:
+  - name: env
+    type: syncFile
+    source: .env.example
+    target: .env
+  - name: link-sdk
+    type: symlink
+    source: "{{ .Projects.sdk.Path }}"
+    target: node_modules/@acme/sdk
+  - name: install-deps
+    command: npm ci
 
-    hooks:
-      clone:
-        post:
-          - extension: env
-          - extension: link-sdk
-          - extension: install-deps   # defined once, in the workspace config
-            scope: workspace
-      up:
-        pre:
-          - extension: install-deps
-            scope: workspace
-    ```
-=== "orca.workspace.yaml"
-    ```yaml
-    extensions:
-      - name: install-deps
-        command: npm ci
-      - name: seed
-        command: ./scripts/seed.sh
-
-    hooks:
-      init:
-        post:
-          - extension: seed
-    ```
+hooks:
+  clone:
+    post:
+      - extension: env
+      - extension: link-sdk
+      - extension: install-deps
+  up:
+    pre:
+      - extension: install-deps
+```
 
 | Property | Description |
 | -------- | ----------- |
-| `extension` | The name of the extension to run. |
-| `scope` | Where the extension is defined: `project` (the project's config) or `workspace` (the workspace config). It defaults to the config the hook is in, so it's only needed for a project's hook that runs one of the workspace's extensions. |
+| `extension` | The name of one of the project's extensions. |
 
-An entry can't define an extension itself. Define it in `extensions`, and reference it by name.
+An entry can't define an extension itself, or use another project's. Define it in the project's `extensions`, and reference it by name. A step several projects need, like `install-deps` above, is defined in each of them.
+
+Every extension runs in its project's directory. The workspace repository's own project (the one with [`self: true`](../configuration/workspace_config.md#repository)) is no different: its hooks run around its own clone, start and stop, like any other project's.
+
+### The workspace's `init.post`
+
+The [workspace config](../configuration/workspace_config.md) has no extensions, and only one hook, `init.post`, which runs once every project is set up. Each entry names the project whose extension it runs:
+
+```yaml
+# orca.workspace.yaml
+hooks:
+  init:
+    post:
+      - extension: seed
+        project: local-env
+```
+
+| Property | Description |
+| -------- | ----------- |
+| `extension` | The name of one of the project's extensions. |
+| `project` | The project that defines it. The extension runs in that project's directory. |
 
 ### Which hooks there are
 
 | Hook | Defined in | Runs |
 | ---- | ---------- | ---- |
-| `clone.post` | project | After the project is cloned, in its directory, by `ws init` and `ws clone`. Again whenever they're re-run. |
-| `init.post` | workspace | At the end of `ws init`, after every project is cloned, and their `clone.post` hooks have run. |
-| `up.pre`, `up.post` | workspace, project | Before and after the project is started, by `orca up`. The workspace's run before the first project starts, and after the last. See [the order](./environments.md#hooks). |
-| `down.pre`, `down.post` | workspace, project | Before and after it's stopped, by `orca down`, in the same way. |
+| `clone.post` | a project | After the project is cloned, in its directory, by `ws init` and `ws clone`. Again whenever they're re-run. |
+| `up.pre`, `up.post` | a project | Before and after the project is started, by `orca up`. See [the order](./environments.md#hooks). |
+| `down.pre`, `down.post` | a project | Before and after the project is stopped, by `orca down`. |
+| `init.post` | the workspace config | At the end of `ws init`, after every project is cloned, and their `clone.post` hooks have run. |
 
 There's no `init.pre` or `clone.pre`. A project's config can't be read until it's cloned, so nothing it defines can run before then.
 
 A [library](./workspaces.md#library-projects) is never started or stopped, so it can only have `clone.post`.
-
-### Where extensions run
-
-Every extension in a project's hook runs in that project's directory, including one defined in the workspace config. So a shared `install-deps` that runs `npm ci` installs each project that uses it. The workspace's own hooks run in the directory of `orca.workspace.yaml`.
 
 ## Running a hook by hand
 
@@ -78,7 +80,7 @@ Every extension in a project's hook runs in that project's directory, including 
 
 ```sh
 $ orca hooks run clone.post -p api     # set api up again
-$ orca hooks run init.post             # run the workspace's init.post
+$ orca hooks run init.post             # run the workspace's init.post, from anywhere
 ```
 
 ```
@@ -88,10 +90,10 @@ api clone.post: install-deps
   added 312 packages in 4s
 ```
 
-- Inside a project, or with `-p`, it runs the project's hook. Outside of a project, or for `init.post`, which only the workspace has, it runs the workspace's.
+- For `init.post`, it runs the workspace's, from anywhere, each extension in its own project. Every other hook is a project's, so it needs one: run it from inside the project, or pass `-p`.
 - Each step's output is shown as it runs, indented under it.
 - Before anything runs, any extension that's new, or has changed since you trusted it, is listed, and you're asked to trust it. See [Trusting extensions](./extensions.md#trusting-extensions). `--yes` runs everything without asking, for that run only.
-- With [shell completion](./shell_completion.md) installed, `orca hooks run <tab>` lists the hooks that run something, with the extensions each one runs.
+- With [shell completion](./shell_completion.md) installed, `orca hooks run <tab>` lists the project's hooks that run something, and the workspace's `init.post`, with the extensions each one runs.
 
 To run one step of a hook on its own, run its extension with `orca ext`, e.g. `orca ext -p api env`.
 

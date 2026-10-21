@@ -38,13 +38,13 @@ For a whole workspace, `up` starts projects in dependency order (projects before
 
 ### Hooks
 
-`up` and `down` run the `up` and `down` [hooks](./hooks.md), around starting and stopping each project:
+`up` and `down` run each project's `up` and `down` [hooks](./hooks.md), around starting and stopping it. For each project, in the order they're started:
 
-1. The workspace's `up.pre`, for the whole workspace only.
-2. For each project, in the order they're started: its `up.pre`, then it's started, then its `up.post`.
-3. The workspace's `up.post`, for the whole workspace only.
+1. its `up.pre`
+2. the project is started
+3. its `up.post`
 
-`down` does the same, with the `down` hooks, in the order projects are stopped. With `-p`, only that project's hooks run, not the workspace's.
+Then the next project. `down` does the same, with the `down` hooks, in the order projects are stopped. The workspace repository's own project is no different from the others, and the workspace config has no `up` or `down` hooks.
 
 A project's hooks only run when it's started or stopped. So a disabled project that's skipped doesn't run them, but one that's started anyway, as an enabled project requires it, does.
 

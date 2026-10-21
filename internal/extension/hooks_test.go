@@ -12,32 +12,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// hooksWorkspace has an api whose clone.post runs its own 'env', then the
-// workspace's 'install-deps', and a workspace whose init.post runs 'seed'.
+// hooksWorkspace is trustWorkspace, where api's clone.post runs its own
+// 'migrate' then 'install-deps', and the workspace's init.post runs
+// local-env's 'seed'.
 func hooksWorkspace() *workspace.Workspace {
 	ws := trustWorkspace()
-	ws.Hooks = map[workspace.Hook][]workspace.HookEntry{
-		workspace.HookInitPost: {{Extension: "seed", Scope: workspace.HookScopeWorkspace}},
-	}
-	ws.Projects[0].Config.Extensions = append(ws.Projects[0].Config.Extensions, command("migrate", workspace.CommandSpec{Command: "./bin/migrate"}))
-	ws.Projects[0].Config.Hooks = map[workspace.Hook][]workspace.HookEntry{
-		workspace.HookClonePost: {
-			{Extension: "migrate", Scope: workspace.HookScopeProject},
-			{Extension: "install-deps", Scope: workspace.HookScopeWorkspace},
-		},
+	ws.InitHooks = []workspace.InitHookEntry{{Project: "local-env", Extension: "seed"}}
+
+	api := &ws.Projects[1]
+	api.Config.Extensions = append(api.Config.Extensions, command("migrate", workspace.CommandSpec{Command: "./bin/migrate"}))
+	api.Config.Hooks = map[workspace.Hook][]workspace.HookEntry{
+		workspace.HookClonePost: {{Extension: "migrate"}, {Extension: "install-deps"}},
 	}
 
 	return ws
 }
 
 func Test_RunHook(t *testing.T) {
-	failure := errors.New("exit status 1")
-
 	tests := []struct {
 		name      string
 		project   string
 		cmd       RunHookCommand
-		executor  stubExecutor
 		answer    bool
 		want      []ran
 		wantLines []string
@@ -71,13 +66,17 @@ func Test_RunHook(t *testing.T) {
 			wantLines: []string{"api clone.post: migrate", "api clone.post: install-deps"},
 		},
 		{
-			name:      "a hook only the workspace has, from inside a project",
+			name:      "the workspace's init.post, from inside another project, runs in its own project",
 			project:   "api",
-			cmd:       RunHookCommand{Hook: "init.post"},
-			answer:    true,
-			wantAsked: 1,
+			cmd:       RunHookCommand{Hook: "init.post", Yes: true},
 			want:      []ran{{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"}},
-			wantLines: []string{"", "This workspace wants to run the following on your machine:", "", "init.post: seed"},
+			wantLines: []string{"local-env init.post: seed"},
+		},
+		{
+			name:      "the workspace's init.post, outside of any project",
+			cmd:       RunHookCommand{Hook: "init.post", Yes: true},
+			want:      []ran{{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"}},
+			wantLines: []string{"local-env init.post: seed"},
 		},
 		{
 			name:      "a hook with nothing in it",
@@ -119,9 +118,7 @@ func Test_RunHook(t *testing.T) {
 
 			got := []ran{}
 			out := &stubTui{answer: tt.answer}
-			executor := tt.executor
-			executor.ran = &got
-			m := NewManager(afero.NewMemMapFs(), nil, executor, out, newTrustStore())
+			m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got}, out, newTrustStore())
 
 			err := m.RunHook(workspace.WithExecutionContext(context.Background(), execCtx), tt.cmd)
 
@@ -139,11 +136,13 @@ func Test_RunHook(t *testing.T) {
 		})
 	}
 
+	failure := errors.New("exit status 1")
+
 	t.Run("a failing extension stops the hook, and says how to re-run it", func(t *testing.T) {
 		ws := hooksWorkspace()
 		got := []ran{}
 		m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got, err: failure, failing: []string{"./bin/migrate"}}, &stubTui{}, newTrustStore())
-		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
+		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[1]})
 
 		err := m.RunHook(ctx, RunHookCommand{Hook: "clone.post", Yes: true})
 
@@ -155,11 +154,13 @@ func Test_RunHook(t *testing.T) {
 
 		msg, _, _ := usererr.Message(err)
 		assert.Equal(t, "Extension 'migrate' failed!", msg)
+		assert.Equal(t, "'migrate', in api's clone.post hook", hookErr.Describe())
 		assert.Equal(t, "orca ext -w acme -p api migrate", hookErr.RerunCommand())
+		assert.Equal(t, "orca hooks run -w acme -p api clone.post", hookErr.RerunHookCommand())
 		assert.Len(t, got, 1, "install-deps doesn't run")
 	})
 
-	t.Run("a failing workspace hook", func(t *testing.T) {
+	t.Run("a failing init.post names its project, and the workspace's hook", func(t *testing.T) {
 		ws := hooksWorkspace()
 		got := []ran{}
 		m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got, err: failure}, &stubTui{}, newTrustStore())
@@ -169,8 +170,21 @@ func Test_RunHook(t *testing.T) {
 
 		hookErr, ok := errors.AsType[HookFailedError](err)
 		require.True(t, ok)
-		assert.Equal(t, "orca ext -w acme seed", hookErr.RerunCommand())
-		assert.EqualError(t, hookErr, "the workspace's init.post hook failed running 'seed': Extension 'seed' failed!: exit status 1")
+		assert.Equal(t, "local-env's 'seed', in the workspace's init.post hook", hookErr.Describe())
+		assert.Equal(t, "orca ext -w acme -p local-env seed", hookErr.RerunCommand())
+		assert.Equal(t, "orca hooks run -w acme init.post", hookErr.RerunHookCommand())
+	})
+
+	t.Run("init.post naming a project that isn't cloned", func(t *testing.T) {
+		ws := hooksWorkspace()
+		ws.Projects[0].IsRegistered = false
+		got := []ran{}
+		m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got}, &stubTui{}, newTrustStore())
+
+		err := m.RunHook(workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws}), RunHookCommand{Hook: "init.post", Yes: true})
+
+		assert.ErrorIs(t, err, ErrProjectNotCloned)
+		assert.Empty(t, got)
 	})
 
 	t.Run("a command's output is indented under the hook", func(t *testing.T) {
@@ -187,12 +201,12 @@ func Test_RunHook(t *testing.T) {
 
 	t.Run("a syncFile's message is indented under the hook", func(t *testing.T) {
 		ws := hooksWorkspace()
-		ws.Projects[0].Config.Hooks[workspace.HookClonePost] = []workspace.HookEntry{{Extension: "env", Scope: workspace.HookScopeProject}}
+		ws.Projects[1].Config.Hooks[workspace.HookClonePost] = []workspace.HookEntry{{Extension: "env"}}
 		fs := afero.NewMemMapFs()
 		require.NoError(t, afero.WriteFile(fs, "/code/acme/api/.env.example", []byte("A=1\n"), 0644))
 		out := &stubTui{}
 		m := NewManager(fs, nil, nil, out, newTrustStore())
-		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]})
+		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[1]})
 
 		require.NoError(t, m.RunHook(ctx, RunHookCommand{Hook: "clone.post", Yes: true}))
 
@@ -202,27 +216,23 @@ func Test_RunHook(t *testing.T) {
 
 func Test_HookChoices(t *testing.T) {
 	ws := hooksWorkspace()
-	ws.Hooks[workspace.HookUpPre] = []workspace.HookEntry{{Extension: "install-deps", Scope: workspace.HookScopeWorkspace}}
 	m := NewManager(nil, nil, nil, nil, nil)
 
-	t.Run("in a project, its hooks and the workspace's init.post", func(t *testing.T) {
-		got, err := m.HookChoices(workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[0]}), HookChoicesQuery{})
+	t.Run("in a project, its own, and the workspace's init.post", func(t *testing.T) {
+		got, err := m.HookChoices(workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws, Project: &ws.Projects[1]}), HookChoicesQuery{})
 
 		require.NoError(t, err)
 		assert.Equal(t, []workspace.Choice{
 			{Value: "clone.post", Description: "Runs migrate, install-deps"},
-			{Value: "init.post", Description: "Runs seed"},
+			{Value: "init.post", Description: "Runs local-env's seed"},
 		}, got)
 	})
 
-	t.Run("outside of a project, the workspace's", func(t *testing.T) {
+	t.Run("outside of a project, the workspace's init.post", func(t *testing.T) {
 		got, err := m.HookChoices(workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: ws}), HookChoicesQuery{})
 
 		require.NoError(t, err)
-		assert.Equal(t, []workspace.Choice{
-			{Value: "init.post", Description: "Runs seed"},
-			{Value: "up.pre", Description: "Runs install-deps"},
-		}, got)
+		assert.Equal(t, []workspace.Choice{{Value: "init.post", Description: "Runs local-env's seed"}}, got)
 	})
 }
 
@@ -233,13 +243,13 @@ func Test_SetUp(t *testing.T) {
 
 	t.Run("each project's clone.post, then init.post, asked about together", func(t *testing.T) {
 		ws := hooksWorkspace()
-		ws.Projects[1].Config.Hooks = map[workspace.Hook][]workspace.HookEntry{
-			workspace.HookClonePost: {{Extension: "install-deps", Scope: workspace.HookScopeWorkspace}},
+		ws.Projects[2].Config.Hooks = map[workspace.Hook][]workspace.HookEntry{
+			workspace.HookClonePost: {{Extension: "install-deps"}},
 		}
 		got := []ran{}
 		out := &stubTui{answer: true}
 
-		require.NoError(t, newManager(out, &got).SetUp(ws, workspace.SetUpOpts{Projects: []string{"web", "api"}, Initialise: true}))
+		require.NoError(t, newManager(out, &got).SetUp(ws, workspace.SetUpOpts{Projects: []string{"local-env", "web", "api"}, Initialise: true}))
 
 		assert.Equal(t, 1, out.asked)
 		assert.Equal(t, []ran{
@@ -249,9 +259,10 @@ func Test_SetUp(t *testing.T) {
 			{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"},
 		}, got)
 		assert.Equal(t, [][][]string{{
-			{"workspace", "clone.post", "install-deps", "command", "npm ci"},
+			{"web", "clone.post", "install-deps", "command", "npm ci"},
 			{"api", "clone.post", "migrate", "command", "./bin/migrate"},
-			{"workspace", "init.post", "seed", "command", "./scripts/seed.sh"},
+			{"api", "clone.post", "install-deps", "command", "npm ci"},
+			{"local-env", "init.post", "seed", "command", "./scripts/seed.sh"},
 		}}, out.tables)
 	})
 
@@ -284,8 +295,9 @@ func Test_SetUp(t *testing.T) {
 
 	t.Run("a service command from a hook doesn't use the terminal", func(t *testing.T) {
 		ws := hooksWorkspace()
-		ws.Projects[0].Config.Extensions = append(ws.Projects[0].Config.Extensions, command("composer", workspace.CommandSpec{Command: "composer install", Service: "app"}))
-		ws.Projects[0].Config.Hooks[workspace.HookClonePost] = []workspace.HookEntry{{Extension: "composer", Scope: workspace.HookScopeProject}}
+		api := &ws.Projects[1]
+		api.Config.Extensions = append(api.Config.Extensions, command("composer", workspace.CommandSpec{Command: "composer install", Service: "app"}))
+		api.Config.Hooks[workspace.HookClonePost] = []workspace.HookEntry{{Extension: "composer"}}
 		got := []ran{}
 
 		require.NoError(t, newManager(&stubTui{}, &got).SetUp(ws, workspace.SetUpOpts{Projects: []string{"api"}, Yes: true}))
@@ -296,22 +308,24 @@ func Test_SetUp(t *testing.T) {
 
 func Test_ConfirmHooks_RunConfirmedHook(t *testing.T) {
 	ws := hooksWorkspace()
-	ws.Hooks[workspace.HookUpPre] = []workspace.HookEntry{{Extension: "install-deps", Scope: workspace.HookScopeWorkspace}}
-	ws.Projects[0].Config.Hooks[workspace.HookUpPost] = []workspace.HookEntry{{Extension: "migrate", Scope: workspace.HookScopeProject}}
+	root, api := &ws.Projects[0], &ws.Projects[1]
+	root.Config.Hooks = map[workspace.Hook][]workspace.HookEntry{workspace.HookUpPre: {{Extension: "seed"}}}
+	api.Config.Hooks[workspace.HookUpPost] = []workspace.HookEntry{{Extension: "migrate"}}
 	got := []ran{}
 	out := &stubTui{answer: true}
 	m := NewManager(afero.NewMemMapFs(), nil, stubExecutor{ran: &got}, out, newTrustStore())
 	runs := []workspace.HookRun{
-		{Hook: workspace.HookUpPre},
-		{Project: &ws.Projects[0], Hook: workspace.HookUpPre},
-		{Project: &ws.Projects[0], Hook: workspace.HookUpPost},
+		{Project: root, Hook: workspace.HookUpPre},
+		{Project: root, Hook: workspace.HookUpPost},
+		{Project: api, Hook: workspace.HookUpPre},
+		{Project: api, Hook: workspace.HookUpPost},
 	}
 
 	require.NoError(t, m.ConfirmHooks(ws, runs, false))
 
 	assert.Equal(t, 1, out.asked)
 	assert.Equal(t, [][][]string{{
-		{"workspace", "up.pre", "install-deps", "command", "npm ci"},
+		{"local-env", "up.pre", "seed", "command", "./scripts/seed.sh"},
 		{"api", "up.post", "migrate", "command", "./bin/migrate"},
 	}}, out.tables)
 
@@ -321,7 +335,7 @@ func Test_ConfirmHooks_RunConfirmedHook(t *testing.T) {
 
 	assert.Equal(t, 1, out.asked, "running them asks nothing more")
 	assert.Equal(t, []ran{
-		{name: "npm", args: []string{"ci"}, dir: "/code/acme/local-env"},
+		{name: "./scripts/seed.sh", args: []string{}, dir: "/code/acme/local-env"},
 		{name: "./bin/migrate", args: []string{}, dir: "/code/acme/api"},
 	}, got)
 }

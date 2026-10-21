@@ -2,7 +2,6 @@ package extension
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/adamkirk/orca/internal/bus"
@@ -10,8 +9,7 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
-// RunCommand runs an extension by name: the project's, or the workspace's
-// when the project doesn't define it, or outside of any project.
+// RunCommand runs one of the project's extensions, by name.
 type RunCommand struct {
 	bus.Returns[bus.Void]
 
@@ -47,38 +45,20 @@ func (m *Manager) Run(ctx context.Context, cmd RunCommand) error {
 	return usererr.Wrap(m.execute(run.target, run.ext, cmd.Args, ""), fmt.Sprintf("Extension '%s' failed!", cmd.Name))
 }
 
-// find looks for the extension in the project first, then the workspace, so a
-// project can override one of the workspace's. Either way, it runs in the
-// project, if there is one.
+// find looks for the extension in the project, which extensions belong to.
 func (m *Manager) find(execCtx workspace.ExecutionContext, name string) (planned, error) {
-	t := target{ws: execCtx.Workspace, project: execCtx.Project}
-	wsExt, wsErr := execCtx.Workspace.FindExtension(name)
-
-	if execCtx.Project != nil {
-		ext, err := execCtx.Project.FindExtension(name)
-
-		if err == nil {
-			if wsErr == nil {
-				m.tui.Info(fmt.Sprintf("Note: running %s's own '%s', rather than the workspace's.", execCtx.Project.Name, name))
-			}
-
-			return planned{owner: execCtx.Project, target: t, ext: ext}, nil
-		}
-
-		if !errors.Is(err, workspace.ErrUnknownExtension) {
-			return planned{}, err
-		}
+	if execCtx.Project == nil {
+		return planned{}, usererr.Wrap(
+			fmt.Errorf("%w: %s", ErrNoProject, name),
+			"Extensions belong to projects; run it from inside a project, or pass -p.",
+		)
 	}
 
-	if wsErr != nil {
-		where := "the workspace"
+	ext, err := execCtx.Project.FindExtension(name)
 
-		if execCtx.Project != nil {
-			where = fmt.Sprintf("%s or the workspace", execCtx.Project.Name)
-		}
-
-		return planned{}, usererr.Wrap(wsErr, fmt.Sprintf("There's no extension '%s' in %s!", name, where))
+	if err != nil {
+		return planned{}, usererr.Wrap(err, fmt.Sprintf("There's no extension '%s' in %s!", name, execCtx.Project.Name))
 	}
 
-	return planned{target: t, ext: wsExt}, nil
+	return planned{target: target{ws: execCtx.Workspace, project: execCtx.Project}, ext: ext}, nil
 }

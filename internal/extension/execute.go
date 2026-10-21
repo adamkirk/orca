@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-// target is where an extension runs: in a project, or in the workspace's
-// directory when project is nil.
+// target is the project an extension runs in, which is always the project that
+// defines it.
 type target struct {
 	ws      *workspace.Workspace
 	project *workspace.Project
@@ -24,18 +24,14 @@ type target struct {
 // dir is the directory the extension's paths are relative to, and its
 // commands run in.
 func (t target) dir() string {
-	if t.project != nil {
-		return t.project.ProjectDir
-	}
-
-	return t.ws.Dir()
+	return t.project.ProjectDir
 }
 
 // execute runs the extension in the target, with args for a command. What it
 // shows, and a host command's output, start with indent, so they can be shown
 // under the hook that's running them.
 func (m *Manager) execute(t target, ext workspace.Extension, args []string, indent string) error {
-	if t.project != nil && !t.project.IsRegistered {
+	if !t.project.IsRegistered {
 		return usererr.Wrap(
 			fmt.Errorf("%w: %s", ErrProjectNotCloned, t.project.Name),
 			fmt.Sprintf("%s isn't cloned; clone it with 'orca ws clone -p %s'.", t.project.Name, t.project.Name),
@@ -98,10 +94,11 @@ func (m *Manager) executeCommand(t target, spec workspace.CommandSpec, args []st
 		return m.executor.Exec(cmdArgs[0], cmdArgs[1:], output, process.ChdirOpt(inDir(t.dir(), spec.Chdir)))
 	}
 
-	if t.project == nil || t.project.IsLibrary() {
+	// A library's config can't define one, so this is only a safeguard
+	if t.project.IsLibrary() {
 		return usererr.Wrap(
 			fmt.Errorf("%w: service '%s'", ErrNoServices, spec.Service),
-			fmt.Sprintf("This extension runs in the '%s' service, so it has to run in a project with a compose stack; pass one with -p.", spec.Service),
+			fmt.Sprintf("%s is a library, so it has no '%s' service to run the extension in!", t.project.Name, spec.Service),
 		)
 	}
 

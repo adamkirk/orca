@@ -99,5 +99,11 @@ type Hooks map[string]map[string][]yaml.Node
 
 type HookEntry struct {
 	Extension string `yaml:"extension"`
-	Scope     string `yaml:"scope"`
+}
+
+// InitHookEntry is an entry of the workspace config's init.post, which runs
+// one of a project's extensions.
+type InitHookEntry struct {
+	Extension string `yaml:"extension"`
+	Project   string `yaml:"project"`
 }

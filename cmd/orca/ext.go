@@ -10,10 +10,9 @@ import (
 
 var extCmd = &cobra.Command{
 	Use:   "ext <extension> [args...]",
-	Short: "Run an extension, defined in the project or workspace config",
-	Long: `Runs one of the project's extensions, or the workspace's when the project
-doesn't define one with that name, or outside of any project. Any arguments are
-appended to a command extension's command.
+	Short: "Run one of the project's extensions",
+	Long: `Runs one of the extensions in the project's orca.project.yaml, from inside the
+project, or with -p. Any arguments are appended to a command extension's command.
 
 Everything after the extension's name is passed on as it is, so orca's own flags
 must come before it, e.g. 'orca ext -p api artisan migrate --force'.`,

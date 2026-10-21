@@ -1,6 +1,6 @@
 # Extensions
 
-An extension is a named step that orca can run, defined in a project's [`orca.project.yaml`](../configuration/project_config.md) or the [`orca.workspace.yaml`](../configuration/workspace_config.md), so the whole team gets the same shortcuts and setup steps. This page covers running them. For every type of extension, and its properties, see the [extensions reference](../configuration/extensions.md).
+An extension is a named step that orca can run, defined in a project's [`orca.project.yaml`](../configuration/project_config.md), so the whole team gets the same shortcuts and setup steps. This page covers running them. For every type of extension, and its properties, see the [extensions reference](../configuration/extensions.md).
 
 The most common is a command that runs in one of the project's services. It saves everyone remembering the service name and the exact command.
 
@@ -66,25 +66,27 @@ A library has no services, so its extensions always run on your machine, in the 
 $ orca ext -p sdk build
 ```
 
-## Workspace extensions
+## Extensions belong to projects
 
-The [workspace config](../configuration/workspace_config.md) can define extensions too, for steps that aren't tied to one project, or that several projects share:
+Every extension is defined in a project's `orca.project.yaml`, and runs in that project's directory. The [workspace config](../configuration/workspace_config.md) has none, so `orca ext` needs a project: run it from inside one, or pass `-p`.
+
+A step that several projects need, like installing their dependencies, is defined in each of them, so each project says how it's done:
 
 ```yaml
-# orca.workspace.yaml
+# api/orca.project.yaml
 extensions:
-  - name: seed
-    command: ./scripts/seed.sh
-    description: Seed the databases with test data
+  - name: install-deps
+    command: npm ci
 ```
 
-`orca ext` looks for the extension in the project first, then in the workspace:
+```yaml
+# billing/orca.project.yaml
+extensions:
+  - name: install-deps
+    command: composer install
+```
 
-- **Outside of any project**, e.g. in the workspace repository, or with only `-w`, it runs the workspace's extension, in the directory of `orca.workspace.yaml`.
-- **Inside a project**, it runs the project's extension, if it defines one with that name. Otherwise it runs the workspace's, in the *project's* directory. So a shared `install` that runs `npm ci` installs whichever project you're in.
-- **A project can override** one of the workspace's extensions, by defining its own with the same name. `orca ext` says when it's running the project's own instead of the workspace's.
-
-A workspace extension with a `service` can only run in a project with that service. Outside of a project, or in a library, it fails.
+Steps for the whole workspace, like seeding the databases, belong to whichever project owns them, often the workspace repository's own. The workspace's [`init.post`](./hooks.md#the-workspaces-initpost) hook can run one once everything is set up.
 
 ## Trusting extensions
 
@@ -93,18 +95,18 @@ An extension runs on your machine, from config that someone else wrote, so orca 
 ```
 This workspace wants to run the following on your machine:
 
-┌────────────┬────────────┬───────────┬──────────┬─────────────────────┐
-│ Defined in │    Hook    │ Extension │   Type   │        Runs         │
-├────────────┼────────────┼───────────┼──────────┼─────────────────────┤
-│ api        │ clone.post │ env       │ syncFile │ .env.example → .env │
-│ workspace  │ init.post  │ seed      │ command  │ ./scripts/seed.sh   │
-└────────────┴────────────┴───────────┴──────────┴─────────────────────┘
+┌───────────┬────────────┬───────────┬──────────┬─────────────────────┐
+│  Project  │    Hook    │ Extension │   Type   │        Runs         │
+├───────────┼────────────┼───────────┼──────────┼─────────────────────┤
+│ api       │ clone.post │ env       │ syncFile │ .env.example → .env │
+│ local-env │ init.post  │ seed      │ command  │ ./scripts/seed.sh   │
+└───────────┴────────────┴───────────┴──────────┴─────────────────────┘
 
 Trust these and continue? [y/N]
 ```
 
 - **Each extension is asked about once.** Your answer is kept in `~/.orca/trust.yaml`, so orca only asks again when the extension's config changes, and then only about that extension, showing what it was before. Changing only its `description` doesn't count.
-- **A workspace extension is trusted once,** however many projects use it.
+- **An extension is trusted once,** however many of its project's hooks, or the workspace's `init.post`, run it.
 - **Running one yourself, with `orca ext`, counts as trusting it,** so you're never asked about it afterwards.
 - **Answering no runs nothing,** and the command fails.
 - **`--yes` runs everything without asking,** for that run only: it doesn't record anything. Without a terminal to ask in, e.g. in a script, orca fails rather than waiting, and suggests `--yes`.

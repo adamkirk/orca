@@ -13,26 +13,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// planned is an extension that's about to run: where it's defined, where it
-// runs, and the hook that runs it, if any.
+// planned is an extension that's about to run, in the project that defines
+// it, and the hook that runs it, if any.
 type planned struct {
 	// Empty when it's run by hand, with ext
-	hook string
-
-	// The project whose config defines it, or nil for the workspace config's
-	owner  *workspace.Project
+	hook   string
 	target target
 	ext    workspace.Extension
 }
 
 func (p planned) trustKey() TrustKey {
-	key := TrustKey{Workspace: p.target.ws.Name, Extension: p.ext.Name}
-
-	if p.owner != nil {
-		key.Project = p.owner.Name
-	}
-
-	return key
+	return TrustKey{Workspace: p.target.ws.Name, Project: p.target.project.Name, Extension: p.ext.Name}
 }
 
 // fingerprint changes whenever what the extension does changes. Its name and
@@ -170,19 +161,13 @@ func (m *Manager) showUntrusted(pending []untrusted) {
 
 	for i, u := range pending {
 		allChanged = allChanged && u.changed
-		definedIn := "workspace"
-
-		if u.run.owner != nil {
-			definedIn = u.run.owner.Name
-		}
-
 		what := summary(u.run.ext)
 
 		if u.changed && u.was.Summary != what {
 			what += fmt.Sprintf("   (was: %s)", u.was.Summary)
 		}
 
-		rows[i] = []string{definedIn, u.run.hook, u.run.ext.Name, string(u.run.ext.Spec.Type()), what}
+		rows[i] = []string{u.run.target.project.Name, u.run.hook, u.run.ext.Name, string(u.run.ext.Spec.Type()), what}
 	}
 
 	if allChanged {
@@ -191,5 +176,5 @@ func (m *Manager) showUntrusted(pending []untrusted) {
 		m.tui.Info("", "This workspace wants to run the following on your machine:", "")
 	}
 
-	m.tui.Table([]string{"Defined in", "Hook", "Extension", "Type", "Runs"}, rows)
+	m.tui.Table([]string{"Project", "Hook", "Extension", "Type", "Runs"}, rows)
 }

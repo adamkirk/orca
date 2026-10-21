@@ -44,8 +44,8 @@ func (c *recordingCompose) Down(_ *workspace.Workspace, p *workspace.Project) er
 	return nil
 }
 
-// recordingHooks records the hooks confirmed, and those run, as "api up.pre",
-// or "workspace up.pre". It fails the hook named in failing, with err.
+// recordingHooks records the hooks confirmed, and those run, as "api up.pre".
+// It fails the hook named in failing, with err.
 type recordingHooks struct {
 	confirmed []workspace.HookRun
 	log       *[]string
@@ -55,10 +55,6 @@ type recordingHooks struct {
 }
 
 func hookName(run workspace.HookRun) string {
-	if run.Project == nil {
-		return "workspace " + run.Hook.String()
-	}
-
 	return run.Project.Name + " " + run.Hook.String()
 }
 
@@ -200,17 +196,15 @@ func TestUpDownHooks(t *testing.T) {
 		return NewManager(&recordingCompose{log: &log}, &recordingTUI{}, hooks), hooks, &log
 	}
 
-	t.Run("a workspace-wide up runs the workspace's hooks around every project's", func(t *testing.T) {
+	t.Run("a workspace-wide up runs each project's own hooks around its start", func(t *testing.T) {
 		m, hooks, log := newManager("")
 		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: newTestWorkspace()})
 
 		require.NoError(t, m.Up(ctx, UpCommand{}))
 
 		assert.Equal(t, []string{
-			"workspace up.pre",
 			"local-env up.pre", "start local-env", "local-env up.post",
 			"api up.pre", "start api", "api up.post",
-			"workspace up.post",
 		}, *log)
 
 		confirmed := []string{}
@@ -219,7 +213,7 @@ func TestUpDownHooks(t *testing.T) {
 			confirmed = append(confirmed, hookName(run))
 		}
 
-		assert.Equal(t, []string{"workspace up.pre", "local-env up.pre", "local-env up.post", "api up.pre", "api up.post", "workspace up.post"}, confirmed, "everything is asked about first")
+		assert.Equal(t, []string{"local-env up.pre", "local-env up.post", "api up.pre", "api up.post"}, confirmed, "everything is asked about first")
 	})
 
 	t.Run("a workspace-wide down runs in reverse", func(t *testing.T) {
@@ -229,10 +223,8 @@ func TestUpDownHooks(t *testing.T) {
 		require.NoError(t, m.Down(ctx, DownCommand{}))
 
 		assert.Equal(t, []string{
-			"workspace down.pre",
 			"api down.pre", "stop api", "api down.post",
 			"local-env down.pre", "stop local-env", "local-env down.post",
-			"workspace down.post",
 		}, *log)
 	})
 
@@ -269,7 +261,7 @@ func TestUpDownHooks(t *testing.T) {
 		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: newTestWorkspace()})
 
 		assert.Error(t, m.Up(ctx, UpCommand{}))
-		assert.Equal(t, []string{"workspace up.pre", "local-env up.pre", "start local-env", "local-env up.post", "api up.pre"}, *log)
+		assert.Equal(t, []string{"local-env up.pre", "start local-env", "local-env up.post", "api up.pre"}, *log)
 	})
 
 	t.Run("a failing post hook fails, after the project's started", func(t *testing.T) {
@@ -277,6 +269,6 @@ func TestUpDownHooks(t *testing.T) {
 		ctx := workspace.WithExecutionContext(context.Background(), workspace.ExecutionContext{Workspace: newTestWorkspace()})
 
 		assert.Error(t, m.Up(ctx, UpCommand{}))
-		assert.Equal(t, []string{"api up.pre", "start api", "api up.post"}, (*log)[4:])
+		assert.Equal(t, []string{"api up.pre", "start api", "api up.post"}, (*log)[3:])
 	})
 }
