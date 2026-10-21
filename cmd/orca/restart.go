@@ -15,6 +15,7 @@ var restartCmd = &cobra.Command{
 func init() {
 	addWorkspaceOption(restartCmd, false)
 	addServiceProjectOption(restartCmd)
+	addYesFlag(restartCmd)
 
 	rootCmd.AddCommand(restartCmd)
 }
@@ -24,10 +25,12 @@ func handleRestart(cmd *cobra.Command, args []string) error {
 
 	ws := mustGetString(cmd, "workspace")
 	project := mustGetString(cmd, "project")
+	yes := mustGetBool(cmd, "yes")
 
 	_, err := b.Dispatch(cmd.Context(), stack.DownCommand{
 		Workspace: ws,
 		Project:   project,
+		Yes:       yes,
 	})
 
 	if err != nil {
@@ -37,6 +40,7 @@ func handleRestart(cmd *cobra.Command, args []string) error {
 	_, err = b.Dispatch(cmd.Context(), stack.UpCommand{
 		Workspace: ws,
 		Project:   project,
+		Yes:       yes,
 	})
 
 	return err

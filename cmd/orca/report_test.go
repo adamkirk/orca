@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/adamkirk/orca/internal/extension"
 	"github.com/adamkirk/orca/internal/tui"
 	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
@@ -56,6 +57,17 @@ func Test_ReportError(t *testing.T) {
 			},
 		},
 		{
+			name: "shows the problems with an invalid project config",
+			err: workspace.InvalidProjectConfigError{
+				Path:     "/code/api/orca.project.yaml",
+				Problems: []string{"extension 'env': 'target' is required for type 'syncFile'"},
+			},
+			expect: []string{
+				"Project config '/code/api/orca.project.yaml' is invalid:",
+				"  - extension 'env': 'target' is required for type 'syncFile'",
+			},
+		},
+		{
 			name: "shows the problems with an invalid preferences file",
 			err: workspace.InvalidPreferencesError{
 				Path:     "/code/orca.preferences.yaml",
@@ -65,6 +77,22 @@ func Test_ReportError(t *testing.T) {
 				"Preferences file '/code/orca.preferences.yaml' is invalid:",
 				"  - project 'api': 'enabled' must be true or false",
 				"  - unknown property 'colour'",
+			},
+		},
+		{
+			name: "says which hook failed, and how to re-run it",
+			err: extension.HookFailedError{
+				Workspace: "acme",
+				Project:   "api",
+				Hook:      "clone.post",
+				Extension: "env",
+				Err:       usererr.Wrap(cause, "Can't create .env, as .env.example doesn't exist!"),
+			},
+			expect: []string{
+				"Can't create .env, as .env.example doesn't exist!",
+				"  permission denied",
+				"This was 'env', in api's clone.post hook. Nothing after it ran.",
+				"Once it's fixed, re-run it with 'orca ext -w acme -p api env', or the whole hook with 'orca hooks run -w acme -p api clone.post'.",
 			},
 		},
 		{

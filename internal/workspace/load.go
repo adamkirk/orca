@@ -79,27 +79,6 @@ func convertProperties(cfgProps []model.Property) []Property {
 	return props
 }
 
-func convertExtension(e model.Extension) Extension {
-	return Extension{
-		Name:        e.Name,
-		Chdir:       e.Chdir,
-		Command:     e.Command,
-		Service:     e.Service,
-		DefaultArgs: e.DefaultArgs,
-		Description: e.Description,
-	}
-}
-
-func convertExtensions(cfgExts []model.Extension) []Extension {
-	exts := make([]Extension, len(cfgExts))
-
-	for i, e := range cfgExts {
-		exts[i] = convertExtension(e)
-	}
-
-	return exts
-}
-
 func convertEnvFile(e model.EnvFile) EnvFile {
 	return EnvFile{
 		Path: e.Path,
@@ -114,25 +93,6 @@ func convertEnvFiles(cfgEnvFiles []model.EnvFile) []EnvFile {
 	}
 
 	return envFiles
-}
-
-func convertProvisioner(e model.Provisioner) Provisioner {
-	return Provisioner{
-		ExampleFile: &ExampleFileProvisioner{
-			Src:    e.ExampleFile.Src,
-			Target: e.ExampleFile.Target,
-			Type:   ExampleFileProvisionerType(e.ExampleFile.Type),
-		},
-	}
-}
-
-func convertProvisioners(cfgProvisioners []model.Provisioner) []Provisioner {
-	provisioners := make([]Provisioner, len(cfgProvisioners))
-	for i, p := range cfgProvisioners {
-		provisioners[i] = convertProvisioner(p)
-	}
-
-	return provisioners
 }
 
 func convertRepository(r model.WorkspaceProjectRepository) ProjectRepositoryConfig {
@@ -153,7 +113,7 @@ func projectType(cfg model.WorkspaceProjectConfig) ProjectType {
 	return ProjectType(cfg.Type)
 }
 
-func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig) Project {
+func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg model.ProjectConfig, exts []Extension, hooks map[Hook][]HookEntry) Project {
 	return Project{
 		Name:             wsPCfg.Name,
 		Type:             projectType(wsPCfg),
@@ -168,9 +128,9 @@ func buildProject(wsPCfg model.WorkspaceProjectConfig, meta ProjectMeta, pCfg mo
 			Properties:      convertProperties(pCfg.Properties),
 			Hosts:           pCfg.Hosts,
 			TLSCertificates: pCfg.TLSCertificates,
-			Extensions:      convertExtensions(pCfg.Extensions),
+			Extensions:      exts,
+			Hooks:           hooks,
 			EnvFiles:        convertEnvFiles(pCfg.EnvFiles),
-			Provisioners:    convertProvisioners(pCfg.Provisioners),
 		},
 	}
 }
@@ -247,7 +207,7 @@ func parseWorkspaceConfig(contents []byte, path string) (*model.WorkspaceConfig,
 }
 
 // validateWorkspaceConfig checks the required fields of a workspace config are
-// present.
+// present, and its extensions are valid.
 func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	problems := []string{}
 
@@ -286,6 +246,9 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 		}
 	}
 
+	_, hookProblems := buildInitHooks(cfg.Hooks, workspaceProjectNames(cfg))
+	problems = append(problems, hookProblems...)
+
 	if len(problems) > 0 {
 		return InvalidWorkspaceConfigError{
 			Path:     path,
@@ -296,9 +259,45 @@ func validateWorkspaceConfig(cfg *model.WorkspaceConfig, path string) error {
 	return nil
 }
 
-// validateLibraryConfig checks a library's project config only has what applies
-// to a project with no compose stack.
-func validateLibraryConfig(cfg *model.ProjectConfig, meta ProjectMeta) error {
+// workspaceProjectNames are the names of the workspace config's projects.
+func workspaceProjectNames(cfg *model.WorkspaceConfig) []string {
+	names := make([]string, len(cfg.Projects))
+
+	for i, p := range cfg.Projects {
+		names[i] = p.Name
+	}
+
+	return names
+}
+
+// buildProjectConfig decodes a project's extensions and hooks, and checks its
+// config as a whole: a library can only have what applies to a project with no
+// compose stack. Its hooks can only run its own extensions.
+func buildProjectConfig(cfg *model.ProjectConfig, meta ProjectMeta, projectType ProjectType) ([]Extension, map[Hook][]HookEntry, error) {
+	exts, problems := buildExtensions(cfg.Extensions)
+	label, supported := "a project config", ProjectHooks
+
+	if projectType == ProjectTypeLibrary {
+		problems = append(problems, libraryProblems(cfg, exts)...)
+		label, supported = "a library project, as it's never started", libraryHooks
+	}
+
+	hooks, hookProblems := buildHooks(cfg.Hooks, label, supported, exts)
+	problems = append(problems, hookProblems...)
+
+	if len(problems) > 0 {
+		return nil, nil, InvalidProjectConfigError{
+			Path:     projectConfigPath(meta),
+			Problems: problems,
+		}
+	}
+
+	return exts, hooks, nil
+}
+
+// libraryProblems lists what's in a library's project config that only applies
+// to a project with a compose stack.
+func libraryProblems(cfg *model.ProjectConfig, exts []Extension) []string {
 	problems := []string{}
 
 	for _, key := range []struct {
@@ -315,20 +314,13 @@ func validateLibraryConfig(cfg *model.ProjectConfig, meta ProjectMeta) error {
 		}
 	}
 
-	for _, ext := range cfg.Extensions {
-		if ext.Service != "" {
+	for _, ext := range exts {
+		if cmd, ok := ext.Spec.(CommandSpec); ok && cmd.Service != "" {
 			problems = append(problems, fmt.Sprintf("extension '%s': 'service' can't be used in a library project, as it has no services", ext.Name))
 		}
 	}
 
-	if len(problems) > 0 {
-		return InvalidProjectConfigError{
-			Path:     projectConfigPath(meta),
-			Problems: problems,
-		}
-	}
-
-	return nil
+	return problems
 }
 
 func buildUnconfiguredWorkspace(ws *model.WorkspaceConfig, path string) *UnconfiguredWorkspace {
@@ -385,10 +377,14 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 		return nil, err
 	}
 
+	// They were checked when the config was parsed
+	initHooks, _ := buildInitHooks(cfg.Hooks, workspaceProjectNames(cfg))
+
 	ws := &Workspace{
 		Name:       cfg.Name,
 		ConfigPath: wsMeta.Path,
 		Projects:   make([]Project, len(cfg.Projects)),
+		InitHooks:  initHooks,
 		OverlayConfig: OverlayConfig{
 			Network: NetworkOverlayConfig{
 				Enabled:        cfg.Overlays.Network.Enabled,
@@ -432,13 +428,18 @@ func (wcr *Repository) Load(name string) (*Workspace, error) {
 			return nil, err
 		}
 
-		if projectType(pCfg) == ProjectTypeLibrary {
-			if err := validateLibraryConfig(p, projectMeta); err != nil {
-				return nil, err
-			}
+		pExts, hooks, err := buildProjectConfig(p, projectMeta, projectType(pCfg))
+
+		if err != nil {
+			return nil, err
 		}
 
-		ws.Projects[i] = buildProject(pCfg, projectMeta, *p)
+		ws.Projects[i] = buildProject(pCfg, projectMeta, *p, pExts, hooks)
+	}
+
+	// Only now are the projects' extensions known
+	if problems := checkInitHookExtensions(ws); len(problems) > 0 {
+		return nil, InvalidWorkspaceConfigError{Path: wsMeta.Path, Problems: problems}
 	}
 
 	ws.PreferencesPath = preferencesPath(wsMeta.Path, cfg.Preferences.Path)

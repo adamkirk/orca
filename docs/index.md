@@ -13,8 +13,7 @@ Orca orchestrates development environments that are spread across several reposi
 | [Workspaces & projects](./getting_started/index.md) | Group repositories (projects) into a workspace, then clone and register them all with one command. |
 | [Environments](./usage/environments.md) | `up`, `down`, `restart`, `logs` and `exec` against one project or the whole workspace, starting projects in dependency order. |
 | [Overlays](./compose_files/overlays/index.md) | Generated compose files that join projects onto a shared network, add DNS aliases and inject TLS certificates, without editing your compose files. |
-| [Extensions](./usage/extensions_and_provisioners.md) | Project-defined shortcuts for commands you run in a service, e.g. `orca ext artisan migrate`. |
-| [Provisioners](./usage/extensions_and_provisioners.md#provisioners) | One-off setup for a project, such as creating `.env` files from their examples. |
+| [Extensions](./usage/extensions.md) | Named steps defined in config: shortcuts for commands you run in a service, e.g. `orca ext artisan migrate`, and setup such as creating `.env` files from their examples. |
 | [Hosts & TLS](./usage/hosts_and_tls.md) | Add your projects' hostnames to `/etc/hosts`, and generate locally trusted TLS certificates for them. |
 | [Git helpers](./usage/git.md) | Check out, pull, push and see the status of branches across every project in a workspace. |
 | [Plugins](./plugins/index.md) | Add your own commands to orca, as separate programs that orca talks to over gRPC. |

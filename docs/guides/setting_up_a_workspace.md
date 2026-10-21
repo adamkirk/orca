@@ -8,7 +8,10 @@ This guide builds a complete workspace for a fictional company, Acme, with three
 | `acme/api` | A backend API, that uses the database. |
 | `acme/web` | A frontend, that calls the API. |
 
-At the end, anyone on the team can run four commands to get the whole environment running at `https://api.acme.test` and `https://web.acme.test`.
+At the end, anyone on the team can run one command to clone and set up every repository, and a few more to get the whole environment running at `https://api.acme.test` and `https://web.acme.test`.
+
+!!! tip "See it working"
+    The [orca-fictorg](https://github.com/orca-fictorg/root) repositories are a complete, runnable workspace built the same way, with a library project, a disabled project, a project on a branch, and hooks for every step. Try it with `orca ws init --repo orca-fictorg/root`.
 
 The first half is for whoever sets the workspace up; the second half, [Joining the workspace](#joining-the-workspace), is what everyone else does.
 
@@ -125,17 +128,15 @@ Each application repository gets its own `orca.project.yaml`.
     envFiles:
       - path: .env
 
-    provisioners:
-      # Fresh clones get a .env based on the committed example
-      - exampleFile:
-          src: .env.example
-          target: .env
-          type: dotenv
-
     hosts:
       - api.acme.test
 
     extensions:
+      # Each developer gets a .env based on the committed example
+      - name: env
+        type: syncFile
+        source: .env.example
+        target: .env
       - name: migrate
         service: app
         command: ./bin/migrate
@@ -146,6 +147,12 @@ Each application repository gets its own `orca.project.yaml`.
         command: go test
         defaultArgs:
           - ./...
+
+    # Run after the project is cloned, so a fresh clone is ready to start
+    hooks:
+      clone:
+        post:
+          - extension: env
     ```
 === "api/docker-compose.yml"
     ```yaml
@@ -214,13 +221,30 @@ $ orca ws init --repo acme/local-env
 
 Repositories you've already cloned in those locations are detected (by their git remote) and registered, rather than cloned again.
 
-It also creates your [preferences file](../configuration/preferences.md), `orca.preferences.yaml`, next to the workspace config, listing every project. It's yours, rather than the team's, so `local-env`'s `.gitignore` should list it:
+Before cloning, it creates your [preferences file](../configuration/preferences.md), `orca.preferences.yaml`, next to the workspace config, listing every project. It's yours, rather than the team's, so `local-env`'s `.gitignore` should list it:
 
 ```gitignore
 orca.preferences.yaml
 ```
 
 If it isn't ignored, `orca ws init` reminds you.
+
+Once everything is cloned, it runs each project's `clone.post` [hook](../usage/hooks.md). Here that's `api`'s `env`, which creates its `.env`. As that runs config someone else wrote on your machine, orca lists it first, and asks you to trust it:
+
+```
+This workspace wants to run the following on your machine:
+
+┌─────────┬────────────┬───────────┬──────────┬─────────────────────┐
+│ Project │    Hook    │ Extension │   Type   │        Runs         │
+├─────────┼────────────┼───────────┼──────────┼─────────────────────┤
+│ api     │ clone.post │ env       │ syncFile │ .env.example → .env │
+└─────────┴────────────┴───────────┴──────────┴─────────────────────┘
+Trust these and continue? [y/N] y
+api clone.post: env
+  Created .env from .env.example.
+```
+
+It ends by listing the next steps, which the rest of this section walks through. Running `orca ws init` again is safe: it clones anything that's missing, and runs the hooks again, which is how to finish a setup that failed part-way.
 
 If the repository is private, set `GH_TOKEN` or `GITHUB_TOKEN` first, so orca can read the workspace config through the GitHub API. See [Initialising a workspace](../usage/workspaces.md#from-github).
 
@@ -246,13 +270,7 @@ $ orca ws ls
 
 ### One-off setup
 
-Create each project's `.env` from its example:
-
-```sh
-$ (cd ~/code/acme/api && orca provision)
-```
-
-Generate TLS certificates, and add the hosts to `/etc/hosts`:
+`api`'s `.env` was created by its hook. What's left needs doing once per machine. Generate TLS certificates, and add the hosts to `/etc/hosts`:
 
 ```sh
 $ orca tls gen

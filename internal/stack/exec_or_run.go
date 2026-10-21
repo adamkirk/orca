@@ -46,8 +46,8 @@ func (m *Manager) ExecOrRun(ctx context.Context, cmd ExecCommand) error {
 	}
 
 	if !isRunning {
-		return m.compose.Run(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
+		return m.compose.Run(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args, nil)
 	}
 
-	return m.compose.Exec(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args)
+	return m.compose.Exec(execCtx.Workspace, execCtx.Project, cmd.Service, cmd.Args, nil)
 }

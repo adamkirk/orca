@@ -29,6 +29,26 @@ type InitialiseCommand struct {
 	SourceDirectory   string
 	WorkspaceFileName string
 	Into              string
+
+	// Clone without running any hooks
+	SkipHooks bool
+
+	// Run every extension the hooks run without asking, and without recording
+	// them as trusted
+	Yes bool
+}
+
+// initOpts are the options for initialising a workspace, from a directory or a
+// repository.
+type initOpts struct {
+	workspaceFile string
+	into          string
+
+	// Skip checking the projects' branches exist, when the caller has already
+	branchesChecked bool
+
+	skipHooks bool
+	yes       bool
 }
 
 func (InitialiseCommand) MessageName() string {
@@ -36,8 +56,15 @@ func (InitialiseCommand) MessageName() string {
 }
 
 func (m *Manager) Initialise(ctx context.Context, cmd InitialiseCommand) error {
+	opts := initOpts{
+		workspaceFile: cmd.WorkspaceFileName,
+		into:          cmd.Into,
+		skipHooks:     cmd.SkipHooks,
+		yes:           cmd.Yes,
+	}
+
 	if cmd.SourceRepo != "" {
-		return m.InitialiseFromRemoteRepo(ctx, cmd.SourceRepo, cmd.Branch, cmd.WorkspaceFileName, cmd.Into)
+		return m.initialiseFromRemoteRepo(cmd.SourceRepo, cmd.Branch, opts)
 	}
 
 	if cmd.Branch != "" {
@@ -47,17 +74,26 @@ func (m *Manager) Initialise(ctx context.Context, cmd InitialiseCommand) error {
 		)
 	}
 
-	return m.InitialiseFromLocalDirectory(ctx, cmd.SourceDirectory, cmd.WorkspaceFileName, cmd.Into, false)
+	return m.initialiseFromLocalDirectory(cmd.SourceDirectory, opts)
 }
 
-// InitialiseFromLocalDirectory registers the workspace config in dir, and
-// clones its projects. branchesChecked skips checking the projects' branches
-// exist, when the caller has already done so.
+// initialiseFromLocalDirectory registers the workspace config in dir, creates
+// the preferences file, clones its projects, and runs their hooks. It's safe to
+// run again: a workspace that's already registered from the same config carries
+// on, cloning whatever's missing, and running the hooks again.
 //
 // The branches are checked before the workspace is registered, so a missing
 // branch leaves nothing behind.
-func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, workspaceFile string, into string, branchesChecked bool) error {
-	workspaceConfigPath := fmt.Sprintf("%s/%s", dir, workspaceFile)
+func (m *Manager) initialiseFromLocalDirectory(dir string, opts initOpts) error {
+	// The path is registered, and every command loads the config from it,
+	// wherever it's run, so it has to be absolute
+	dir, err := filepath.Abs(dir)
+
+	if err != nil {
+		return usererr.Wrap(err, "Failed to determine the workspace's directory!")
+	}
+
+	workspaceConfigPath := filepath.Join(dir, opts.workspaceFile)
 	exists, err := afero.Exists(m.fs, workspaceConfigPath)
 
 	if err != nil {
@@ -77,23 +113,13 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return usererr.Wrap(err, fmt.Sprintf("Failed to load workspace config '%s'!", workspaceConfigPath))
 	}
 
-	if !branchesChecked {
-		if err := m.checkWorkspaceBranches(cfg, into); err != nil {
+	if !opts.branchesChecked {
+		if err := m.checkWorkspaceBranches(cfg, opts.into); err != nil {
 			return err
 		}
 	}
 
-	err = m.configManager.AddWorkspace(workspaceConfigPath, cfg.Name)
-
-	if err != nil {
-		if errors.Is(err, ErrWorkspaceAlreadyExists) {
-			return usererr.Wrap(err, "Workspace already exists!")
-		}
-
-		return usererr.Wrap(err, "Failed to register workspace, this is likely a bug!")
-	}
-
-	if err := m.clone(cfg.Name, "", into, true); err != nil {
+	if err := m.registerWorkspace(cfg.Name, workspaceConfigPath); err != nil {
 		return err
 	}
 
@@ -101,10 +127,83 @@ func (m *Manager) InitialiseFromLocalDirectory(ctx context.Context, dir string, 
 		return err
 	}
 
-	m.tui.Success("Workspace initialised!")
+	ws, err := m.clone(cfg.Name, cloneOpts{
+		to:              opts.into,
+		branchesChecked: true,
+		skipHooks:       opts.skipHooks,
+		yes:             opts.yes,
+		initialise:      true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	m.showNextSteps(ws)
 	m.suggestIgnoringPreferences(cfg.PreferencesPath)
 
 	return nil
+}
+
+// registerWorkspace records the workspace in the user config. One that's
+// already registered from the same config is left as it is, so init can be run
+// again, but another workspace with the same name is an error.
+func (m *Manager) registerWorkspace(name string, configPath string) error {
+	err := m.configManager.AddWorkspace(configPath, name)
+
+	if !errors.Is(err, ErrWorkspaceAlreadyExists) {
+		return usererr.Wrap(err, "Failed to register workspace, this is likely a bug!")
+	}
+
+	existing, metaErr := m.configManager.GetWorkspaceMeta(name)
+
+	if metaErr != nil {
+		return usererr.Wrap(metaErr, "Failed to check the existing workspace, this is likely a bug!")
+	}
+
+	if filepath.Clean(existing.Path) != filepath.Clean(configPath) {
+		return usererr.Wrap(err, fmt.Sprintf("There's already a workspace called %s, from %s!", name, existing.Path))
+	}
+
+	m.tui.Info(fmt.Sprintf("Workspace %s is already initialised here; cloning anything that's missing, and running its hooks again.", name))
+
+	return nil
+}
+
+// showNextSteps lists what's left to do to run the workspace, which orca never
+// does itself, e.g. as it needs sudo.
+func (m *Manager) showNextSteps(ws *Workspace) {
+	steps := [][2]string{}
+
+	if m.configManager.GetCurrentWorkspace() != ws.Name {
+		steps = append(steps, [2]string{fmt.Sprintf("orca ws switch %s", ws.Name), "make it your current workspace"})
+	}
+
+	if len(ws.GetUniqueHosts()) > 0 {
+		steps = append(steps, [2]string{`sudo ORCA_CONFIG_PATH="$HOME/.orca/orca.yaml" orca hosts`, "add its hosts to /etc/hosts"})
+	}
+
+	if len(ws.GetUniqueTLSCertificates()) > 0 {
+		steps = append(steps, [2]string{"orca tls gen", "generate its TLS certificates"})
+	}
+
+	steps = append(steps, [2]string{"orca up", "start it"})
+
+	width := 0
+
+	for _, step := range steps {
+		width = max(width, len(step[0]))
+	}
+
+	lines := []string{}
+
+	for _, step := range steps {
+		lines = append(lines, fmt.Sprintf("  %-*s   %s", width, step[0], step[1]))
+	}
+
+	m.tui.Info("")
+	m.tui.Success(fmt.Sprintf("Workspace %s is ready. Next steps:", ws.Name))
+	m.tui.Info(lines...)
 }
 
 // createPreferences creates the workspace's preferences file, listing every
@@ -145,9 +244,8 @@ func (m *Manager) suggestIgnoringPreferences(path string) {
 
 	m.tui.Info(
 		"",
-		"Next steps:",
-		fmt.Sprintf("  %s holds your own preferences, like which projects are enabled.", path),
-		"  It isn't ignored by git, so unless your team commits it as shared defaults, add it to the workspace repository's .gitignore.",
+		fmt.Sprintf("Note: %s holds your own preferences, like which projects are enabled.", path),
+		"It isn't ignored by git, so unless your team commits it as shared defaults, add it to the workspace repository's .gitignore.",
 	)
 }
 
@@ -175,7 +273,9 @@ func parseGithubRepo(input string) (githubRepo, error) {
 	}, nil
 }
 
-func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string, branch string, workspaceFile string, into string) error {
+// initialiseFromRemoteRepo clones the workspace's repository into opts.into,
+// unless it's already there, then initialises it from there.
+func (m *Manager) initialiseFromRemoteRepo(repoName string, branch string, opts initOpts) error {
 	repo, err := parseGithubRepo(repoName)
 
 	if err != nil {
@@ -197,7 +297,7 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 		}
 	}
 
-	workspaceFilePath := strings.TrimPrefix(path.Clean(workspaceFile), "/")
+	workspaceFilePath := strings.TrimPrefix(path.Clean(opts.workspaceFile), "/")
 
 	m.tui.Info(fmt.Sprintf("Checking for '%s' in %s/%s%s...", workspaceFilePath, repo.Owner, repo.Name, branchSuffix(branch)))
 
@@ -228,42 +328,67 @@ func (m *Manager) InitialiseFromRemoteRepo(ctx context.Context, repoName string,
 		)
 	}
 
-	cloneDir, err := filepath.Abs(filepath.Join(into, repo.Name))
+	cloneDir, err := filepath.Abs(filepath.Join(opts.into, repo.Name))
 
 	if err != nil {
 		return usererr.Wrap(err, "Failed to determine clone directory!")
 	}
 
-	dirExists, err := afero.Exists(m.fs, cloneDir)
+	alreadyCloned, err := m.isClonedAt(cloneDir, repo.CloneURL)
 
 	if err != nil {
 		return err
 	}
 
-	if dirExists {
-		return usererr.Wrap(
-			fmt.Errorf("%w: %s", ErrDirectoryAlreadyExists, cloneDir),
-			fmt.Sprintf("Cannot clone into '%s', it already exists!", cloneDir),
-		)
-	}
-
 	// Check the projects' branches before cloning anything, including the
 	// workspace repo itself
-	if err := m.checkWorkspaceBranches(wsCfg, into); err != nil {
+	if err := m.checkWorkspaceBranches(wsCfg, opts.into); err != nil {
 		return err
 	}
 
-	if err := m.fs.MkdirAll(into, 0755); err != nil {
-		return usererr.Wrap(err, "Failed to create target directory!")
+	if alreadyCloned {
+		m.tui.Info(fmt.Sprintf("%s/%s is already cloned at %s, so it's used as it is.", repo.Owner, repo.Name, cloneDir))
+	} else {
+		if err := m.fs.MkdirAll(opts.into, 0755); err != nil {
+			return usererr.Wrap(err, "Failed to create target directory!")
+		}
+
+		m.tui.Info(fmt.Sprintf("Cloning '%s'%s into %s...", repo.CloneURL, branchSuffix(branch), cloneDir))
+
+		if err := m.git.Clone(repo.CloneURL, cloneDir, branch); err != nil {
+			return usererr.Wrap(err, "Clone failed!")
+		}
 	}
 
-	m.tui.Info(fmt.Sprintf("Cloning '%s'%s into %s...", repo.CloneURL, branchSuffix(branch), cloneDir))
+	opts.branchesChecked = true
 
-	if err := m.git.Clone(repo.CloneURL, cloneDir, branch); err != nil {
-		return usererr.Wrap(err, "Clone failed!")
+	return m.initialiseFromLocalDirectory(cloneDir, opts)
+}
+
+// isClonedAt reports whether dir is already a clone of the repo, e.g. as init
+// is being run again. Anything else already at dir is an error, as the repo
+// can't be cloned there.
+func (m *Manager) isClonedAt(dir string, repoURL string) (bool, error) {
+	exists, err := afero.Exists(m.fs, dir)
+
+	if err != nil || !exists {
+		return false, err
 	}
 
-	return m.InitialiseFromLocalDirectory(ctx, cloneDir, workspaceFile, into, true)
+	hasOrigin, err := m.git.DirectoryHasOrigin(dir, repoURL)
+
+	if err != nil {
+		return false, usererr.Wrap(err, fmt.Sprintf("Failed to check what's already in '%s'!", dir))
+	}
+
+	if !hasOrigin {
+		return false, usererr.Wrap(
+			fmt.Errorf("%w: %s", ErrDirectoryAlreadyExists, dir),
+			fmt.Sprintf("Cannot clone into '%s', it already exists, and isn't a clone of %s!", dir, repoURL),
+		)
+	}
+
+	return true, nil
 }
 
 // checkWorkspaceBranches checks the branches of a workspace's projects before

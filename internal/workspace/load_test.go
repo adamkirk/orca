@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseUnconfiguredWorkspace(t *testing.T) {
@@ -237,9 +238,30 @@ extensions:
 
 	assert.NoError(t, err)
 	assert.Equal(t, []Extension{
-		{Name: "artisan", Service: "app", Command: "php artisan", Description: "Run an artisan command"},
-		{Name: "test", Service: "app", Command: "vendor/bin/phpunit"},
+		{Name: "artisan", Description: "Run an artisan command", Spec: CommandSpec{Service: "app", Command: "php artisan"}},
+		{Name: "test", Spec: CommandSpec{Service: "app", Command: "vendor/bin/phpunit"}},
 	}, ws.Projects[0].Config.Extensions)
+}
+
+func TestLoadIgnoresProvisioners(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	path := "/acme/root/orca.workspace.yaml"
+
+	require.NoError(t, afero.WriteFile(fs, path, []byte("name: acme\nprojects:\n  - name: api\n    repository:\n      ssh: git@github.com:acme/api.git\n"), 0644))
+	require.NoError(t, afero.WriteFile(fs, "/acme/api/"+DefaultProjectFileName, []byte(`
+provisioners:
+  - exampleFile:
+      src: .env.example
+      target: .env
+`), 0644))
+
+	ws, err := NewRepository(fs, stubUserConfig{
+		workspaces: map[string]WorkspaceMeta{"acme": {Name: "acme", Path: path}},
+		projects:   map[string]ProjectMeta{"api": {Name: "api", Path: "/acme/api", WorkspaceName: "acme"}},
+	}).Load("acme")
+
+	require.NoError(t, err)
+	assert.Equal(t, []Extension{}, ws.Projects[0].Config.Extensions)
 }
 
 func TestLoadLibrary(t *testing.T) {
@@ -278,10 +300,10 @@ projects:
 		assert.True(t, ws.Projects[0].IsLibrary())
 		assert.Equal(t, ProjectConfig{
 			ComposeFiles: ComposeFiles{Extras: []ExtraComposeFile{}},
-			Provisioners: []Provisioner{},
 			EnvFiles:     []EnvFile{},
 			Properties:   []Property{},
 			Extensions:   []Extension{},
+			Hooks:        map[Hook][]HookEntry{},
 		}, ws.Projects[0].Config)
 	})
 
@@ -289,7 +311,7 @@ projects:
 		ws, err := newRepo(t, "extensions:\n  - name: build\n    command: make build\n").Load("acme")
 
 		assert.NoError(t, err)
-		assert.Equal(t, []Extension{{Name: "build", Command: "make build"}}, ws.Projects[0].Config.Extensions)
+		assert.Equal(t, []Extension{{Name: "build", Spec: CommandSpec{Command: "make build"}}}, ws.Projects[0].Config.Extensions)
 	})
 
 	t.Run("lists everything that doesn't apply to a library", func(t *testing.T) {

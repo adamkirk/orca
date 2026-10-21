@@ -49,6 +49,7 @@ projects:
 | `projects` | The projects in this workspace, see [below](#projects). |
 | `overlays` | Workspace-wide [overlays](../compose_files/overlays/index.md). Currently only [`network`](../compose_files/overlays/network.md) is available. |
 | `preferences.path` | Where each developer's [preferences file](./preferences.md) lives, relative to this file. Defaults to `orca.preferences.yaml`, next to it. |
+| `hooks` | Optional. Only [`init.post`](../usage/hooks.md#the-workspaces-initpost), which runs once every project is cloned and set up, e.g. to seed the databases. The workspace config has no extensions, so each entry names a `project` and one of its `extension`s, which runs in that project's directory. Every other hook belongs in a [project's config](./project_config.md#hooks). |
 
 ### Projects
 
@@ -83,6 +84,7 @@ Orca checks the workspace config whenever it loads it, so every command fails if
 - No project has both `repository.self` and `repository.branch`.
 - Every `type` is `service` or `library`.
 - No `path` is absolute, or escapes the directory projects are cloned into with `..`, and none is combined with `repository.self`.
+- `hooks` only has `init.post`, and each of its entries has an `extension` and a `project` that's in the workspace, and nothing else. Once that project is cloned, its config must define the extension.
 
 Every problem found is listed, e.g.:
 

@@ -72,7 +72,8 @@ nav:
       - usage/index.md
       - Environments: usage/environments.md
       - Workspaces: usage/workspaces.md
-      - Extensions & provisioners: usage/extensions_and_provisioners.md
+      - Extensions: usage/extensions.md
+      - Hooks: usage/hooks.md
       - Hosts & TLS: usage/hosts_and_tls.md
       - Git: usage/git.md
       - Orca itself: usage/system.md
@@ -82,6 +83,7 @@ nav:
       - User config: configuration/user_config.md
       - Workspace config: configuration/workspace_config.md
       - Project config: configuration/project_config.md
+      - Extensions: configuration/extensions.md
       - Preferences: configuration/preferences.md
   - Compose files:
       - compose_files/index.md

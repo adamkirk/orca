@@ -2,6 +2,11 @@ package workspace
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -103,7 +108,7 @@ projects:
 			},
 		}
 
-		return NewManager(fs, stubTUI{}, nil, git, github, NewRepository(fs, nil), nil), git, github
+		return NewManager(fs, stubTUI{}, nil, git, github, NewRepository(fs, nil), nil, nil), git, github
 	}
 
 	t.Run("missing workspace branch", func(t *testing.T) {
@@ -176,6 +181,47 @@ projects:
 	})
 }
 
+// registeringConfig records the workspaces added, then stops the init by
+// saying they already exist.
+type registeringConfig struct {
+	config
+
+	added []string
+}
+
+func (c *registeringConfig) AddWorkspace(path string, _ string) error {
+	c.added = append(c.added, path)
+
+	return ErrWorkspaceAlreadyExists
+}
+
+// GetWorkspaceMeta says the workspace is registered from somewhere else, so
+// init stops there.
+func (c *registeringConfig) GetWorkspaceMeta(name string) (WorkspaceMeta, error) {
+	return WorkspaceMeta{Name: name, Path: "/elsewhere/orca.workspace.yaml"}, nil
+}
+
+func TestInitialiseFromLocalDirectory_RegistersAnAbsolutePath(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	fs := afero.NewMemMapFs()
+	path := filepath.Join(wd, "local-env", DefaultWorkspaceFileName)
+	require.NoError(t, afero.WriteFile(fs, path, []byte("name: acme\nprojects: []\n"), 0644))
+
+	cfg := &registeringConfig{}
+	m := NewManager(fs, stubTUI{}, cfg, &stubGit{}, nil, NewRepository(fs, nil), nil, nil)
+
+	err = m.Initialise(context.Background(), InitialiseCommand{
+		SourceDirectory:   "./local-env",
+		WorkspaceFileName: DefaultWorkspaceFileName,
+		Into:              "..",
+	})
+
+	assert.ErrorIs(t, err, ErrWorkspaceAlreadyExists)
+	assert.Equal(t, []string{path}, cfg.added)
+}
+
 func TestCreatePreferences(t *testing.T) {
 	cfg := &UnconfiguredWorkspace{
 		Name:            "acme",
@@ -187,7 +233,7 @@ func TestCreatePreferences(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		tui := &recordingTUI{}
 
-		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil).createPreferences(cfg))
+		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil, nil).createPreferences(cfg))
 
 		prefs, err := loadPreferences(fs, cfg.PreferencesPath)
 		require.NoError(t, err)
@@ -202,7 +248,7 @@ func TestCreatePreferences(t *testing.T) {
 		require.NoError(t, afero.WriteFile(fs, cfg.PreferencesPath, []byte("projects:\n  web:\n    enabled: false\n"), 0644))
 		tui := &recordingTUI{}
 
-		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil).createPreferences(cfg))
+		require.NoError(t, NewManager(fs, tui, nil, &stubGit{}, nil, nil, nil, nil).createPreferences(cfg))
 
 		prefs, err := loadPreferences(fs, cfg.PreferencesPath)
 		require.NoError(t, err)
@@ -215,16 +261,172 @@ func TestSuggestIgnoringPreferences(t *testing.T) {
 	t.Run("suggests ignoring it", func(t *testing.T) {
 		tui := &recordingTUI{}
 
-		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{}, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
+		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{}, nil, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
 
-		assert.Contains(t, tui.lines, "Next steps:")
+		assert.Contains(t, tui.lines, "Note: /acme/root/orca.preferences.yaml holds your own preferences, like which projects are enabled.")
 	})
 
 	t.Run("not when it's already ignored", func(t *testing.T) {
 		tui := &recordingTUI{}
 
-		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{ignored: true}, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
+		NewManager(afero.NewMemMapFs(), tui, nil, &stubGit{ignored: true}, nil, nil, nil, nil).suggestIgnoringPreferences("/acme/root/orca.preferences.yaml")
 
 		assert.Empty(t, tui.lines)
+	})
+}
+
+// initConfig is a user config that the workspace is registered in by init.
+type initConfig struct {
+	*cloneConfig
+
+	added   []string
+	current string
+}
+
+func (c *initConfig) AddWorkspace(path string, name string) error {
+	if c.meta.Path != "" {
+		return fmt.Errorf("%w: %s", ErrWorkspaceAlreadyExists, name)
+	}
+
+	c.meta = WorkspaceMeta{Name: name, Path: path}
+	c.added = append(c.added, path)
+
+	return nil
+}
+
+func (c *initConfig) GetCurrentWorkspace() string {
+	return c.current
+}
+
+func TestInitialiseRunsHooks(t *testing.T) {
+	const wsConfig = `
+name: acme
+projects:
+  - name: local-env
+    type: library
+    repository:
+      self: true
+  - name: api
+    repository:
+      ssh: git@github.com:acme/api.git
+`
+
+	newManager := func(t *testing.T) (*Manager, *initConfig, *stubGit, *recordingHooks, *recordingTUI) {
+		fs := afero.NewMemMapFs()
+		require.NoError(t, afero.WriteFile(fs, "/acme/local-env/"+DefaultWorkspaceFileName, []byte(wsConfig), 0644))
+
+		cfg := &initConfig{cloneConfig: &cloneConfig{}}
+		git := &stubGit{fs: fs, root: "/acme/local-env", ignored: true, files: map[string]string{
+			"/acme/api/" + DefaultProjectFileName: "hosts: [api.acme.test]\ntlsCerts: [\"*.acme.test\"]\n",
+		}}
+		hooks := &recordingHooks{}
+		tui := &recordingTUI{}
+
+		return NewManager(fs, tui, cfg, git, nil, NewRepository(fs, cfg), nil, hooks), cfg, git, hooks, tui
+	}
+
+	local := InitialiseCommand{SourceDirectory: "/acme/local-env", WorkspaceFileName: DefaultWorkspaceFileName, Into: "/acme"}
+
+	t.Run("creates the preferences, clones, runs every hook, and shows what's next", func(t *testing.T) {
+		m, cfg, git, hooks, tui := newManager(t)
+
+		require.NoError(t, m.Initialise(context.Background(), local))
+
+		assert.Equal(t, []string{"/acme/local-env/" + DefaultWorkspaceFileName}, cfg.added)
+		assert.Equal(t, []string{"git@github.com:acme/api.git"}, git.cloned)
+		assert.Equal(t, []SetUpOpts{{Projects: []string{"local-env", "api"}, Initialise: true}}, hooks.calls)
+
+		prefs := slices.Index(tui.lines, "Created /acme/local-env/orca.preferences.yaml, where you can enable and disable projects.")
+		cloning := slices.Index(tui.lines, "Cloning 'git@github.com:acme/api.git' into /acme/api...")
+		assert.True(t, prefs >= 0 && prefs < cloning, "the preferences are created before anything's cloned")
+
+		next := slices.Index(tui.lines, "Workspace acme is ready. Next steps:")
+		require.GreaterOrEqual(t, next, 0)
+		hosts := `sudo ORCA_CONFIG_PATH="$HOME/.orca/orca.yaml" orca hosts`
+		step := func(cmd string, what string) string {
+			return fmt.Sprintf("  %-*s   %s", len(hosts), cmd, what)
+		}
+
+		assert.Equal(t, []string{
+			step("orca ws switch acme", "make it your current workspace"),
+			step(hosts, "add its hosts to /etc/hosts"),
+			step("orca tls gen", "generate its TLS certificates"),
+			step("orca up", "start it"),
+		}, tui.lines[next+1:])
+	})
+
+	t.Run("running it again clones nothing more, and runs the hooks again", func(t *testing.T) {
+		m, cfg, git, hooks, tui := newManager(t)
+
+		require.NoError(t, m.Initialise(context.Background(), local))
+		require.NoError(t, m.Initialise(context.Background(), local))
+
+		assert.Len(t, cfg.added, 1)
+		assert.Equal(t, []string{"git@github.com:acme/api.git"}, git.cloned)
+		assert.Len(t, hooks.calls, 2)
+		assert.Equal(t, hooks.calls[0], hooks.calls[1])
+		assert.Contains(t, tui.lines, "Workspace acme is already initialised here; cloning anything that's missing, and running its hooks again.")
+	})
+
+	t.Run("doesn't suggest switching to the current workspace", func(t *testing.T) {
+		m, cfg, _, _, tui := newManager(t)
+		cfg.current = "acme"
+
+		require.NoError(t, m.Initialise(context.Background(), local))
+
+		assert.NotContains(t, strings.Join(tui.lines, "\n"), "orca ws switch")
+	})
+
+	t.Run("another workspace with the same name", func(t *testing.T) {
+		m, cfg, git, hooks, _ := newManager(t)
+		cfg.meta = WorkspaceMeta{Name: "acme", Path: "/elsewhere/orca.workspace.yaml"}
+
+		err := m.Initialise(context.Background(), local)
+
+		assert.ErrorIs(t, err, ErrWorkspaceAlreadyExists)
+		assert.ErrorContains(t, err, "There's already a workspace called acme, from /elsewhere/orca.workspace.yaml!")
+		assert.Empty(t, git.cloned)
+		assert.Empty(t, hooks.calls)
+	})
+
+	t.Run("skips the hooks, or runs them without asking", func(t *testing.T) {
+		m, _, git, hooks, _ := newManager(t)
+		skip := local
+		skip.SkipHooks = true
+
+		require.NoError(t, m.Initialise(context.Background(), skip))
+		assert.Empty(t, hooks.calls)
+		assert.Len(t, git.cloned, 1)
+
+		yes := local
+		yes.Yes = true
+
+		require.NoError(t, m.Initialise(context.Background(), yes))
+		assert.Equal(t, []SetUpOpts{{Projects: []string{"local-env", "api"}, Initialise: true, Yes: true}}, hooks.calls)
+	})
+
+	t.Run("from a repository that's already cloned, it's used as it is", func(t *testing.T) {
+		m, _, git, hooks, tui := newManager(t)
+		git.origins = map[string]string{"/acme/local-env": "git@github.com:acme/local-env.git"}
+		m.githubClient = &stubGithub{configs: map[string]string{"": wsConfig}}
+
+		err := m.Initialise(context.Background(), InitialiseCommand{SourceRepo: "acme/local-env", WorkspaceFileName: DefaultWorkspaceFileName, Into: "/acme"})
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"git@github.com:acme/api.git"}, git.cloned, "the workspace's repo isn't cloned again")
+		assert.Contains(t, tui.lines, "acme/local-env is already cloned at /acme/local-env, so it's used as it is.")
+		assert.Len(t, hooks.calls, 1)
+	})
+
+	t.Run("from a repository, when something else is in the way", func(t *testing.T) {
+		m, _, git, hooks, _ := newManager(t)
+		git.origins = map[string]string{"/acme/local-env": "git@github.com:someone/else.git"}
+		m.githubClient = &stubGithub{configs: map[string]string{"": wsConfig}}
+
+		err := m.Initialise(context.Background(), InitialiseCommand{SourceRepo: "acme/local-env", WorkspaceFileName: DefaultWorkspaceFileName, Into: "/acme"})
+
+		assert.ErrorIs(t, err, ErrDirectoryAlreadyExists)
+		assert.Empty(t, git.cloned)
+		assert.Empty(t, hooks.calls)
 	})
 }

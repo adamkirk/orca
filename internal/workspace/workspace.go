@@ -5,10 +5,6 @@ import (
 	"slices"
 )
 
-type ExampleFileProvisionerType string
-
-const ExampleFileProvisionerTypeDotenv ExampleFileProvisionerType = "dotenv"
-
 type LoaderPropertyCondition struct {
 	Name  string
 	Value any
@@ -36,38 +32,18 @@ type Property struct {
 	Default any
 }
 
-type Extension struct {
-	Name        string
-	Chdir       string
-	Command     string
-	Service     string
-	DefaultArgs []string
-	// Shown next to the name when completing it
-	Description string
-}
-
 type EnvFile struct {
 	Path string
 }
 
-type ExampleFileProvisioner struct {
-	Src    string
-	Target string
-	Type   ExampleFileProvisionerType
-}
-
-type Provisioner struct {
-	ExampleFile *ExampleFileProvisioner
-}
-
 type ProjectConfig struct {
 	ComposeFiles    ComposeFiles
-	Provisioners    []Provisioner
 	EnvFiles        []EnvFile
 	Properties      []Property
 	Hosts           []string
 	TLSCertificates []string
 	Extensions      []Extension
+	Hooks           map[Hook][]HookEntry
 }
 
 type ProjectRepositoryConfig struct {
@@ -132,14 +108,27 @@ func (p Project) EnvFilePaths() []string {
 	return paths
 }
 
+// DefinedHooks returns the project's hooks that run something.
+func (p Project) DefinedHooks() []Hook {
+	return definedHooks(p.Config.Hooks, ProjectHooks)
+}
+
+// FindExtension returns the extension the project's config defines with the
+// name.
 func (p Project) FindExtension(name string) (Extension, error) {
-	for _, ext := range p.Config.Extensions {
-		if ext.Name == name {
-			return ext, nil
-		}
+	return findExtension(p.Config.Extensions, name)
+}
+
+func findExtension(exts []Extension, name string) (Extension, error) {
+	i := slices.IndexFunc(exts, func(e Extension) bool {
+		return e.Name == name
+	})
+
+	if i == -1 {
+		return Extension{}, fmt.Errorf("%w: %s", ErrUnknownExtension, name)
 	}
 
-	return Extension{}, fmt.Errorf("%w: %s", ErrUnknownExtension, name)
+	return exts[i], nil
 }
 
 type NetworkOverlayConfig struct {
@@ -165,6 +154,10 @@ type Workspace struct {
 	// UnknownPreferenceProjects are listed in the preferences file, but aren't
 	// in the workspace, so are ignored
 	UnknownPreferenceProjects []string
+
+	// The workspace's init.post, which runs projects' extensions once every
+	// project is cloned and set up
+	InitHooks []InitHookEntry
 }
 
 func (ws *Workspace) GetProject(name string) (*Project, error) {

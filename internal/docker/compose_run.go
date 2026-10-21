@@ -2,6 +2,7 @@ package docker
 
 import (
 	"errors"
+	"io"
 	"os/exec"
 
 	"github.com/adamkirk/orca/internal/process"
@@ -9,8 +10,13 @@ import (
 	"github.com/adamkirk/orca/internal/workspace"
 )
 
+// Run runs a command in the service in a new container, removed afterwards.
+// With output, the command isn't attached to a terminal, and what it writes goes
+// to output, e.g. when a hook runs it. Without, it uses the host's terminal, so
+// it can be interactive.
+//
 // TODO: guard against nil inputs
-func (c *Compose) Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string) error {
+func (c *Compose) Run(ws *workspace.Workspace, p *workspace.Project, service string, cmdArgs []string, output io.Writer) error {
 	if err := c.goToProject(p); err != nil {
 		return err
 	}
@@ -21,10 +27,11 @@ func (c *Compose) Run(ws *workspace.Workspace, p *workspace.Project, service str
 	}
 
 	cmd := buildBaseComposeCommand(ws, p, overlay)
-	cmd = append(cmd, "run", "-it", "--rm", service)
+	cmd = append(cmd, attachArgs("run", output)...)
+	cmd = append(cmd, "--rm", service)
 	cmd = append(cmd, cmdArgs...)
 
-	err = c.cli.Exec(cmd[0], cmd[1:], process.WithHostIO(), process.ChdirOpt(p.ProjectDir))
+	err = c.cli.Exec(cmd[0], cmd[1:], outputOpt(output), process.ChdirOpt(p.ProjectDir))
 
 	if err != nil {
 		// If it's exit code 130, it's because they exited an interactive container

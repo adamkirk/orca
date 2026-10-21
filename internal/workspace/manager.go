@@ -36,6 +36,11 @@ type stack interface {
 	Down(ws *Workspace, p *Project) error
 }
 
+// hooks runs the hooks that set projects up once they're cloned.
+type hooks interface {
+	SetUp(ws *Workspace, opts SetUpOpts) error
+}
+
 type githubClient interface {
 	GetFileContents(owner string, repo string, path string, ref string) ([]byte, bool, error)
 }
@@ -54,9 +59,10 @@ type Manager struct {
 	githubClient  githubClient
 	workspaceRepo workspaceRepo
 	stack         stack
+	hooks         hooks
 }
 
-func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo, stack stack) *Manager {
+func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClient githubClient, workspaceRepo workspaceRepo, stack stack, hooks hooks) *Manager {
 	return &Manager{
 		fs:            fs,
 		tui:           tui,
@@ -65,5 +71,6 @@ func NewManager(fs afero.Fs, tui tui, configManager config, git git, githubClien
 		githubClient:  githubClient,
 		workspaceRepo: workspaceRepo,
 		stack:         stack,
+		hooks:         hooks,
 	}
 }

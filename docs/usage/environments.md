@@ -36,6 +36,20 @@ $ orca restart            # down, then up
 
 For a whole workspace, `up` starts projects in dependency order (projects before the ones that `require` them), and `down` stops them in reverse. See [dependencies between projects](../configuration/workspace_config.md#dependencies-between-projects). Projects you've [disabled](./workspaces.md#enabling-and-disabling-projects) are skipped by `up`, unless an enabled project requires them.
 
+### Hooks
+
+`up` and `down` run each project's `up` and `down` [hooks](./hooks.md), around starting and stopping it. For each project, in the order they're started:
+
+1. its `up.pre`
+2. the project is started
+3. its `up.post`
+
+Then the next project. `down` does the same, with the `down` hooks, in the order projects are stopped. The workspace repository's own project is no different from the others, and the workspace config has no `up` or `down` hooks.
+
+A project's hooks only run when it's started or stopped. So a disabled project that's skipped doesn't run them, but one that's started anyway, as an enabled project requires it, does.
+
+Any extension that you haven't trusted yet is asked about before anything starts or stops. `--yes` runs them all without asking, for that run only. A failing hook stops the command: a failing `up.pre` stops before its project starts, and a failing `up.post` fails the command, though its project is already started. `restart` asks about `down`'s hooks, then `up`'s.
+
 ## Logs
 
 ```sh
@@ -62,4 +76,4 @@ Either way you get an interactive terminal. Everything after the service is pass
 
 Earlier versions took the service with `-s`, and needed `--` before a command with flags, e.g. `orca exec -s app -- ls -la`. Drop both: `orca exec app ls -la`. A `--` straight after the service is an error, rather than being passed to the container.
 
-For commands you run often, define an [extension](./extensions_and_provisioners.md#extensions) instead.
+For commands you run often, define an [extension](./extensions.md) instead.

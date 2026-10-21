@@ -8,12 +8,12 @@ import (
 	"github.com/adamkirk/orca/internal/bus"
 	"github.com/adamkirk/orca/internal/config"
 	"github.com/adamkirk/orca/internal/docker"
+	"github.com/adamkirk/orca/internal/extension"
 	"github.com/adamkirk/orca/internal/git"
 	"github.com/adamkirk/orca/internal/github"
 	"github.com/adamkirk/orca/internal/hosts"
 	"github.com/adamkirk/orca/internal/plugins"
 	"github.com/adamkirk/orca/internal/process"
-	"github.com/adamkirk/orca/internal/provision"
 	"github.com/adamkirk/orca/internal/stack"
 	"github.com/adamkirk/orca/internal/sys"
 	"github.com/adamkirk/orca/internal/tls"
@@ -44,6 +44,9 @@ type services struct {
 
 	stack *stack.Manager
 
+	extension  *extension.Manager
+	trustStore *extension.TrustStore
+
 	hosts *hosts.Manager
 
 	workspaceRepo *workspace.Repository
@@ -53,8 +56,6 @@ type services struct {
 	compose                 *docker.Compose
 	composeParser           *docker.ComposeParser
 	composeOverlayGenerator *docker.ComposeOverlayGenerator
-
-	provision *provision.Manager
 
 	pluginManager      *plugins.Manager
 	pluginCommandCache *plugins.CommandCache
@@ -93,6 +94,7 @@ func (s *services) GetTui() *tui.Tui {
 	}
 
 	s.tui = tui.NewTui(
+		os.Stdin,
 		os.Stdout,
 		os.Stderr,
 	)
@@ -186,6 +188,7 @@ func (s *services) GetWorkspaceManager() *workspace.Manager {
 		s.GetGithubClient(),
 		s.GetWorkspaceRepository(),
 		s.GetCompose(),
+		s.GetExtension(),
 	)
 
 	return s.workspaceManager
@@ -196,9 +199,29 @@ func (s *services) GetStack() *stack.Manager {
 		return s.stack
 	}
 
-	s.stack = stack.NewManager(s.GetCompose(), s.GetTui())
+	s.stack = stack.NewManager(s.GetCompose(), s.GetTui(), s.GetExtension())
 
 	return s.stack
+}
+
+func (s *services) GetExtension() *extension.Manager {
+	if s.extension != nil {
+		return s.extension
+	}
+
+	s.extension = extension.NewManager(s.GetFs(), s.GetCompose(), s.GetExecutor(), s.GetTui(), s.GetTrustStore())
+
+	return s.extension
+}
+
+func (s *services) GetTrustStore() *extension.TrustStore {
+	if s.trustStore != nil {
+		return s.trustStore
+	}
+
+	s.trustStore = extension.NewTrustStore(s.GetFs(), getTrustFilePath())
+
+	return s.trustStore
 }
 
 func (s *services) GetHosts() *hosts.Manager {
@@ -283,19 +306,6 @@ func (s *services) GetComposeOverlayGenerator() *docker.ComposeOverlayGenerator 
 	return s.composeOverlayGenerator
 }
 
-func (s *services) GetProvision() *provision.Manager {
-	if s.provision != nil {
-		return s.provision
-	}
-
-	s.provision = provision.NewManager(
-		s.GetFs(),
-		s.GetTui(),
-	)
-
-	return s.provision
-}
-
 func (s *services) GetPluginManager() *plugins.Manager {
 	if s.pluginManager != nil {
 		return s.pluginManager
@@ -332,14 +342,15 @@ func (s *services) GetBus() *bus.Bus {
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Up))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Down))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecOrRun))
-	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ExecuteExtension))
+	b.HandleVoid(lazy(s.GetExtension, (*extension.Manager).Run))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).Logs))
 	b.HandleVoid(lazy(s.GetHosts, (*hosts.Manager).Sync))
-	b.HandleVoid(lazy(s.GetProvision, (*provision.Manager).Provision))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeConfig))
 	b.HandleVoid(lazy(s.GetStack, (*stack.Manager).ShowComposeCommand))
 	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ServiceChoices))
-	b.Handle(lazyResult(s.GetStack, (*stack.Manager).ExtensionChoices))
+	b.Handle(lazyResult(s.GetExtension, (*extension.Manager).Choices))
+	b.HandleVoid(lazy(s.GetExtension, (*extension.Manager).RunHook))
+	b.Handle(lazyResult(s.GetExtension, (*extension.Manager).HookChoices))
 
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).Checkout))
 	b.HandleVoid(lazy(s.GetGit, (*git.Manager).ShowBranches))
@@ -392,14 +403,11 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(cmd stack.ExecCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project, ServicesOnly: true}
 	})
-	ec.Target(func(cmd stack.ExecuteExtensionCommand) workspace.ExecutionTarget {
+	ec.Target(func(cmd extension.RunCommand) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.LogsQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
-	})
-	ec.Target(func(cmd provision.RunCommand) workspace.ExecutionTarget {
-		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
 	})
 	ec.Target(func(query stack.ShowComposeConfigQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
@@ -410,7 +418,13 @@ func (s *services) GetExecutionContextMiddleware() *workspace.ExecutionContextMi
 	ec.Target(func(query stack.ServiceChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project, ServicesOnly: true}
 	})
-	ec.Target(func(query stack.ExtensionChoicesQuery) workspace.ExecutionTarget {
+	ec.Target(func(query extension.ChoicesQuery) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
+	})
+	ec.Target(func(cmd extension.RunHookCommand) workspace.ExecutionTarget {
+		return workspace.ExecutionTarget{Workspace: cmd.Workspace, Project: cmd.Project}
+	})
+	ec.Target(func(query extension.HookChoicesQuery) workspace.ExecutionTarget {
 		return workspace.ExecutionTarget{Workspace: query.Workspace, Project: query.Project}
 	})
 	ec.Target(func(cmd hosts.SyncCommand) workspace.ExecutionTarget {

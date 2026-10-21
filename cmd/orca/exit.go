@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"github.com/adamkirk/orca/internal/extension"
 	"github.com/adamkirk/orca/internal/tui"
 	"github.com/adamkirk/orca/internal/usererr"
 	"github.com/adamkirk/orca/internal/workspace"
@@ -72,6 +73,12 @@ func reportError(out errorPrinter, err error) {
 		return
 	}
 
+	if invalidProject, ok := errors.AsType[workspace.InvalidProjectConfigError](err); ok {
+		reportProblems(out, fmt.Sprintf("Project config '%s' is invalid:", invalidProject.Path), invalidProject.Problems)
+
+		return
+	}
+
 	if invalidPrefs, ok := errors.AsType[workspace.InvalidPreferencesError](err); ok {
 		reportProblems(out, fmt.Sprintf("Preferences file '%s' is invalid:", invalidPrefs.Path), invalidPrefs.Problems)
 
@@ -80,10 +87,16 @@ func reportError(out errorPrinter, err error) {
 
 	if !hasMsg {
 		out.Error(fmt.Sprintf("Error: %s", err))
-		return
+	} else {
+		out.Error(fmt.Sprintf("  %s", cause))
 	}
 
-	out.Error(fmt.Sprintf("  %s", cause))
+	// Whatever the extension said, say where it was running, and how to try
+	// it again once it's fixed
+	if hookErr, ok := errors.AsType[extension.HookFailedError](err); ok {
+		out.Error(fmt.Sprintf("This was %s. Nothing after it ran.", hookErr.Describe()))
+		out.Error(fmt.Sprintf("Once it's fixed, re-run it with '%s', or the whole hook with '%s'.", hookErr.RerunCommand(), hookErr.RerunHookCommand()))
+	}
 }
 
 func reportProblems(out errorPrinter, title string, problems []string) {

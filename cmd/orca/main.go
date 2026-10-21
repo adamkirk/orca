@@ -103,6 +103,13 @@ func getPluginCommandCachePath() string {
 	return fmt.Sprintf("%s/.orca/cache/plugin-commands.json", homeDir)
 }
 
+func getTrustFilePath() string {
+	homeDir, err := os.UserHomeDir()
+	checkErr(err)
+
+	return fmt.Sprintf("%s/.orca/trust.yaml", homeDir)
+}
+
 func getTLSDir() string {
 	homeDir, err := os.UserHomeDir()
 	checkErr(err)
@@ -178,6 +185,11 @@ func addWorkspaceOption(cmd *cobra.Command, required bool) {
 	if required {
 		cmd.MarkFlagRequired("workspace")
 	}
+}
+
+// addYesFlag adds --yes, for commands that run hooks.
+func addYesFlag(cmd *cobra.Command) {
+	cmd.Flags().BoolP("yes", "y", false, "Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted.")
 }
 
 func addProjectOption(cmd *cobra.Command) {

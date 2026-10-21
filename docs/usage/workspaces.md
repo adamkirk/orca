@@ -17,7 +17,7 @@ With `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 
 1. Fetches the workspace config from the repository's default branch, or `--branch`, through the GitHub API, and checks that it's [valid](../configuration/workspace_config.md#validation). If the branch or the config is missing, or the config is invalid, orca stops before cloning anything.
 2. Checks that every project's [`repository.branch`](../configuration/workspace_config.md#repository) exists on its remote. If any are missing, orca lists them all and stops before cloning anything.
-3. Clones the repository over SSH (`git@github.com:acme/local-env.git`) into `{target}/{repo name}`, here `~/code/acme/local-env`, on `--branch` if it's given. If that directory already exists, orca stops with an error rather than touch it.
+3. Clones the repository over SSH (`git@github.com:acme/local-env.git`) into `{target}/{repo name}`, here `~/code/acme/local-env`, on `--branch` if it's given. If that directory is already a clone of the repository, e.g. as you're running `ws init` again, it's used as it is. If it's anything else, orca stops with an error rather than touch it.
 4. Carries on as if you'd run `orca ws init` from inside the clone (see [below](#from-a-local-directory)), so the other projects are cloned next to it.
 
 `--repo` only accepts GitHub repositories, in the form `owner/repo`. You'll need SSH access to the repository for the clone.
@@ -34,8 +34,28 @@ $ orca ws init
 Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 
 1. Reads the workspace config from the current directory, checks that it's [valid](../configuration/workspace_config.md#validation), and registers the workspace in your [user config](../configuration/user_config.md).
-2. Sets up every project in it, as [`orca ws clone`](#cloning-projects) does.
-3. Creates your [preferences file](../configuration/preferences.md), listing every project, unless it already exists. Each project follows the workspace config's [`enabled`](../configuration/workspace_config.md#projects) until you enable or disable it. If git doesn't ignore it, orca suggests adding it to `.gitignore`.
+2. Creates your [preferences file](../configuration/preferences.md), listing every project, unless it already exists. Each project follows the workspace config's [`enabled`](../configuration/workspace_config.md#projects) until you enable or disable it.
+3. Clones every project, as [`orca ws clone`](#cloning-projects) does.
+4. Runs every project's `clone.post` [hook](./hooks.md), in the order they're cloned, then the workspace's `init.post`, each of whose extensions runs in the project it belongs to. Any extension they run that you haven't trusted yet is listed first, in one go, and you're asked to [trust](./extensions.md#trusting-extensions) it.
+5. Lists what's left to do, which orca never does itself, e.g. as it needs `sudo`:
+
+    ```
+    Workspace acme is ready. Next steps:
+      orca ws switch acme                                        make it your current workspace
+      sudo ORCA_CONFIG_PATH="$HOME/.orca/orca.yaml" orca hosts   add its hosts to /etc/hosts
+      orca tls gen                                               generate its TLS certificates
+      orca up                                                    start it
+    ```
+
+    If git doesn't ignore the preferences file, orca also suggests adding it to `.gitignore`.
+
+### Running it again
+
+`orca ws init` is safe to run again, in the same place. If the workspace is already registered from the same config, it carries on: it clones any projects that are missing, then runs every hook again. Nothing records which hooks have run, so this is how to finish a setup that failed part-way, once you've fixed the problem. It only asks about extensions that are new, or have changed since you trusted them.
+
+That relies on hooks being safe to run more than once, see [Write extensions that are safe to run again](./hooks.md#write-extensions-that-are-safe-to-run-again). To clone without running anything, pass `--skip-hooks`.
+
+A different workspace with the same name is still an error.
 
 ### Flags
 
@@ -46,6 +66,8 @@ Without `--repo`, [`orca ws init`](../CLI/orca_ws_init.md):
 | `-s`, `--source` | The directory containing the workspace config. | The current directory |
 | `-c`, `--config` | The workspace config's file name, relative to the source directory or the repository's root. | `orca.workspace.yaml` |
 | `-t`, `--target` | The directory to clone projects into. | The current directory with `--repo`, otherwise its parent |
+| `--skip-hooks` | Clone without running any hooks. | |
+| `-y`, `--yes` | Run every extension the hooks run without asking, for this run only: it doesn't record them as trusted. | |
 
 It doesn't make the workspace current; use `orca ws switch` for that.
 
@@ -71,6 +93,8 @@ Projects are cloned into `{target}/{project name}`, or `{target}/{path}` for a p
 Projects are cloned in the order they're configured, except that a project is cloned after the projects it [`requires`](../configuration/workspace_config.md#dependencies-between-projects), and after any project whose directory its `path` is inside.
 
 [Disabled](#enabling-and-disabling-projects) projects are cloned too: being disabled only means they don't run.
+
+Then the `clone.post` [hook](./hooks.md) of every project it was asked for runs, in the same order, whether it was cloned now or before. So running `orca ws clone` again sets the projects up again. `--skip-hooks` clones without running them, and `--yes` runs them without asking about untrusted extensions.
 
 ## Enabling and disabling projects
 
